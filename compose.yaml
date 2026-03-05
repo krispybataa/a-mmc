@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+
+  frontend:
+    image: a-mmc-frontend
+    ports:
+      - "80:80"
+    networks:
+      - sample_network
+
+  backend:
+    image: a-mmc-backend
+    ports:
+      - "8000:8000"
+    environment:
+      DB_NAME: mydb
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: db
+      DB_PORT: 5432
+    networks:
+      - sample_network
+
+networks:
+  sample_network:
+    driver: bridge
