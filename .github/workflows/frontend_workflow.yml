@@ -14,5 +14,5 @@ jobs:
     steps:
       - name: Run build if changes detected
         run: |
-          echo "Changes detected in src or config folder. Running the build process."
+          echo "FRONTEND Changes detected in src or config folder. Running the build process."
           # Your build commands go here (e.g., npm ci, npm run build)
