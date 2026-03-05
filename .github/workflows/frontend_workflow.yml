@@ -3,7 +3,7 @@ name: CI on Frontend Folder
 on:
   push:
     branches:
-      - main 
+      - workflow-test-branch 
     paths:
       - 'a-mmc_frontend/**'
 
