@@ -1,0 +1,30 @@
+"""""
+Greetings, Participant! 
+
+Thank you greatly for your interest in the project 
+""""
+
+Could you finish the greeting message above to convey the following points: 
+
+- The purpose of this document is to briefly explain the nature of my project 
+
+- Nature of the project 
+	- You are participating in the creation of a PCC system as described by the initial Google Forms you have answered. 
+	- You are participating as users of the system, specifically patients testing the system as development progresses. 
+	- When the time comes, you will be given test accounts to navigate and test the system. You are NOT to encode any real information pertaining to yourself or any real circumstances pertaining to you. 
+
+- The participation details: 
+	- Runs from April 20 to May 1
+	- Participation consists of visiting the site and answering corresponding evaluation forms 
+	- The last few days of this period will be allotted for the more formal evluation of the system via the User Evaluation Questionnaire 
+	- This document will be updated as the development of the system progresses (Updated for instructions, guides, etc.) 
+	
+Tone: 4th year comsci student, grateful for the interest and hopeful that they find the system 
+
+Context: The message is to be placed in a Google Doc linked to the participants via email 
+
+__NEXT TASK__
+
+Write an brief email that thanks the participant for there interest in the project and conveys the point that the email is opened as a thread to address their further questions and links to the doc mentioned. 
+
+Context: The participants responded: "I would like more information before making a decision" in my recruitment survey
