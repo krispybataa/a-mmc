@@ -3,7 +3,7 @@ name: CI on Frontend Folder
 on:
   push:
     branches:
-      - main 
+      - main
     paths:
       - 'a-mmc_frontend/**'
 
