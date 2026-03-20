@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v4
       - name: Run build if changes detected
         run: |
           echo "FRONTEND Changes detected in src or config folder. Running the build process."
