@@ -16,9 +16,9 @@ jobs:
         run: |
           echo "FRONTEND Changes detected in src or config folder. Running the build process."
           # Your build commands go here (e.g., npm ci, npm run build)
-      
-      - name: build image
-        run: docker build ./a-mmc_frontend -t krispybata/frontend:latest
 
-      - name: push image
-        run: docker push krispybata/frontend:latest
+      - name: Build Docker Image
+        run:  docker build -t krispybata/a-mmc-frontend:latest -f a-mmc_frontend/dockerfile .
+        
+      - name: Push Docker Image to Docker Hub
+        run:  docker push krispybata/a-mmc-frontend:latest
