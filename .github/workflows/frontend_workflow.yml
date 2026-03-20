@@ -18,7 +18,7 @@ jobs:
           # Your build commands go here (e.g., npm ci, npm run build)
 
       - name: Build Docker Image
-        run:  docker build -t krispybata/a-mmc-frontend:latest -f a-mmc_frontend/Dockerfile .
+        run:  docker build ./a-mmc_frontend/ -t krispybata/a-mmc-frontend:latest
         
       - name: Push Docker Image to Docker Hub
         run:  docker push krispybata/a-mmc-frontend:latest
