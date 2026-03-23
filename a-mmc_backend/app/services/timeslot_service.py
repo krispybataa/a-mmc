@@ -130,3 +130,59 @@ def generate_slots(
         db.session.commit()
 
     return len(new_slots)
+
+
+def regenerate_slots_for_schedule_change(
+    clinician_id: int,
+    affected_day_of_week: str,
+    from_date: date,
+    to_date: date,
+    slot_duration_minutes: int = 60,
+) -> dict:
+    """
+    Handle schedule changes by removing orphaned slots and regenerating.
+
+    Call this after a ClinicianSchedule row is modified (times changed or day
+    toggled). It targets only future slots on the affected day of the week
+    within the supplied date range.
+
+    Algorithm
+    ---------
+    1. Fetch all existing future slots for (clinician, date_range, affected_day).
+    2. Split into two buckets:
+       - "safe" slots: status == "available" AND zero non-cancelled appointments
+         → delete these; they are safe orphans (no patient impact)
+       - "stuck" slots: have one or more active appointments
+         (pending | accepted | reschedule_requested)
+         → leave them untouched; return them for C/S to resolve manually
+    3. Run generate_slots() for the affected range to produce slots matching
+       the new schedule.
+    4. Return a summary dict with counts and the list of stuck slots.
+
+    Returns
+    -------
+    {
+        "deleted": int,          # safe slots removed
+        "created": int,          # new slots generated
+        "stuck": [               # slots needing manual C/S action
+            {
+                "slot_id": int,
+                "slot_date": str,
+                "start_time": str,
+                "end_time": str,
+                "active_appointment_count": int,
+            },
+            ...
+        ]
+    }
+
+    TODO: Implement this function before the schedule-edit endpoint (PATCH
+    /api/clinicians/<id>/schedules/<schedule_id>) goes live. The route should
+    call this and surface the "stuck" list to the C/S user so they know which
+    appointments still need manual rescheduling.
+    """
+    raise NotImplementedError(
+        "regenerate_slots_for_schedule_change() is not yet implemented. "
+        "See the docstring for the full algorithm."
+    )
+

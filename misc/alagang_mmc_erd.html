@@ -63,7 +63,7 @@
 <body>
 <header>
   <h1>Alagang MMC — Entity Relationship Diagram</h1>
-  <p>PostgreSQL schema · Multi-role clinical appointment management system</p>
+  <p>PostgreSQL schema · Multi-role clinical appointment management system · Last updated 2026-03-23</p>
 </header>
 <div id="erd-wrap">
   <div id="erd"></div>
@@ -138,6 +138,8 @@ const diagram = `erDiagram
     varchar status
     int max_patients
   }
+  %% CLINICIAN_TIMESLOT.status valid values: available | blocked
+  %% max_patients: nullable; slot auto-blocks when accepted count reaches this limit
   SECRETARY {
     int secretary_id PK
     varchar title
@@ -195,9 +197,15 @@ const diagram = `erDiagram
     varchar payment_type
     varchar status
     text reschedule_reason
+    text cancellation_reason
     timestamp created_at
     timestamp updated_at
   }
+  %% APPOINTMENT.status lifecycle:
+  %% pending -> accepted | rejected | cancelled
+  %% accepted -> reschedule_requested | cancelled
+  %% reschedule_requested -> accepted (new slot) | cancelled
+  %% rejected / cancelled -> terminal
 
   CLINICIAN ||--o{ CLINICIAN_SCHEDULE : "has"
   CLINICIAN ||--o{ CLINICIAN_HMO : "accredited with"
