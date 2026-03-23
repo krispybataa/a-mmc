@@ -138,10 +138,38 @@ do not overlap. Secretary or clinician can accept or request reschedule.
 ## Key design decisions
 - **VARCHAR over ENUM** everywhere statuses or types appear — easier to extend without migrations
 - **Child tables** for HMO and Info instead of arrays/JSONB — keeps queries clean and rows addable without schema changes
-- **CLINICIAN_TIMESLOT** as a generated slots table — appointment booking references a slot rather than raw times, preventing double-booking at the DB level
+- **CLINICIAN_TIMESLOT** as a pre-generated slots table — slots are created from schedule on save (60-day rolling window); appointments reference a slot rather than raw times
 - **SECRETARY_CLINICIAN** as a junction table — supports M2M even though 1:1 is the common case
 - **No integration** with external MMC systems (iHIMS, EMR) — operates as a standalone system
 - **No billing, diagnostics, or post-consultation data** — strictly pre-consultation coordination
+
+### Slot model invariants (DO NOT CHANGE without design review)
+- A slot (`CLINICIAN_TIMESLOT`) may hold **multiple appointments** — it is NOT 1:1 with a patient
+- Slot `status` is **only ever written by C/S explicitly** (`available` → `blocked` and back), or auto-blocked when `max_patients` is reached. **Booking, rescheduling, and cancelling an appointment never write to slot status**
+- `"booked"` is NOT a valid slot status. Valid values: `available | blocked`
+- `max_patients` is nullable. When set, the slot auto-blocks after that many `accepted` appointments (opt-in soft capacity). Slot count is NOT shown to patients.
+- Slot booking count is derived from `Appointment` rows for audit; it is informational only, never enforced unless `max_patients` is set
+
+### Appointment status lifecycle
+```
+pending → accepted | rejected | cancelled
+accepted → reschedule_requested | cancelled
+reschedule_requested → accepted (new slot) | cancelled
+rejected → (terminal)
+cancelled → (terminal)
+```
+
+### Cancellation time rules
+- **> 48 hours:** Any party may cancel freely; `cancellation_reason` required
+- **24–48 hours:** Allowed with a warning in the API response
+- **< 24 hours (patient):** Blocked — patient is directed to contact C/S directly
+- **< 24 hours (C/S):** Cannot outright cancel — must use the `reschedule_requested` flow
+
+### Reschedule rules
+- Either patient or C/S may initiate `reschedule_requested`; `reschedule_reason` required
+- C/S confirms by supplying `new_slot_id` when moving to `accepted`; new slot must be `available` and belong to the same clinician
+- Old slot is **never touched** on reschedule — it may have other patients
+
 
 ---
 

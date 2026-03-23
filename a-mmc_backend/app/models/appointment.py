@@ -13,7 +13,7 @@ class Appointment(db.Model):
     chief_complaint = db.Column(db.String(300))
     chief_complaint_description = db.Column(db.Text)
     payment_type = db.Column(db.String(100))
-    # pending | accepted | rescheduled | rejected | cancelled
+    # pending | accepted | reschedule_requested | rejected | cancelled
     status = db.Column(db.String(30), nullable=False, default="pending")
     reschedule_reason = db.Column(db.Text)
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
@@ -27,7 +27,7 @@ class Appointment(db.Model):
     # Relationships
     patient = db.relationship("Patient", back_populates="appointments")
     clinician = db.relationship("Clinician", back_populates="appointments")
-    slot = db.relationship("ClinicianTimeslot", back_populates="appointment")
+    slot = db.relationship("ClinicianTimeslot", back_populates="appointments")
 
     def __repr__(self) -> str:
         return f"<Appointment {self.appointment_id}: patient={self.patient_id} clinician={self.clinician_id} [{self.status}]>"

@@ -84,10 +84,13 @@ class ClinicianTimeslot(db.Model):
     slot_date = db.Column(db.Date, nullable=False)
     start_time = db.Column(db.Time, nullable=False)
     end_time = db.Column(db.Time, nullable=False)
-    status = db.Column(db.String(20), nullable=False, default="available")  # available | booked | blocked
+    status = db.Column(db.String(20), nullable=False, default="available")  # available | blocked
+    # Optional soft patient limit. When set, slot is auto-blocked after this many
+    # accepted appointments. NULL = no limit (default).
+    max_patients = db.Column(db.Integer, nullable=True)
 
     clinician = db.relationship("Clinician", back_populates="timeslots")
-    appointment = db.relationship("Appointment", back_populates="slot", uselist=False)
+    appointments = db.relationship("Appointment", back_populates="slot")
 
     def __repr__(self) -> str:
         return f"<ClinicianTimeslot {self.slot_id}: {self.slot_date} {self.start_time}–{self.end_time} [{self.status}]>"
