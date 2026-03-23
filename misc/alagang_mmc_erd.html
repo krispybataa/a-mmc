@@ -136,6 +136,7 @@ const diagram = `erDiagram
     time start_time
     time end_time
     varchar status
+    int max_patients
   }
   SECRETARY {
     int secretary_id PK
@@ -207,7 +208,7 @@ const diagram = `erDiagram
   SECRETARY_CLINICIAN }o--|| CLINICIAN : ""
   PATIENT ||--o{ APPOINTMENT : "books"
   CLINICIAN ||--o{ APPOINTMENT : "receives"
-  CLINICIAN_TIMESLOT ||--o| APPOINTMENT : "fills"
+  CLINICIAN_TIMESLOT ||--o{ APPOINTMENT : "contains"
 `;
 
 const { svg } = await mermaid.render('erd-svg', diagram);
