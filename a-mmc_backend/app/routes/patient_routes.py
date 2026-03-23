@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from app import db
 from app.models.patient import Patient
+from app.utils.validators import require_fields
 
 patient_bp = Blueprint("patients", __name__)
 
@@ -55,7 +56,17 @@ def get_patient(patient_id: int):
 
 @patient_bp.post("/")
 def create_patient():
-    data = request.get_json(force=True)
+    data = request.get_json(force=True) or {}
+
+    err = require_fields(
+        data,
+        "last_name", "first_name", "birthday", "gender",
+        "mobile_number", "address_line_1", "province", "city",
+        "barangay", "login_email", "login_password_hash", "educational_attainment",
+    )
+    if err:
+        return err
+
     patient = Patient(
         last_name=data["last_name"],
         first_name=data["first_name"],

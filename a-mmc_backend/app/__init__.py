@@ -39,4 +39,32 @@ def create_app(config_name: str = "development") -> Flask:
     def health():
         return {"status": "ok"}
 
+    # ------------------------------------------------------------------
+    # Centralized error handlers — all errors return { "error": "..." }
+    # ------------------------------------------------------------------
+
+    @app.errorhandler(400)
+    def bad_request(e):
+        return {"error": "Bad request", "detail": str(e)}, 400
+
+    @app.errorhandler(404)
+    def not_found(e):
+        return {"error": "Resource not found"}, 404
+
+    @app.errorhandler(405)
+    def method_not_allowed(e):
+        return {"error": "Method not allowed"}, 405
+
+    @app.errorhandler(409)
+    def conflict(e):
+        return {"error": str(e)}, 409
+
+    @app.errorhandler(422)
+    def unprocessable(e):
+        return {"error": "Unprocessable entity", "detail": str(e)}, 422
+
+    @app.errorhandler(500)
+    def server_error(e):
+        return {"error": "Internal server error"}, 500
+
     return app

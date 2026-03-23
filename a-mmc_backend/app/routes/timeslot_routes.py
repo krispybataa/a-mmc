@@ -49,7 +49,7 @@ def create_timeslot():
 def update_timeslot(slot_id: int):
     s = db.get_or_404(ClinicianTimeslot, slot_id)
     data = request.get_json(force=True)
-    for field in ["slot_date", "start_time", "end_time", "status"]:
+    for field in ["slot_date", "start_time", "end_time", "status", "max_patients"]:
         if field in data:
             setattr(s, field, data[field])
     db.session.commit()
@@ -72,4 +72,9 @@ def _serialize(s: ClinicianTimeslot) -> dict:
         "start_time": str(s.start_time),
         "end_time": str(s.end_time),
         "status": s.status,
+        "max_patients": s.max_patients,
+        "booked_count": sum(
+            1 for a in s.appointments
+            if a.status not in ("cancelled", "rejected")
+        ),
     }
