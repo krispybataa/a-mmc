@@ -15,6 +15,12 @@ services:
       - "${NETWORK_NAME}"
     depends_on:
       - "${POSTGRES_CONTAINER}"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${BACKEND_PORT}/health || exit 1"]
+      interval: ${CONTAINER_INTERVAL}
+      timeout: ${CONTAINER_TIMEOUT}
+      retries: ${CONTAINER_RETRIES}
+      start_period: 20s
 
   a-mmc-nginx:
     image: "${NGINX_IMAGE}"
@@ -41,12 +47,12 @@ services:
       - a-mmc-network
     volumes:
       - "${POSTGRES_DATA_VOLUME}:/var/lib/postgresql/data"
-    # healthcheck:
-    #   test: ["CMD-SHELL", "psql -U ${DB_USER} -d ${DB_MAIN} -c 'SELECT 1' || exit 1"]
-    #   interval: ${CONTAINER_INTERVAL}
-    #   timeout: ${CONTAINER_TIMEOUT}
-    #   retries: ${CONTAINER_RETRIES}
-    #   start_period: 20s
+    healthcheck:
+      test: ["CMD-SHELL", "psql -U ${DB_USER} -d ${DB_NAME} -c 'SELECT 1' || exit 1"]
+      interval: ${CONTAINER_INTERVAL}
+      timeout: ${CONTAINER_TIMEOUT}
+      retries: ${CONTAINER_RETRIES}
+      start_period: 20s
 
 networks:
   a-mmc-network:
