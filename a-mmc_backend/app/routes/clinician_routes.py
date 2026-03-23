@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from datetime import date as date_type
 from app import db
 from app.models.clinician import (
     Clinician,
@@ -6,8 +7,10 @@ from app.models.clinician import (
     ClinicianHMO,
     ClinicianInfo,
 )
+from app.services.timeslot_service import generate_slots
 
 clinician_bp = Blueprint("clinicians", __name__)
+
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +159,18 @@ def create_schedule(clinician_id: int):
     )
     db.session.add(schedule)
     db.session.commit()
-    return jsonify({"schedule_id": schedule.schedule_id}), 201
+
+    # Auto-generate a 60-day rolling window of slots from today
+    from datetime import date, timedelta
+    today = date.today()
+    slots_created = generate_slots(
+        clinician_id=clinician_id,
+        from_date=today,
+        to_date=today + timedelta(days=60),
+    )
+
+    return jsonify({"schedule_id": schedule.schedule_id, "slots_created": slots_created}), 201
+
 
 
 # ---------------------------------------------------------------------------
@@ -206,3 +220,54 @@ def create_info(clinician_id: int):
     db.session.add(info)
     db.session.commit()
     return jsonify({"info_id": info.info_id}), 201
+
+
+# ---------------------------------------------------------------------------
+# Timeslot generation
+# ---------------------------------------------------------------------------
+
+@clinician_bp.post("/<int:clinician_id>/generate-slots")
+def generate_clinician_slots(clinician_id: int):
+    """
+    Generate available timeslots for a clinician from their schedule.
+
+    Body (JSON):
+        from_date             (str, YYYY-MM-DD, required)
+        to_date               (str, YYYY-MM-DD, required)
+        slot_duration_minutes (int, optional, default 30)
+
+    Returns:
+        { "slots_created": N }
+    """
+    db.get_or_404(Clinician, clinician_id)
+    data = request.get_json(force=True) or {}
+
+    from_date_str = data.get("from_date")
+    to_date_str = data.get("to_date")
+    if not from_date_str or not to_date_str:
+        return jsonify({"error": "Missing required fields: from_date, to_date"}), 422
+
+    try:
+        from_date = date_type.fromisoformat(from_date_str)
+        to_date = date_type.fromisoformat(to_date_str)
+    except ValueError:
+        return jsonify({"error": "Dates must be in YYYY-MM-DD format"}), 422
+
+    if from_date > to_date:
+        return jsonify({"error": "from_date must be on or before to_date"}), 422
+
+    duration = data.get("slot_duration_minutes", 30)
+    if not isinstance(duration, int) or duration <= 0:
+        return jsonify({"error": "slot_duration_minutes must be a positive integer"}), 422
+
+    try:
+        count = generate_slots(
+            clinician_id=clinician_id,
+            from_date=from_date,
+            to_date=to_date,
+            slot_duration_minutes=duration,
+        )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 422
+
+    return jsonify({"slots_created": count}), 201
