@@ -27,6 +27,8 @@ a-mmc_backend/dist/
 a-mmc_backend/*.egg-info/
 a-mmc_backend/__pycache__/
 
+a-mmc_infra/certs/
+
 
 .vscode/*
 !.vscode/extensions.json
