@@ -2,11 +2,13 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager
 
 from app.config import config_by_name
 
 db = SQLAlchemy()
 migrate = Migrate()
+jwt = JWTManager()
 
 
 def create_app(config_name: str = "development") -> Flask:
@@ -18,6 +20,7 @@ def create_app(config_name: str = "development") -> Flask:
     db.init_app(app)
     migrate.init_app(app, db)
     CORS(app)
+    jwt.init_app(app)
 
     # Import models so Flask-Migrate can detect them
     from app.models import clinician, secretary, patient, appointment  # noqa: F401
@@ -28,12 +31,14 @@ def create_app(config_name: str = "development") -> Flask:
     from app.routes.patient_routes import patient_bp
     from app.routes.timeslot_routes import timeslot_bp
     from app.routes.appointment_routes import appointment_bp
+    from app.routes.auth_routes import auth_bp
 
     app.register_blueprint(clinician_bp, url_prefix="/api/clinicians")
     app.register_blueprint(secretary_bp, url_prefix="/api/secretaries")
     app.register_blueprint(patient_bp, url_prefix="/api/patients")
     app.register_blueprint(timeslot_bp, url_prefix="/api/timeslots")
     app.register_blueprint(appointment_bp, url_prefix="/api/appointments")
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
 
     @app.get("/api/health")
     def health():
@@ -46,6 +51,14 @@ def create_app(config_name: str = "development") -> Flask:
     @app.errorhandler(400)
     def bad_request(e):
         return {"error": "Bad request", "detail": str(e)}, 400
+
+    @app.errorhandler(401)
+    def unauthorized(e):
+        return {"error": "Unauthorized — valid credentials required"}, 401
+
+    @app.errorhandler(403)
+    def forbidden(e):
+        return {"error": "Forbidden — you do not have permission to perform this action"}, 403
 
     @app.errorhandler(404)
     def not_found(e):
@@ -68,3 +81,4 @@ def create_app(config_name: str = "development") -> Flask:
         return {"error": "Internal server error"}, 500
 
     return app
+

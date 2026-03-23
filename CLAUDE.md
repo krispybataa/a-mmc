@@ -37,25 +37,33 @@ a-mmc/
 │   ├── requirements.txt
 │   ├── run.py            ← entry point
 │   └── app/
-│       ├── __init__.py   ← app factory (create_app)
-│       ├── config.py     ← DevelopmentConfig / ProductionConfig
+│       ├── __init__.py   ← app factory (create_app), JWTManager registered
+│       ├── config.py     ← DevelopmentConfig / ProductionConfig / JWT config
 │       ├── models/
 │       │   ├── clinician.py   ← Clinician, Schedule, HMO, Info, Timeslot
 │       │   ├── secretary.py   ← Secretary + SecretaryClinicianLink
 │       │   ├── patient.py
 │       │   └── appointment.py
-│       └── routes/
-│           ├── clinician_routes.py
-│           ├── secretary_routes.py
-│           ├── patient_routes.py
-│           ├── timeslot_routes.py
-│           └── appointment_routes.py
+│       ├── routes/
+│       │   ├── auth_routes.py        ← [STUB] login/logout/me endpoints
+│       │   ├── clinician_routes.py
+│       │   ├── secretary_routes.py
+│       │   ├── patient_routes.py
+│       │   ├── timeslot_routes.py
+│       │   └── appointment_routes.py
+│       ├── services/
+│       │   ├── auth_service.py       ← hash_password / verify_password (bcrypt)
+│       │   └── timeslot_service.py   ← generate_slots + regenerate stub
+│       └── utils/
+│           ├── __init__.py
+│           └── validators.py         ← require_fields() helper
 ├── a-mmc_frontend/       ← React + Vite (scaffolded, not yet integrated)
 │   ├── src/
 │   ├── public/
 │   └── vite.config.js
 └── misc/
-    └── compose.yaml
+    ├── compose.yaml
+    └── alagang_mmc_erd.html
 ```
 
 ---
@@ -94,7 +102,8 @@ Flexible "more information" entries (background, awards, etc.). Can be empty.
 Generated slots derived from CLINICIAN_SCHEDULE. Appointments reference these.
 - `slot_id` PK, `clinician_id` FK
 - `slot_date` (date), `start_time`, `end_time` (TIME)
-- `status` (varchar: "available", "booked", "blocked")
+- `status` (varchar: `available` | `blocked`)
+- `max_patients` (int, nullable) — optional soft patient cap; auto-blocks slot when reached
 
 **SECRETARY**
 Assistive administrative role. Manages clinician profile, schedule, and appointments
@@ -129,7 +138,7 @@ do not overlap. Secretary or clinician can accept or request reschedule.
 - `consultation_date` (date)
 - `chief_complaint` (varchar), `chief_complaint_description` (text)
 - `payment_type` (varchar, free text)
-- `status` (varchar: "pending", "accepted", "rescheduled", "rejected", "cancelled")
+- `status` (varchar: "pending", "accepted", "reschedule_requested", "rejected", "cancelled")
 - `reschedule_reason` (text, nullable)
 - `created_at`, `updated_at` (timestamp)
 
@@ -142,6 +151,14 @@ do not overlap. Secretary or clinician can accept or request reschedule.
 - **SECRETARY_CLINICIAN** as a junction table — supports M2M even though 1:1 is the common case
 - **No integration** with external MMC systems (iHIMS, EMR) — operates as a standalone system
 - **No billing, diagnostics, or post-consultation data** — strictly pre-consultation coordination
+
+### Schedule change handling (timeslot invariant)
+- `generate_slots()` is idempotent — it skips existing `(clinician, date, start_time)` keys and never deletes
+- If a `ClinicianSchedule` row is edited after slots have been generated, future slots reflecting the **old** schedule become orphaned
+- `regenerate_slots_for_schedule_change()` in `timeslot_service.py` (stub, not yet implemented) handles this:
+  - **Safe orphans** (available, zero active appointments) → deleted automatically
+  - **Stuck slots** (have active appointments) → returned to C/S for manual action (cancel or reschedule each appointment before the slot can be removed)
+- The schedule-edit route must call this function and surface the stuck list to the C/S user
 
 ### Slot model invariants (DO NOT CHANGE without design review)
 - A slot (`CLINICIAN_TIMESLOT`) may hold **multiple appointments** — it is NOT 1:1 with a patient
@@ -173,6 +190,16 @@ cancelled → (terminal)
 
 ---
 
+## Auth layer
+`flask-jwt-extended` is wired into the app factory. Three login endpoints exist as stubs
+at `/api/auth/{patient,clinician,secretary}/login`. The skeleton is intentionally thin:
+- `app/services/auth_service.py` — `hash_password()` / `verify_password()` using bcrypt
+- `app/routes/auth_routes.py` — route stubs that return 501 with documented contracts
+- All security decisions (token lifetime, rotation, blocklist, rate-limiting, brute-force
+  protection) are marked `# TODO(security)` and left to the security-owning collaborator
+
+---
+
 ## User roles
 | Role | What they do in the system |
 |---|---|
@@ -186,19 +213,28 @@ Patients can browse clinicians without an account but must register to book.
 ---
 
 ## Where things stand
-- ✅ Flask backend fully scaffolded (app factory, config, models, routes)
+- ✅ Flask backend fully scaffolded (app factory, config, models, routes, services, utils)
 - ✅ All 8 schema tables implemented as SQLAlchemy models
-- ✅ All 5 route blueprints scaffolded with full CRUD
-- ✅ `.env.example` template in place
-- ⏳ First migration not yet run — Postgres has not been touched
-- ⏳ Auth layer not yet implemented (login endpoints, password hashing, JWT/session)
+- ✅ All 5 domain route blueprints scaffolded with full CRUD
+- ✅ Appointment lifecycle, slot model invariants, and cancellation time gates enforced
+- ✅ Auth layer skeleton: `auth_service.py` + `auth_routes.py` wired via `JWTManager`
+- ✅ 60-day rolling slot generation on schedule save (`timeslot_service.generate_slots`)
+- ✅ `regenerate_slots_for_schedule_change()` stub documented and ready to implement
+- ✅ `.env.example` template in place (includes `JWT_SECRET_KEY`)
+- ⏳ Auth endpoints not yet implemented — stubs return 501 with documented contracts (see `auth_routes.py`)
+- ⏳ Patient overlap check not yet implemented — see design notes below
+- ⏳ Schedule change handler (`regenerate_slots_for_schedule_change`) not yet implemented
+- ⏳ First migration not yet run — Postgres not yet touched (with collaborators)
 - ⏳ Frontend not yet integrated with backend
-- **Next steps:**
-  1. Copy `.env.example` → `.env`, fill in DB credentials
-  2. Run `flask db init && flask db migrate -m "initial schema" && flask db upgrade`
-  3. Smoke-test live routes against a running DB
-  4. Implement auth (login endpoints + password hashing + JWT or session)
-  5. Begin frontend integration once at least one API endpoint is live end-to-end
+
+### Next steps (priority order)
+1. Copy `.env.example` → `.env`; fill in DB credentials + `JWT_SECRET_KEY`
+2. Run `flask db init && flask db migrate -m "initial schema" && flask db upgrade`
+3. Smoke-test existing routes against a live DB
+4. **Implement auth** — login endpoints for all three roles (see `auth_routes.py` docstrings for full contract)
+5. **Implement patient overlap check** — create `app/services/appointment_service.py` with `has_overlap()`; wire into `POST /api/appointments/` and the reschedule-confirm branch of `PATCH /api/appointments/<id>`
+6. **Implement `regenerate_slots_for_schedule_change()`** before the schedule-edit PATCH endpoint ships
+7. Begin frontend integration
 
 ---
 
@@ -207,5 +243,6 @@ Patients can browse clinicians without an account but must register to book.
 - Config via classes in `config.py` (DevelopmentConfig, ProductionConfig)
 - Models in `app/models/`, one file per domain entity
 - Routes in `app/routes/`, one blueprint per domain entity
+- Services in `app/services/`, pure logic functions (no route handling)
 - All secrets and DB credentials via `.env` (never hardcoded)
 - 24hr time throughout (TIME columns, API responses, frontend display)
