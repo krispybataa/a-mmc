@@ -1,26 +1,44 @@
 version: "3.9"
 
 services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: mydb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sample_network
+
+  backend:
+    build: 
+      context: ./a-mmc_backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+    networks:
+      - sample_network
 
   frontend:
-    image: a-mmc-frontend
+    build:
+      context: ./a-mmc_frontend
+      dockerfile: dockerfile
     ports:
       - "80:80"
     networks:
       - sample_network
 
-  backend:
-    image: a-mmc-backend
-    ports:
-      - "8000:8000"
-    environment:
-      DB_NAME: mydb
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_HOST: db
-      DB_PORT: 5432
-    networks:
-      - sample_network
+volumes:
+  postgres_data:
 
 networks:
   sample_network:
