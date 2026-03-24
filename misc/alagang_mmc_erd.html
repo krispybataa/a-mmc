@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alagang MMC — Entity Relationship Diagram</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f5f4f0;
+    color: #1a1a18;
+    min-height: 100vh;
+    padding: 32px 24px;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1a1a18; color: #c2c0b6; }
+    header { border-bottom-color: #3a3a38; }
+    .note { color: #888780; }
+  }
+  header {
+    max-width: 960px;
+    margin: 0 auto 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #d3d1c7;
+  }
+  header h1 { font-size: 22px; font-weight: 500; margin-bottom: 4px; }
+  header p { font-size: 14px; color: #5f5e5a; }
+  @media (prefers-color-scheme: dark) {
+    header p { color: #888780; }
+  }
+  #erd-wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #d3d1c7;
+    padding: 24px;
+    overflow-x: auto;
+  }
+  @media (prefers-color-scheme: dark) {
+    #erd-wrap { background: #242422; border-color: #3a3a38; }
+  }
+  #erd svg { width: 100%; height: auto; }
+  /* Force mermaid ERD headers to always be readable */
+  #erd svg .er.entityBox { fill: #1e3a5f !important; }
+  #erd svg .er.entityLabel { fill: #ffffff !important; }
+  #erd svg .er.attributeBoxOdd { fill: #f0f4fa !important; }
+  #erd svg .er.attributeBoxEven { fill: #e4ecf7 !important; }
+  #erd svg text { fill: #1a1a18 !important; }
+  #erd svg .er.entityLabel text,
+  #erd svg .entityLabel text { fill: #ffffff !important; }
+  #erd svg .er.relationshipLabel { fill: #3d3d3a !important; font-size: 11px !important; }
+  #erd svg .er.relationshipLine { stroke: #5f5e5a !important; }
+  .note {
+    max-width: 960px;
+    margin: 14px auto 0;
+    font-size: 12px;
+    color: #888780;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Alagang MMC — Entity Relationship Diagram</h1>
+  <p>PostgreSQL schema · Multi-role clinical appointment management system · Last updated 2026-03-23</p>
+</header>
+<div id="erd-wrap">
+  <div id="erd"></div>
+</div>
+<p class="note">Generated from Rodriguez SP Proposal · React-Vite + Flask + PostgreSQL stack</p>
+
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'default',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  er: { useMaxWidth: true },
+  themeVariables: {
+    fontSize: '13px',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    lineColor: '#5f5e5a',
+    primaryColor: '#dce8f5',
+    primaryTextColor: '#1a1a18',
+    primaryBorderColor: '#7a9ec4',
+    edgeLabelBackground: '#f5f4f0',
+    tertiaryColor: '#f0f4fa',
+  },
+});
+
+const diagram = `erDiagram
+  CLINICIAN {
+    int clinician_id PK
+    varchar title
+    varchar first_name
+    varchar middle_name
+    varchar last_name
+    varchar suffix
+    varchar department
+    varchar specialty
+    varchar local_number
+    varchar room_number
+    varchar profile_picture
+    varchar contact_phone
+    varchar contact_email
+    varchar login_email
+    varchar login_password_hash
+  }
+  CLINICIAN_SCHEDULE {
+    int schedule_id PK
+    int clinician_id FK
+    varchar day_of_week
+    time am_start
+    time am_end
+    time pm_start
+    time pm_end
+  }
+  CLINICIAN_HMO {
+    int hmo_id PK
+    int clinician_id FK
+    varchar hmo_name
+  }
+  CLINICIAN_INFO {
+    int info_id PK
+    int clinician_id FK
+    text content
+    varchar label
+  }
+  CLINICIAN_TIMESLOT {
+    int slot_id PK
+    int clinician_id FK
+    date slot_date
+    time start_time
+    time end_time
+    varchar status
+    int max_patients
+  }
+  %% CLINICIAN_TIMESLOT.status valid values: available | blocked
+  %% max_patients: nullable; slot auto-blocks when accepted count reaches this limit
+  SECRETARY {
+    int secretary_id PK
+    varchar title
+    varchar first_name
+    varchar last_name
+    varchar suffix
+    varchar contact_phone
+    varchar contact_email
+    varchar login_email
+    varchar login_password_hash
+  }
+  SECRETARY_CLINICIAN {
+    int id PK
+    int secretary_id FK
+    int clinician_id FK
+  }
+  PATIENT {
+    int patient_id PK
+    varchar last_name
+    varchar first_name
+    varchar middle_name
+    date birthday
+    varchar gender
+    varchar civil_status
+    varchar nationality
+    varchar religion
+    varchar occupation
+    varchar mobile_number
+    varchar next_of_kin_name
+    varchar next_of_kin_relationship
+    varchar next_of_kin_contact
+    varchar address_line_1
+    varchar province
+    varchar city
+    varchar barangay
+    varchar country
+    varchar login_email
+    varchar login_password_hash
+    varchar sc_pwd_id_number
+    varchar pwd_id_front
+    varchar pwd_id_back
+    varchar preferred_language
+    varchar culture
+    varchar educational_attainment
+    varchar disability_type
+  }
+  APPOINTMENT {
+    int appointment_id PK
+    int patient_id FK
+    int clinician_id FK
+    int slot_id FK
+    date consultation_date
+    varchar chief_complaint
+    text chief_complaint_description
+    varchar payment_type
+    varchar status
+    text reschedule_reason
+    text cancellation_reason
+    timestamp created_at
+    timestamp updated_at
+  }
+  %% APPOINTMENT.status lifecycle:
+  %% pending -> accepted | rejected | cancelled
+  %% accepted -> reschedule_requested | cancelled
+  %% reschedule_requested -> accepted (new slot) | cancelled
+  %% rejected / cancelled -> terminal
+
+  CLINICIAN ||--o{ CLINICIAN_SCHEDULE : "has"
+  CLINICIAN ||--o{ CLINICIAN_HMO : "accredited with"
+  CLINICIAN ||--o{ CLINICIAN_INFO : "has"
+  CLINICIAN ||--o{ CLINICIAN_TIMESLOT : "has"
+  CLINICIAN }o--o{ SECRETARY : "assigned to"
+  SECRETARY_CLINICIAN }o--|| SECRETARY : ""
+  SECRETARY_CLINICIAN }o--|| CLINICIAN : ""
+  PATIENT ||--o{ APPOINTMENT : "books"
+  CLINICIAN ||--o{ APPOINTMENT : "receives"
+  CLINICIAN_TIMESLOT ||--o{ APPOINTMENT : "contains"
+`;
+
+const { svg } = await mermaid.render('erd-svg', diagram);
+document.getElementById('erd').innerHTML = svg;
+
+document.querySelectorAll('#erd svg .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx', '8');
+  for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+
+document.querySelectorAll('#erd svg .row-rect-odd path, #erd svg .row-rect-even path').forEach(p => {
+  p.setAttribute('stroke', 'none');
+});
+</script>
+</body>
+</html>
