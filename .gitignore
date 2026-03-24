@@ -27,12 +27,10 @@ a-mmc_backend/dist/
 a-mmc_backend/*.egg-info/
 a-mmc_backend/__pycache__/
 
-#Global env
-.env.compose
 
 .vscode/*
 !.vscode/extensions.json
-.idea/
+.idea/  
 
 *.swp
 *.swo
