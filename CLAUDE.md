@@ -16,14 +16,17 @@ billing, diagnostics, or post-consultation records.
 |---|---|
 | Frontend | React + Vite |
 | Backend | Flask + Flask-SQLAlchemy + Flask-Migrate |
-| Database | PostgreSQL 16 |
-| Containerization | Docker (compose.yaml in `/misc`) |
+| Database | PostgreSQL 16 (transactional) |
+| Containerization | Docker — all three services (frontend, backend, PostgreSQL) via `compose.yaml` in `/misc` |
+| Reverse proxy | Planned — Nginx, SSL termination at proxy level, requires signed certs |
+| Auth | flask-jwt-extended (JWT), bcrypt |
 | CORS | flask-cors |
 | Env management | python-dotenv |
 
-**Postgres is available two ways:**
-- Docker via `compose.yaml` (preferred for dev)
-- Local install available as fallback
+**Scalability strategy:** Vertical only (increase instance spec). No horizontal scaling.
+**Cost factors:** API usage, EBS storage, instance spec.
+**Postgres connection pooling:** SQLAlchemy pool settings in `config.py` must be tuned
+before production; avoid too many concurrent connections on a single instance.
 
 ---
 
@@ -57,8 +60,41 @@ a-mmc/
 │       └── utils/
 │           ├── __init__.py
 │           └── validators.py         ← require_fields() helper
-├── a-mmc_frontend/       ← React + Vite (scaffolded, not yet integrated)
+├── a-mmc_frontend/
 │   ├── src/
+│   │   ├── components/
+│   │   │   ├── ClinicianCard.jsx          ← full-width image/avatar, card info below
+│   │   │   ├── Navbar.jsx                 ← persistent, excluded from /login + /register
+│   │   │   └── shared/
+│   │   │       ├── AppointmentDrawer.jsx  ← slide-in detail drawer (right desktop, bottom mobile)
+│   │   │       └── SlotPicker.jsx         ← controlled date + slot selection component
+│   │   ├── context/
+│   │   │   └── AuthContext.jsx       ← user, token, setUser, setToken, logout()
+│   │   ├── data/
+│   │   │   ├── mockAppointments.js   ← 4 appointments, one per status
+│   │   │   ├── mockClinicians.js     ← 3 clinicians, includes gender field
+│   │   │   └── triageLogic.js        ← ⚠️ PLACEHOLDER — pending domain expert review
+│   │   ├── lib/
+│   │   │   └── utils.js              ← cn() helper
+│   │   ├── pages/
+│   │   │   ├── public/
+│   │   │   │   ├── Home.jsx              ← legacy browse page, kept but no longer on / route
+│   │   │   │   ├── FindDoctor.jsx        ← /find — aware vs unaware entry point
+│   │   │   │   ├── GuidedSearch.jsx      ← /find/triage — 3-step unaware triage flow
+│   │   │   │   ├── Doctors.jsx           ← /doctors — full directory + collapsible filter panel
+│   │   │   │   ├── ClinicianProfile.jsx  ← /clinician/:id
+│   │   │   │   ├── Login.jsx             ← /login, ?redirect= chain
+│   │   │   │   └── Register.jsx          ← /register, 3-step, ?redirect= chain
+│   │   │   └── dashboard/
+│   │   │       ├── PatientDashboard.jsx      ← /dashboard
+│   │   │       ├── PatientAppointments.jsx   ← /dashboard/appointments
+│   │   │       ├── ClinicianDashboard.jsx    ← /clinician-dashboard [STUB]
+│   │   │       └── UpdateProfile.jsx         ← /dashboard/profile [STUB]
+│   │   ├── services/
+│   │   │   └── api.js                ← axios instance, base URL from VITE_API_URL
+│   │   ├── App.jsx                   ← BrowserRouter, Layout, all routes
+│   │   ├── main.jsx                  ← wraps app in AuthProvider
+│   │   └── index.css                 ← Tailwind v4 + @theme brand tokens
 │   ├── public/
 │   └── vite.config.js
 └── misc/
@@ -68,9 +104,47 @@ a-mmc/
 
 ---
 
+## Routing
+| Path | Component | Auth required |
+|---|---|---|
+| / | Redirects to /find | No |
+| /find | FindDoctor.jsx | No |
+| /find/triage | GuidedSearch.jsx | No |
+| /doctors | Doctors.jsx | No |
+| /clinician/:id | ClinicianProfile.jsx | No (book CTA gates at /login) |
+| /login | Login.jsx | No |
+| /register | Register.jsx | No |
+| /dashboard | PatientDashboard.jsx | Yes → /login?redirect=/dashboard |
+| /dashboard/appointments | PatientAppointments.jsx | Yes |
+| /dashboard/profile | UpdateProfile.jsx | Yes [STUB] |
+| /clinician-dashboard | ClinicianDashboard.jsx | Yes [STUB] |
+| /staff/login | — | Not yet built |
+
+**?redirect= chain:** Unauthenticated patient hitting a gated page →
+`/login?redirect=X` → `/register?redirect=X` → back to X after auth.
+
+---
+
+## Brand tokens (src/index.css)
+```css
+@theme {
+  --color-primary: #1D409C;
+  --color-primary-light: #8EA0CE;
+  --color-accent: #CE1117;
+  --color-dark: #303030;
+  --color-white: #FFFFFF;
+}
+```
+Use via Tailwind: `bg-[var(--color-primary)]`, `text-[var(--color-accent)]`, etc.
+No arbitrary hex colors anywhere in the frontend.
+
+---
+
 ## Database schema
-PostgreSQL. All status/type fields use VARCHAR (not enums) for flexibility.
+PostgreSQL 16. All status/type fields use VARCHAR (not enums) for flexibility.
 Migrations managed by Flask-Migrate (Alembic under the hood).
+DB is transactional — commit/rollback boundaries must be deliberate, especially
+for multi-table operations (e.g. booking + auto-block, reschedule slot swap).
 
 ### Tables
 
@@ -140,6 +214,7 @@ do not overlap. Secretary or clinician can accept or request reschedule.
 - `payment_type` (varchar, free text)
 - `status` (varchar: "pending", "accepted", "reschedule_requested", "rejected", "cancelled")
 - `reschedule_reason` (text, nullable)
+- `cancellation_reason` (text, nullable)
 - `created_at`, `updated_at` (timestamp)
 
 ---
@@ -187,6 +262,11 @@ cancelled → (terminal)
 - C/S confirms by supplying `new_slot_id` when moving to `accepted`; new slot must be `available` and belong to the same clinician
 - Old slot is **never touched** on reschedule — it may have other patients
 
+### Patient overlap check (not yet implemented)
+- Overlap test: `NOT (A.end <= B.start OR B.end <= A.start)` — touching boundaries are allowed
+- Active statuses checked: `pending | accepted | reschedule_requested`
+- Needs: `app/services/appointment_service.py` with `has_overlap(patient_id, candidate_slot, exclude_appointment_id=None)`
+- Call sites: `POST /api/appointments/` and reschedule-confirm branch of `PATCH /api/appointments/<id>`
 
 ---
 
@@ -213,6 +293,8 @@ Patients can browse clinicians without an account but must register to book.
 ---
 
 ## Where things stand
+
+### Backend
 - ✅ Flask backend fully scaffolded (app factory, config, models, routes, services, utils)
 - ✅ All 8 schema tables implemented as SQLAlchemy models
 - ✅ All 5 domain route blueprints scaffolded with full CRUD
@@ -221,20 +303,55 @@ Patients can browse clinicians without an account but must register to book.
 - ✅ 60-day rolling slot generation on schedule save (`timeslot_service.generate_slots`)
 - ✅ `regenerate_slots_for_schedule_change()` stub documented and ready to implement
 - ✅ `.env.example` template in place (includes `JWT_SECRET_KEY`)
-- ⏳ Auth endpoints not yet implemented — stubs return 501 with documented contracts (see `auth_routes.py`)
-- ⏳ Patient overlap check not yet implemented — see design notes below
-- ⏳ Schedule change handler (`regenerate_slots_for_schedule_change`) not yet implemented
+- ⏳ Auth endpoints not yet implemented — stubs return 501 (see `auth_routes.py` docstrings)
+- ⏳ Patient overlap check not yet implemented — design plan documented above
+- ⏳ `regenerate_slots_for_schedule_change()` not yet implemented — stub + docstring exists
 - ⏳ First migration not yet run — Postgres not yet touched (with collaborators)
-- ⏳ Frontend not yet integrated with backend
 
-### Next steps (priority order)
+### Frontend
+- ✅ 5a: React + Vite shell, Tailwind v4, shadcn, routing, AuthContext stub
+- ✅ 5b: Home.jsx — legacy clinician browse (no longer on / route)
+- ✅ 5c: ClinicianProfile.jsx — schedule, HMOs, info, auth-aware Book CTA
+- ✅ 5d: Login.jsx, Register.jsx (3-step), ?redirect= chain complete
+- ✅ 5e: BookAppointment.jsx — 3-step booking, SlotPicker.jsx extracted as shared component
+- ✅ 5f: PatientDashboard.jsx, PatientAppointments.jsx, Navbar.jsx, AppointmentDrawer.jsx
+- ✅ 5f-patch: Dashboard overhaul — DASHBOARD home with CTA buttons + pending table,
+      Appointments page with date filter + pagination + reschedule modal using SlotPicker
+- ✅ 5f-patch-2: AppointmentDrawer — slide-in detail drawer replacing alert(),
+      consolidates Cancel + Request Reschedule actions
+- ✅ 5g: FindDoctor.jsx (/find), GuidedSearch.jsx (/find/triage), Doctors.jsx (/doctors),
+      triageLogic.js (⚠️ placeholder — posted for domain expert review),
+      ClinicianCard.jsx updated with full-width image/avatar,
+      mockClinicians.js updated with gender field
+- ✅ 5g-patch: / redirects to /find, Doctors.jsx filter panel collapsed into
+      search-first bar with expandable filters + active filter count badge
+
+### Known frontend debt
+- window.confirm() dialogs are placeholders throughout (cancel, reschedule)
+- Cancellation/reschedule time gates not yet enforced on frontend
+  (rules: >48hr free, 24-48hr warning, <24hr patient blocked, <24hr C/S must use reschedule flow)
+- triageLogic.js routing logic pending domain expert validation before any real deployment
+- Home.jsx kept but unused — can be deleted once confirmed no longer needed
+- AuthContext is mock only — no real JWT handling yet
+
+---
+
+## Next steps (priority order)
+
+### Immediate — C/S frontend (Mission 6 series)
+- 6a: C/S Login — `/staff/login`, separate role, same ?redirect= pattern
+- 6b: C/S Appointment Inbox — paginated list, accept / request reschedule actions
+- 6c: Clinician Profile Manager — edit profile fields, upload profile picture
+- 6d: Schedule Manager — weekly schedule editor, triggers slot regeneration
+
+### Backend (once DB is up with collaborators)
 1. Copy `.env.example` → `.env`; fill in DB credentials + `JWT_SECRET_KEY`
-2. Run `flask db init && flask db migrate -m "initial schema" && flask db upgrade`
-3. Smoke-test existing routes against a live DB
-4. **Implement auth** — login endpoints for all three roles (see `auth_routes.py` docstrings for full contract)
-5. **Implement patient overlap check** — create `app/services/appointment_service.py` with `has_overlap()`; wire into `POST /api/appointments/` and the reschedule-confirm branch of `PATCH /api/appointments/<id>`
-6. **Implement `regenerate_slots_for_schedule_change()`** before the schedule-edit PATCH endpoint ships
-7. Begin frontend integration
+2. `flask db init && flask db migrate -m "initial schema" && flask db upgrade`
+3. Smoke-test all routes against live DB
+4. Implement auth login endpoints for all three roles (see `auth_routes.py` docstrings)
+5. Implement patient overlap check (`appointment_service.py`)
+6. Implement `regenerate_slots_for_schedule_change()` before schedule-edit route ships
+7. Begin frontend → backend integration (replace mock data with real API calls via `api.js`)
 
 ---
 
@@ -245,37 +362,8 @@ Patients can browse clinicians without an account but must register to book.
 - Routes in `app/routes/`, one blueprint per domain entity
 - Services in `app/services/`, pure logic functions (no route handling)
 - All secrets and DB credentials via `.env` (never hardcoded)
-- 24hr time throughout (TIME columns, API responses, frontend display)
-
----
-
-## Frontend state (current)
-
-### Completed missions
-- 5a: React + Vite shell, Tailwind v4, shadcn, routing, AuthContext stub
-- 5b: Home.jsx — clinician browse, search/filter, ClinicianCard.jsx,
-      mockClinicians.js
-- 5c: ClinicianProfile.jsx — schedule table, HMOs, info, Book CTA,
-      useParams :id coercion fix
-- 5d: Login.jsx, Register.jsx (3-step), AuthContext mock login/logout,
-      ?redirect= chain complete across login + register
-- 5e: BookAppointment.jsx — 3-step, date picker, availability chips,
-      slot generation, mock submit with bookingSuccess flag
-- 5f: PatientDashboard.jsx, Navbar.jsx, mockAppointments.js,
-      Layout wrapper in App.jsx
-
-### Known frontend debt
-- Reschedule action needs a modal with reason input field
-- Cancellation/reschedule time gates not yet enforced on frontend
-  (rules: >48hr free, 24-48hr warning, <24hr patient blocked,
-  <24hr C/S must use reschedule flow)
-- window.confirm() dialogs are placeholders throughout
-
-### Next missions
-- 5g: GuidedSearch.jsx — symptom-first tap-only flow,
-      Home.jsx split into two entry points (aware / unaware),
-      triageLogic.js reviewed by domain expert
-- 6a: C/S Login (/staff/login, separate role)
-- 6b: C/S Appointment Inbox
-- 6c: Clinician Profile Manager
-- 6d: Schedule Manager
+- 24hr time throughout (TIME columns, API responses, frontend display) — no AM/PM anywhere
+- Desktop-first layout that degrades gracefully to mobile
+- Touch targets minimum 44px, base font minimum 16px — primary demographic is 60+ users
+- Use brand tokens only — no arbitrary hex colors in frontend code
+- All React hooks before any conditional returns (Rules of Hooks)
