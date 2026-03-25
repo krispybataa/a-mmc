@@ -1,0 +1,91 @@
+version: "3.9"
+
+services:
+  a-mmc-frontend:
+    image: "${FRONTEND_IMAGE}"
+    container_name: "${FRONTEND_CONTAINER}"
+    networks:
+      - a-mmc-network
+
+  a-mmc-backend:
+    image: "${BACKEND_IMAGE}"
+    container_name: "${BACKEND_CONTAINER}"
+    networks:
+      - a-mmc-network
+    depends_on:
+      - "${POSTGRES_CONTAINER}"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${BACKEND_PORT}/health || exit 1"]
+      interval: ${CONTAINER_INTERVAL}
+      timeout: ${CONTAINER_TIMEOUT}
+      retries: ${CONTAINER_RETRIES}
+      start_period: 20s
+
+  a-mmc-nginx:
+    image: "${NGINX_IMAGE}"
+    container_name: "${NGINX_CONTAINER}"
+    ports:
+      - "${NGINX_HTTP_PORT}:${NGINX_HTTP_PORT}"
+      - "${NGINX_HTTPS_PORT}:${NGINX_HTTPS_PORT}"
+    networks:
+      - a-mmc-network
+    volumes:
+      # SSL certificates
+      - "${NGINX_SSL_VOLUME}:${NGINX_SSL_DIR}:ro"
+
+      # nginx.conf
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - "${FRONTEND_CONTAINER}"
+      - "${BACKEND_CONTAINER}"
+
+  a-mmc-postgres:
+    image: "${POSTGRES_IMAGE}"
+    container_name: "${POSTGRES_CONTAINER}"
+    networks:
+      - a-mmc-network
+    volumes:
+      - "${POSTGRES_DATA_VOLUME}:/var/lib/postgresql/data"
+    healthcheck:
+      test: ["CMD-SHELL", "psql -U ${DB_USER} -d ${DB_NAME} -c 'SELECT 1' || exit 1"]
+      interval: ${CONTAINER_INTERVAL}
+      timeout: ${CONTAINER_TIMEOUT}
+      retries: ${CONTAINER_RETRIES}
+      start_period: 20s
+
+  #MINIO ALT
+  a-mmc-minio-test:
+    image: "${MINIO_IMAGE}"
+    container_name: "${MINIO_CONTAINER}"
+    ports:
+      - "${MINIO_PORT}:${MINIO_PORT}"
+      - "${MINIO_API_PORT}:${MINIO_API_PORT}"
+    secrets:
+      - minio-root-user
+      - minio-root-password
+    environment:
+      MINIO_ROOT_USER_FILE: /run/secrets/minio-root-user
+      MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio-root-password
+    command: server /data --console-address ":9001"
+    networks:
+      - a-mmc-network
+    volumes:
+      - a-mmc-minio-data:/data
+    restart: unless-stopped
+
+networks:
+  a-mmc-network:
+    driver: bridge
+
+volumes:
+  a-mmc-postgres-data:
+      driver: local
+  a-mmc-minio-data:
+      driver: local
+
+secrets:
+  #MINIO ALT
+  minio-root-user:
+    file: ./secrets/minio-root-user.txt
+  minio-root-password:
+    file: ./secrets/minio-root-password.txt
