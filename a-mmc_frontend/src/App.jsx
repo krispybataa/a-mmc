@@ -1,35 +1,48 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import Navbar from './components/Navbar'
+import Home from './pages/public/Home'
+import ClinicianProfile from './pages/public/ClinicianProfile'
+import Login from './pages/public/Login'
+import Register from './pages/public/Register'
+import BookAppointment from './pages/public/BookAppointment'
+import PatientDashboard from './pages/dashboard/PatientDashboard'
+import PatientAppointments from './pages/dashboard/PatientAppointments'
+import ClinicianDashboard from './pages/dashboard/ClinicianDashboard'
+import UpdateProfile from './pages/dashboard/UpdateProfile'
+import FindDoctor from './pages/public/FindDoctor'
+import GuidedSearch from './pages/public/GuidedSearch'
+import Doctors from './pages/public/Doctors'
 
-function App() {
-  const [count, setCount] = useState(0)
+// Routes where the navbar should be hidden
+const NO_NAV = ['/login', '/register']
 
+function Layout() {
+  const { pathname } = useLocation()
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      {!NO_NAV.includes(pathname) && <Navbar />}
+      <Routes>
+        <Route path="/" element={<Navigate to="/find" replace />} />
+        <Route path="/clinician/:id" element={<ClinicianProfile />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/book/:id" element={<BookAppointment />} />
+        <Route path="/dashboard" element={<PatientDashboard />} />
+        <Route path="/dashboard/appointments" element={<PatientAppointments />} />
+        <Route path="/clinician-dashboard" element={<ClinicianDashboard />} />
+        <Route path="/dashboard/profile" element={<UpdateProfile />} />
+        <Route path="/find" element={<FindDoctor />} />
+        <Route path="/find/triage" element={<GuidedSearch />} />
+        <Route path="/doctors" element={<Doctors />} />
+      </Routes>
     </>
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Layout />
+    </BrowserRouter>
+  )
+}

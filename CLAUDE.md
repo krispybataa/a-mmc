@@ -246,3 +246,36 @@ Patients can browse clinicians without an account but must register to book.
 - Services in `app/services/`, pure logic functions (no route handling)
 - All secrets and DB credentials via `.env` (never hardcoded)
 - 24hr time throughout (TIME columns, API responses, frontend display)
+
+---
+
+## Frontend state (current)
+
+### Completed missions
+- 5a: React + Vite shell, Tailwind v4, shadcn, routing, AuthContext stub
+- 5b: Home.jsx — clinician browse, search/filter, ClinicianCard.jsx,
+      mockClinicians.js
+- 5c: ClinicianProfile.jsx — schedule table, HMOs, info, Book CTA,
+      useParams :id coercion fix
+- 5d: Login.jsx, Register.jsx (3-step), AuthContext mock login/logout,
+      ?redirect= chain complete across login + register
+- 5e: BookAppointment.jsx — 3-step, date picker, availability chips,
+      slot generation, mock submit with bookingSuccess flag
+- 5f: PatientDashboard.jsx, Navbar.jsx, mockAppointments.js,
+      Layout wrapper in App.jsx
+
+### Known frontend debt
+- Reschedule action needs a modal with reason input field
+- Cancellation/reschedule time gates not yet enforced on frontend
+  (rules: >48hr free, 24-48hr warning, <24hr patient blocked,
+  <24hr C/S must use reschedule flow)
+- window.confirm() dialogs are placeholders throughout
+
+### Next missions
+- 5g: GuidedSearch.jsx — symptom-first tap-only flow,
+      Home.jsx split into two entry points (aware / unaware),
+      triageLogic.js reviewed by domain expert
+- 6a: C/S Login (/staff/login, separate role)
+- 6b: C/S Appointment Inbox
+- 6c: Clinician Profile Manager
+- 6d: Schedule Manager
