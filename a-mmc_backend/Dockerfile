@@ -1,4 +1,15 @@
-FROM python:3.12-slim
+FROM python:3.11-alpine
+
+# Prevent Python from writing pyc files & enable stdout logging
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+RUN apk add --no-cache \
+    curl \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    postgresql-dev
 
 WORKDIR /app
 
@@ -7,6 +18,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 8000
-
-CMD ["python", "hello.py"]
+CMD ["python", "app.py"]
