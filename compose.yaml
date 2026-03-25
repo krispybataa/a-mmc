@@ -1,6 +1,13 @@
 version: "3.9"
 
 services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: mydb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
 
   a-mmc-frontend:
     image: "${FRONTEND_IMAGE}"
@@ -20,9 +27,33 @@ services:
     image: "${NGINX_IMAGE}"
     container_name: "${NGINX_CONTAINER}"
     ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
       - "${NGINX_HTTP_PORT}:${NGINX_HTTP_PORT}"
       - "${NGINX_HTTPS_PORT}:${NGINX_HTTPS_PORT}"
     networks:
+      - sample_network
+
+  backend:
+    build: 
+      context: ./a-mmc_backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+    networks:
+      - sample_network
+
+  frontend:
+    build:
+      context: ./a-mmc_frontend
+      dockerfile: dockerfile
+    ports:
+      - "80:80"
       - a-mmc-network
     volumes:
       # SSL certificates
@@ -48,9 +79,13 @@ services:
     #   retries: ${CONTAINER_RETRIES}
     #   start_period: 20s
 
+volumes:
+  postgres_data:
+
 networks:
   a-mmc-network:
     driver: bridge
+
 
 volumes:
   a-mmc-nginx-ssl:
