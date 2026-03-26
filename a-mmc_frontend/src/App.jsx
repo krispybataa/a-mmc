@@ -12,9 +12,10 @@ import UpdateProfile from './pages/dashboard/UpdateProfile'
 import FindDoctor from './pages/public/FindDoctor'
 import GuidedSearch from './pages/public/GuidedSearch'
 import Doctors from './pages/public/Doctors'
+import StaffLogin from './pages/staff/StaffLogin'
 
 // Routes where the navbar should be hidden
-const NO_NAV = ['/login', '/register']
+const NO_NAV = ['/login', '/register', '/staff/login']
 
 function Layout() {
   const { pathname } = useLocation()
@@ -34,6 +35,7 @@ function Layout() {
         <Route path="/find" element={<FindDoctor />} />
         <Route path="/find/triage" element={<GuidedSearch />} />
         <Route path="/doctors" element={<Doctors />} />
+        <Route path="/staff/login" element={<StaffLogin />} />
       </Routes>
     </>
   )

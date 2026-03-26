@@ -11,6 +11,13 @@ billing, diagnostics, or post-consultation records.
 
 ---
 
+## Mission nomenclature
+- Backend missions: `B<number>-<letter>` (e.g. B1-A, B1-B, B1-C...)
+- Frontend missions: `F<number>-<letter>` (e.g. F6-A, F6-B, F6-C...)
+- Patch missions append `-patch` to the parent (e.g. B1-B-patch, B1-D-patch)
+
+---
+
 ## Stack
 | Layer | Technology |
 |---|---|
@@ -20,6 +27,7 @@ billing, diagnostics, or post-consultation records.
 | Containerization | Docker — all three services (frontend, backend, PostgreSQL) via `compose.yaml` in `/misc` |
 | Reverse proxy | Planned — Nginx, SSL termination at proxy level, requires signed certs |
 | Auth | flask-jwt-extended (JWT), bcrypt |
+| Email | stdlib smtplib + email.mime — config-driven, Mailtrap for dev |
 | CORS | flask-cors |
 | Env management | python-dotenv |
 
@@ -48,15 +56,17 @@ a-mmc/
 │       │   ├── patient.py
 │       │   └── appointment.py
 │       ├── routes/
-│       │   ├── auth_routes.py        ← [STUB] login/logout/me endpoints
-│       │   ├── clinician_routes.py
+│       │   ├── auth_routes.py        ← login/logout/me/refresh — all 3 roles implemented
+│       │   ├── clinician_routes.py   ← includes PATCH schedules/<id> (schedule edit)
 │       │   ├── secretary_routes.py
 │       │   ├── patient_routes.py
 │       │   ├── timeslot_routes.py
-│       │   └── appointment_routes.py
+│       │   └── appointment_routes.py ← full lifecycle, transaction boundaries verified
 │       ├── services/
-│       │   ├── auth_service.py       ← hash_password / verify_password (bcrypt)
-│       │   └── timeslot_service.py   ← generate_slots + regenerate stub
+│       │   ├── auth_service.py       ← hash_password / verify_password + get_*_by_email + build_identity
+│       │   ├── appointment_service.py ← has_overlap()
+│       │   ├── email_service.py      ← Mailtrap scaffold, 5 notification functions
+│       │   └── timeslot_service.py   ← generate_slots + regenerate_slots_for_schedule_change
 │       └── utils/
 │           ├── __init__.py
 │           └── validators.py         ← require_fields() helper
@@ -64,12 +74,12 @@ a-mmc/
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── ClinicianCard.jsx          ← full-width image/avatar, card info below
-│   │   │   ├── Navbar.jsx                 ← persistent, excluded from /login + /register
+│   │   │   ├── Navbar.jsx                 ← persistent, excluded from /login, /register, /staff/login
 │   │   │   └── shared/
 │   │   │       ├── AppointmentDrawer.jsx  ← slide-in detail drawer (right desktop, bottom mobile)
 │   │   │       └── SlotPicker.jsx         ← controlled date + slot selection component
 │   │   ├── context/
-│   │   │   └── AuthContext.jsx       ← user, token, setUser, setToken, logout()
+│   │   │   └── AuthContext.jsx       ← real JWT, authLoading, silent refresh on mount, role-aware logout
 │   │   ├── data/
 │   │   │   ├── mockAppointments.js   ← 4 appointments, one per status
 │   │   │   ├── mockClinicians.js     ← 3 clinicians, includes gender field
@@ -85,13 +95,15 @@ a-mmc/
 │   │   │   │   ├── ClinicianProfile.jsx  ← /clinician/:id
 │   │   │   │   ├── Login.jsx             ← /login, ?redirect= chain
 │   │   │   │   └── Register.jsx          ← /register, 3-step, ?redirect= chain
+│   │   │   ├── staff/
+│   │   │   │   └── StaffLogin.jsx        ← /staff/login, role selector, ?redirect= chain
 │   │   │   └── dashboard/
 │   │   │       ├── PatientDashboard.jsx      ← /dashboard
 │   │   │       ├── PatientAppointments.jsx   ← /dashboard/appointments
 │   │   │       ├── ClinicianDashboard.jsx    ← /clinician-dashboard [STUB]
 │   │   │       └── UpdateProfile.jsx         ← /dashboard/profile [STUB]
 │   │   ├── services/
-│   │   │   └── api.js                ← axios instance, base URL from VITE_API_URL
+│   │   │   └── api.js                ← axios instance, configureApiAuth, request + 401 retry interceptors
 │   │   ├── App.jsx                   ← BrowserRouter, Layout, all routes
 │   │   ├── main.jsx                  ← wraps app in AuthProvider
 │   │   └── index.css                 ← Tailwind v4 + @theme brand tokens
@@ -114,14 +126,16 @@ a-mmc/
 | /clinician/:id | ClinicianProfile.jsx | No (book CTA gates at /login) |
 | /login | Login.jsx | No |
 | /register | Register.jsx | No |
+| /staff/login | StaffLogin.jsx | No |
 | /dashboard | PatientDashboard.jsx | Yes → /login?redirect=/dashboard |
 | /dashboard/appointments | PatientAppointments.jsx | Yes |
 | /dashboard/profile | UpdateProfile.jsx | Yes [STUB] |
 | /clinician-dashboard | ClinicianDashboard.jsx | Yes [STUB] |
-| /staff/login | — | Not yet built |
 
-**?redirect= chain:** Unauthenticated patient hitting a gated page →
+**?redirect= chain (patient):** Unauthenticated patient hitting a gated page →
 `/login?redirect=X` → `/register?redirect=X` → back to X after auth.
+
+**?redirect= chain (staff):** Same pattern via `/staff/login?redirect=X`.
 
 ---
 
@@ -227,13 +241,31 @@ do not overlap. Secretary or clinician can accept or request reschedule.
 - **No integration** with external MMC systems (iHIMS, EMR) — operates as a standalone system
 - **No billing, diagnostics, or post-consultation data** — strictly pre-consultation coordination
 
+### Auth token strategy
+- Access token: 60 minutes, returned in response body as `{ "access_token": "..." }`
+- Refresh token: 7 days, set as `httpOnly` cookie named `refresh_token`
+- No blocklist — logout clears cookie client-side only. `# TODO(security)` marked for production hardening
+- Cookie settings: `httpOnly=True`, `secure=True` (False in DevelopmentConfig), `samesite="Lax"`
+- Frontend stores access token in memory only (NOT localStorage — XSS risk)
+- Silent refresh on AuthContext mount via `POST /api/auth/refresh`
+- api.js 401 interceptor retries once with refreshed token; guards against infinite loop on /refresh itself
+
+### Email strategy
+- Provider: Mailtrap for dev/testing (no domain required), SendGrid for production
+- All MAIL_* config is env-sourced — switching provider is a `.env` change only, zero code changes
+- MAIL_FROM placeholder: `noreply@alagang-mmc.local` — update when domain is settled
+- Failed email never affects DB transaction — all send calls are post-commit, wrapped in try/except
+- `send_noshow_confirmation_prompt()` scaffolded but not wired — requires scheduler
+  (`# TODO(scheduler)` marked in appointment_routes.py)
+
 ### Schedule change handling (timeslot invariant)
 - `generate_slots()` is idempotent — it skips existing `(clinician, date, start_time)` keys and never deletes
-- If a `ClinicianSchedule` row is edited after slots have been generated, future slots reflecting the **old** schedule become orphaned
-- `regenerate_slots_for_schedule_change()` in `timeslot_service.py` (stub, not yet implemented) handles this:
+- `generate_slots()` accepts `commit=False` param for parent-transaction participation
+- If a `ClinicianSchedule` row is edited, `regenerate_slots_for_schedule_change()` handles cleanup:
   - **Safe orphans** (available, zero active appointments) → deleted automatically
-  - **Stuck slots** (have active appointments) → returned to C/S for manual action (cancel or reschedule each appointment before the slot can be removed)
-- The schedule-edit route must call this function and surface the stuck list to the C/S user
+  - **Stuck slots** (have active appointments) → returned to C/S for manual action
+- Schedule-edit PATCH wraps schedule update + regeneration in a single atomic transaction
+- Stuck slot list is surfaced in the response — does not block the save
 
 ### Slot model invariants (DO NOT CHANGE without design review)
 - A slot (`CLINICIAN_TIMESLOT`) may hold **multiple appointments** — it is NOT 1:1 with a patient
@@ -262,21 +294,27 @@ cancelled → (terminal)
 - C/S confirms by supplying `new_slot_id` when moving to `accepted`; new slot must be `available` and belong to the same clinician
 - Old slot is **never touched** on reschedule — it may have other patients
 
-### Patient overlap check (not yet implemented)
+### Patient overlap check
 - Overlap test: `NOT (A.end <= B.start OR B.end <= A.start)` — touching boundaries are allowed
 - Active statuses checked: `pending | accepted | reschedule_requested`
-- Needs: `app/services/appointment_service.py` with `has_overlap(patient_id, candidate_slot, exclude_appointment_id=None)`
-- Call sites: `POST /api/appointments/` and reschedule-confirm branch of `PATCH /api/appointments/<id>`
+- Implemented in `app/services/appointment_service.py` — `has_overlap(patient_id, candidate_slot, exclude_appointment_id=None)`
+- Wired into: `POST /api/appointments/` and reschedule-confirm branch of `PATCH /api/appointments/<id>`
+
+### Transaction boundaries
+All multi-table write operations are wrapped in try/except with db.session.rollback() on failure.
+Verified routes:
+- `POST /api/appointments/` — booking + potential auto-block
+- `PATCH /api/appointments/<id>` — all status transition branches including flush + auto-block
+- `DELETE /api/appointments/<id>` — cancellation
+- `PATCH /api/clinicians/<id>/schedules/<schedule_id>` — schedule update + slot regeneration
 
 ---
 
 ## Auth layer
-`flask-jwt-extended` is wired into the app factory. Three login endpoints exist as stubs
-at `/api/auth/{patient,clinician,secretary}/login`. The skeleton is intentionally thin:
-- `app/services/auth_service.py` — `hash_password()` / `verify_password()` using bcrypt
-- `app/routes/auth_routes.py` — route stubs that return 501 with documented contracts
-- All security decisions (token lifetime, rotation, blocklist, rate-limiting, brute-force
-  protection) are marked `# TODO(security)` and left to the security-owning collaborator
+`flask-jwt-extended` is fully wired. All three login endpoints are implemented.
+- `app/services/auth_service.py` — `hash_password()`, `verify_password()`, `get_*_by_email()`, `build_identity()`
+- `app/routes/auth_routes.py` — `/patient/login`, `/clinician/login`, `/secretary/login`, `/refresh`, `/logout`, `/me`
+- All security hardening decisions marked `# TODO(security)`: blocklist, CSRF protection, rate limiting, brute-force protection
 
 ---
 
@@ -299,59 +337,49 @@ Patients can browse clinicians without an account but must register to book.
 - ✅ All 8 schema tables implemented as SQLAlchemy models
 - ✅ All 5 domain route blueprints scaffolded with full CRUD
 - ✅ Appointment lifecycle, slot model invariants, and cancellation time gates enforced
-- ✅ Auth layer skeleton: `auth_service.py` + `auth_routes.py` wired via `JWTManager`
+- ✅ Auth layer fully implemented — all 3 roles, access + refresh tokens, httpOnly cookie
 - ✅ 60-day rolling slot generation on schedule save (`timeslot_service.generate_slots`)
-- ✅ `regenerate_slots_for_schedule_change()` stub documented and ready to implement
-- ✅ `.env.example` template in place (includes `JWT_SECRET_KEY`)
-- ⏳ Auth endpoints not yet implemented — stubs return 501 (see `auth_routes.py` docstrings)
-- ⏳ Patient overlap check not yet implemented — design plan documented above
-- ⏳ `regenerate_slots_for_schedule_change()` not yet implemented — stub + docstring exists
+- ✅ `regenerate_slots_for_schedule_change()` fully implemented and wired into schedule-edit route
+- ✅ Patient overlap check implemented (`appointment_service.has_overlap`) and wired
+- ✅ Email service scaffolded (Mailtrap) — 5 notification functions wired post-commit
+- ✅ Transaction boundaries verified on all multi-table write routes
+- ✅ Unit test scaffolds in place: `tests/test_appointment_service.py`, `tests/test_timeslot_service.py`, `tests/test_email_service.py`
+- ✅ `.env.example` template in place (JWT, DB, MAIL_* vars)
 - ⏳ First migration not yet run — Postgres not yet touched (with collaborators)
+- ⏳ No smoke-testing against live DB yet (B2 mission — pinned)
 
 ### Frontend
-- ✅ 5a: React + Vite shell, Tailwind v4, shadcn, routing, AuthContext stub
-- ✅ 5b: Home.jsx — legacy clinician browse (no longer on / route)
-- ✅ 5c: ClinicianProfile.jsx — schedule, HMOs, info, auth-aware Book CTA
-- ✅ 5d: Login.jsx, Register.jsx (3-step), ?redirect= chain complete
-- ✅ 5e: BookAppointment.jsx — 3-step booking, SlotPicker.jsx extracted as shared component
-- ✅ 5f: PatientDashboard.jsx, PatientAppointments.jsx, Navbar.jsx, AppointmentDrawer.jsx
-- ✅ 5f-patch: Dashboard overhaul — DASHBOARD home with CTA buttons + pending table,
-      Appointments page with date filter + pagination + reschedule modal using SlotPicker
-- ✅ 5f-patch-2: AppointmentDrawer — slide-in detail drawer replacing alert(),
-      consolidates Cancel + Request Reschedule actions
-- ✅ 5g: FindDoctor.jsx (/find), GuidedSearch.jsx (/find/triage), Doctors.jsx (/doctors),
-      triageLogic.js (⚠️ placeholder — posted for domain expert review),
-      ClinicianCard.jsx updated with full-width image/avatar,
-      mockClinicians.js updated with gender field
-- ✅ 5g-patch: / redirects to /find, Doctors.jsx filter panel collapsed into
-      search-first bar with expandable filters + active filter count badge
+- ✅ F5-A through F5-G-patch: full patient-facing frontend complete
+- ✅ F6-A: StaffLogin.jsx (/staff/login), AuthContext real JWT + silent refresh,
+      api.js request + 401 retry interceptors, configureApiAuth token bridge
+- ⏳ F6-B: C/S Appointment Inbox
+- ⏳ F6-C: Clinician Profile Manager
+- ⏳ F6-D: Schedule Manager
 
-### Known frontend debt
-- window.confirm() dialogs are placeholders throughout (cancel, reschedule)
+### Known debt
+- `window.confirm()` dialogs are placeholders throughout (cancel, reschedule flows)
 - Cancellation/reschedule time gates not yet enforced on frontend
-  (rules: >48hr free, 24-48hr warning, <24hr patient blocked, <24hr C/S must use reschedule flow)
-- triageLogic.js routing logic pending domain expert validation before any real deployment
-- Home.jsx kept but unused — can be deleted once confirmed no longer needed
-- AuthContext is mock only — no real JWT handling yet
+- `triageLogic.js` routing logic pending domain expert validation
+- `Home.jsx` kept but unused — can be deleted once confirmed no longer needed
+- `ClinicianDashboard.jsx` and `UpdateProfile.jsx` are stubs
+- `send_noshow_confirmation_prompt()` not wired — requires scheduler (`# TODO(scheduler)`)
+- `# TODO(security)` markers throughout auth: blocklist, CSRF, rate limiting, brute-force protection
 
 ---
 
 ## Next steps (priority order)
 
-### Immediate — C/S frontend (Mission 6 series)
-- 6a: C/S Login — `/staff/login`, separate role, same ?redirect= pattern
-- 6b: C/S Appointment Inbox — paginated list, accept / request reschedule actions
-- 6c: Clinician Profile Manager — edit profile fields, upload profile picture
-- 6d: Schedule Manager — weekly schedule editor, triggers slot regeneration
+### Immediate — C/S frontend
+- F6-B: C/S Appointment Inbox — paginated list, accept / request reschedule actions
+- F6-C: Clinician Profile Manager — edit profile fields, upload profile picture
+- F6-D: Schedule Manager — weekly schedule editor, triggers slot regeneration, surfaces stuck slots
 
-### Backend (once DB is up with collaborators)
-1. Copy `.env.example` → `.env`; fill in DB credentials + `JWT_SECRET_KEY`
+### Backend (once DB is up with collaborators) — B2
+1. Copy `.env.example` → `.env`; fill in DB credentials, `JWT_SECRET_KEY`, `MAIL_*`
 2. `flask db init && flask db migrate -m "initial schema" && flask db upgrade`
 3. Smoke-test all routes against live DB
-4. Implement auth login endpoints for all three roles (see `auth_routes.py` docstrings)
-5. Implement patient overlap check (`appointment_service.py`)
-6. Implement `regenerate_slots_for_schedule_change()` before schedule-edit route ships
-7. Begin frontend → backend integration (replace mock data with real API calls via `api.js`)
+4. Run full unit test suite (`pytest tests/`)
+5. Begin frontend → backend integration (replace mock data with real API calls via `api.js`)
 
 ---
 
@@ -361,9 +389,11 @@ Patients can browse clinicians without an account but must register to book.
 - Models in `app/models/`, one file per domain entity
 - Routes in `app/routes/`, one blueprint per domain entity
 - Services in `app/services/`, pure logic functions (no route handling)
+- Deferred imports inside service functions to avoid circular references
 - All secrets and DB credentials via `.env` (never hardcoded)
 - 24hr time throughout (TIME columns, API responses, frontend display) — no AM/PM anywhere
 - Desktop-first layout that degrades gracefully to mobile
 - Touch targets minimum 44px, base font minimum 16px — primary demographic is 60+ users
 - Use brand tokens only — no arbitrary hex colors in frontend code
 - All React hooks before any conditional returns (Rules of Hooks)
+- No localStorage or sessionStorage for tokens — memory only

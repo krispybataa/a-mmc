@@ -3,169 +3,167 @@ auth_routes.py
 --------------
 Authentication endpoints for all three user roles.
 
-STATUS: STUB — not yet implemented.
+Token strategy:
+  - Access token  — 60 min, returned in response body as { "access_token": "..." }
+  - Refresh token — 7 days, set as an httpOnly cookie named "refresh_token"
+  - Logout clears the cookie; the access token expires naturally (stateless)
 
-Each endpoint is intentionally wired to return a 501 response that documents
-its expected contract (inputs / outputs). This gives the collaborator a clear
-API surface to implement against without any hidden assumptions baked in.
-
-TODO(security) items visible throughout this file are the collaborator's
-responsibility:
-  - Choose and configure token lifetime / rotation strategy
-  - Implement a token blocklist if logout must be hard (stateful JWT)
-  - Add rate-limiting to /login endpoints (e.g. flask-limiter)
-  - Add brute-force protection (account lockout after N failed attempts)
-  - Ensure login_email comparison is case-insensitive and normalised
+TODO(security) items deferred for production hardening:
+  - Rate-limiting on /login endpoints (e.g. flask-limiter)
+  - Brute-force protection / account lockout after N failed attempts
+  - Server-side token blocklist (see /logout) for true access-token revocation
 """
 
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import (
+    jwt_required,
+    get_jwt_identity,
+    create_access_token,
+    create_refresh_token,
+    set_refresh_cookies,
+    unset_jwt_cookies,
+)
+
+from app.services.auth_service import (
+    verify_password,
+    get_patient_by_email,
+    get_clinician_by_email,
+    get_secretary_by_email,
+    build_identity,
+)
+from app.utils.validators import require_fields
 
 auth_bp = Blueprint("auth", __name__)
 
+_INVALID_CREDENTIALS = {"error": "Invalid credentials"}
+
 
 # ---------------------------------------------------------------------------
-# Helper — consistent "not yet implemented" stub response
+# Internal helper — shared login logic for all three roles
 # ---------------------------------------------------------------------------
-def _stub(expects: dict, returns_when_done: dict, note: str = "") -> tuple:
-    body = {
-        "status": "not_implemented",
-        "expects": expects,
-        "returns_when_done": returns_when_done,
-    }
-    if note:
-        body["note"] = note
-    return jsonify(body), 501
+
+def _login(get_by_email_fn, role: str):
+    """
+    Shared login flow used by all three role-specific login endpoints.
+
+    Validates required fields, looks up the user, verifies the password, and
+    returns an access token (body) + refresh token (httpOnly cookie).
+    """
+    data = request.get_json(silent=True) or {}
+
+    err = require_fields(data, "email", "password")
+    if err:
+        return err
+
+    user = get_by_email_fn(data["email"])
+
+    # Same 401 for "not found" and "wrong password" — no user enumeration
+    if user is None or not verify_password(data["password"], user.login_password_hash):
+        return jsonify(_INVALID_CREDENTIALS), 401
+
+    identity = build_identity(user, role)
+    access_token = create_access_token(
+        identity=identity,
+        additional_claims={"role": role},
+    )
+    refresh_token = create_refresh_token(
+        identity=identity,
+        additional_claims={"role": role},
+    )
+
+    response = jsonify({"access_token": access_token, "user": identity})
+    set_refresh_cookies(response, refresh_token)
+    return response, 200
 
 
 # ---------------------------------------------------------------------------
 # POST /api/auth/patient/login
 # ---------------------------------------------------------------------------
+
 @auth_bp.post("/patient/login")
 def patient_login():
-    """
-    Authenticate a patient and return an access token.
-
-    Expected body:
-        { "login_email": "string", "password": "string" }
-
-    Returns:
-        { "access_token": "string", "patient_id": int }
-
-    TODO(security):
-      1. Look up Patient by login_email (case-insensitive)
-      2. Call auth_service.verify_password(body["password"], patient.login_password_hash)
-      3. On success, create_access_token(identity=str(patient.patient_id),
-             additional_claims={"role": "patient"})
-      4. Return access_token in response body (and/or httpOnly cookie — your call)
-      5. On failure, return 401; do NOT reveal whether email or password was wrong
-    """
-    return _stub(
-        expects={"login_email": "string", "password": "string"},
-        returns_when_done={"access_token": "string", "patient_id": "int"},
-        note="See auth_service.verify_password and flask_jwt_extended.create_access_token",
-    )
+    # TODO(security): Add rate-limiting to prevent brute-force attacks
+    # TODO(security): Add account lockout after N consecutive failed attempts
+    return _login(get_patient_by_email, "patient")
 
 
 # ---------------------------------------------------------------------------
 # POST /api/auth/clinician/login
 # ---------------------------------------------------------------------------
+
 @auth_bp.post("/clinician/login")
 def clinician_login():
-    """
-    Authenticate a clinician and return an access token.
-
-    Expected body:
-        { "login_email": "string", "password": "string" }
-
-    Returns:
-        { "access_token": "string", "clinician_id": int }
-
-    TODO(security): Same pattern as patient_login. Role claim: "clinician".
-    """
-    return _stub(
-        expects={"login_email": "string", "password": "string"},
-        returns_when_done={"access_token": "string", "clinician_id": "int"},
-        note="Role claim should be 'clinician'. See patient_login docstring for full flow.",
-    )
+    # TODO(security): Add rate-limiting to prevent brute-force attacks
+    # TODO(security): Add account lockout after N consecutive failed attempts
+    return _login(get_clinician_by_email, "clinician")
 
 
 # ---------------------------------------------------------------------------
 # POST /api/auth/secretary/login
 # ---------------------------------------------------------------------------
+
 @auth_bp.post("/secretary/login")
 def secretary_login():
+    # TODO(security): Add rate-limiting to prevent brute-force attacks
+    # TODO(security): Add account lockout after N consecutive failed attempts
+    return _login(get_secretary_by_email, "secretary")
+
+
+# ---------------------------------------------------------------------------
+# POST /api/auth/refresh
+# ---------------------------------------------------------------------------
+
+@auth_bp.post("/refresh")
+@jwt_required(refresh=True)
+def refresh():
     """
-    Authenticate a secretary and return an access token.
+    Issue a new access token using the refresh token stored in the httpOnly cookie.
 
-    Expected body:
-        { "login_email": "string", "password": "string" }
-
-    Returns:
-        { "access_token": "string", "secretary_id": int }
-
-    TODO(security): Same pattern as patient_login. Role claim: "secretary".
+    The refresh token is read automatically by flask-jwt-extended from the
+    "refresh_token" cookie (JWT_TOKEN_LOCATION includes "cookies").
     """
-    return _stub(
-        expects={"login_email": "string", "password": "string"},
-        returns_when_done={"access_token": "string", "secretary_id": "int"},
-        note="Role claim should be 'secretary'. See patient_login docstring for full flow.",
+    identity = get_jwt_identity()
+    access_token = create_access_token(
+        identity=identity,
+        additional_claims={"role": identity["role"]},
     )
+    return jsonify({"access_token": access_token}), 200
 
 
 # ---------------------------------------------------------------------------
 # POST /api/auth/logout
 # ---------------------------------------------------------------------------
+
 @auth_bp.post("/logout")
 @jwt_required()
 def logout():
     """
-    Invalidate the current access token.
+    Clear the refresh token cookie.
 
-    TODO(security):
-      If you need stateful logout (token must be truly revoked, not just expired):
-        1. Add a TokenBlocklist model (jti: string, created_at: datetime)
-        2. In @jwt.token_in_blocklist_loader, check if jti is in the DB
-        3. On logout, add get_jwt()["jti"] to the blocklist
-      If stateless logout (client just discards the token) is acceptable, this
-      endpoint can simply return 200 and let the client handle it.
+    The access token is NOT revoked — it remains valid until it expires (60 min).
+
+    TODO(security): Implement a server-side token blocklist for production
+    hardening. On logout, add get_jwt()["jti"] to a blocklist (DB or Redis)
+    and check it in a @jwt.token_in_blocklist_loader callback. This gives true
+    revocation without waiting for the access token TTL to expire.
     """
-    return _stub(
-        expects={"Authorization": "Bearer <token> (header)"},
-        returns_when_done={"message": "logged out"},
-        note=(
-            "TODO(security): Implement token blocklist for true revocation, "
-            "or document that logout is client-side only."
-        ),
-    )
+    response = jsonify({"message": "Logged out"})
+    unset_jwt_cookies(response)
+    return response, 200
 
 
 # ---------------------------------------------------------------------------
 # GET /api/auth/me
 # ---------------------------------------------------------------------------
+
 @auth_bp.get("/me")
 @jwt_required()
 def me():
     """
-    Return the identity of the currently authenticated user.
+    Return the identity of the currently authenticated user from the token.
 
-    The JWT identity is set at login time; the role claim tells you which
-    table to query for the full profile.
-
-    TODO(security): Decide what to expose here. Avoid leaking sensitive fields
-    (login_password_hash, etc.). Return only what the frontend needs for
-    session hydration.
-
-    TODO: After login is implemented, return the actual user object from DB
-    using get_jwt_identity() and get_jwt()["role"].
+    No DB query — identity is read directly from the JWT payload as set at
+    login time via build_identity().
     """
-    identity = get_jwt_identity()  # Will be None until login is implemented
-    return _stub(
-        expects={"Authorization": "Bearer <token> (header)"},
-        returns_when_done={
-            "id": "int",
-            "role": "patient | clinician | secretary",
-            "name": "string",
-        },
-        note=f"Current JWT identity (will be None until login is implemented): {identity}",
-    )
+    identity = get_jwt_identity()
+    return jsonify({"user": identity}), 200
