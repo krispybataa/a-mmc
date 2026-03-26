@@ -6,6 +6,13 @@ from app import db
 from app.models.appointment import Appointment
 from app.models.clinician import ClinicianTimeslot
 from app.utils.validators import require_fields
+from app.services.appointment_service import has_overlap
+from app.services.email_service import (
+    send_appointment_confirmation,
+    send_reschedule_request_to_patient,
+    send_reschedule_request_to_clinician,
+    send_cancellation_notice,
+)
 
 appointment_bp = Blueprint("appointments", __name__)
 
@@ -132,20 +139,28 @@ def create_appointment():
     if slot.clinician_id != data["clinician_id"]:
         return jsonify({"error": "Slot does not belong to the specified clinician"}), 409
 
+    if has_overlap(data["patient_id"], slot):
+        return jsonify({"error": "This time slot conflicts with an existing appointment."}), 409
+
     # Note: slot status is NOT changed here. Slots stay available until C/S blocks them.
     # Booking count is tracked via Appointment rows (see _maybe_auto_block_slot).
-    appointment = Appointment(
-        patient_id=data["patient_id"],
-        clinician_id=data["clinician_id"],
-        slot_id=data["slot_id"],
-        consultation_date=data["consultation_date"],
-        chief_complaint=data.get("chief_complaint"),
-        chief_complaint_description=data.get("chief_complaint_description"),
-        payment_type=data.get("payment_type"),
-        status="pending",
-    )
-    db.session.add(appointment)
-    db.session.commit()
+    # B1-B-patch: transaction boundary added
+    try:
+        appointment = Appointment(
+            patient_id=data["patient_id"],
+            clinician_id=data["clinician_id"],
+            slot_id=data["slot_id"],
+            consultation_date=data["consultation_date"],
+            chief_complaint=data.get("chief_complaint"),
+            chief_complaint_description=data.get("chief_complaint_description"),
+            payment_type=data.get("payment_type"),
+            status="pending",
+        )
+        db.session.add(appointment)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return jsonify({"appointment_id": appointment.appointment_id}), 201
 
 
@@ -155,59 +170,88 @@ def update_appointment(appointment_id: int):
     data = request.get_json(force=True) or {}
 
     new_status = data.get("status")
-    if new_status and new_status != a.status:
+    original_status = a.status  # capture before any mutation for email routing
 
-        # Validate transition
-        allowed = VALID_TRANSITIONS.get(a.status, set())
-        if new_status not in allowed:
-            return jsonify({
-                "error": f"Cannot transition appointment from '{a.status}' to '{new_status}'"
-            }), 409
+    # B1-B-patch: transaction boundary added
+    # All validation early-returns above this point write nothing to the session.
+    # Every branch below that reaches db.session.commit() is covered by this boundary.
+    try:
+        if new_status and new_status != a.status:
 
-        # ----------------------------------------------------------------
-        # Reschedule request — either party initiates
-        # ----------------------------------------------------------------
-        if new_status == "reschedule_requested":
-            reschedule_reason = (data.get("reschedule_reason") or "").strip()
-            if not reschedule_reason:
-                return jsonify({"error": "reschedule_reason is required when requesting a reschedule"}), 422
-            a.reschedule_reason = reschedule_reason
+            # Validate transition
+            allowed = VALID_TRANSITIONS.get(a.status, set())
+            if new_status not in allowed:
+                return jsonify({
+                    "error": f"Cannot transition appointment from '{a.status}' to '{new_status}'"
+                }), 409
 
-        # ----------------------------------------------------------------
-        # Accepting a reschedule — C/S must confirm with a new slot
-        # ----------------------------------------------------------------
-        elif new_status == "accepted" and a.status == "reschedule_requested":
-            new_slot_id = data.get("new_slot_id")
-            if not new_slot_id:
-                return jsonify({"error": "new_slot_id is required when confirming a reschedule"}), 422
+            # ----------------------------------------------------------------
+            # Reschedule request — either party initiates
+            # ----------------------------------------------------------------
+            if new_status == "reschedule_requested":
+                reschedule_reason = (data.get("reschedule_reason") or "").strip()
+                if not reschedule_reason:
+                    return jsonify({"error": "reschedule_reason is required when requesting a reschedule"}), 422
+                a.reschedule_reason = reschedule_reason
 
-            new_slot = db.get_or_404(ClinicianTimeslot, new_slot_id)
-            if new_slot.status != "available":
-                return jsonify({"error": "New slot is not available"}), 409
-            if new_slot.clinician_id != a.clinician_id:
-                return jsonify({"error": "New slot does not belong to the same clinician"}), 409
+            # ----------------------------------------------------------------
+            # Accepting a reschedule — C/S must confirm with a new slot
+            # ----------------------------------------------------------------
+            elif new_status == "accepted" and a.status == "reschedule_requested":
+                new_slot_id = data.get("new_slot_id")
+                if not new_slot_id:
+                    return jsonify({"error": "new_slot_id is required when confirming a reschedule"}), 422
 
-            # Update appointment to new slot. Old slot is NOT touched.
-            a.slot_id = new_slot.slot_id
-            a.consultation_date = str(new_slot.slot_date)
+                new_slot = db.get_or_404(ClinicianTimeslot, new_slot_id)
+                if new_slot.status != "available":
+                    return jsonify({"error": "New slot is not available"}), 409
+                if new_slot.clinician_id != a.clinician_id:
+                    return jsonify({"error": "New slot does not belong to the same clinician"}), 409
 
-        # ----------------------------------------------------------------
-        # Accept a pending appointment — check max_patients auto-block
-        # ----------------------------------------------------------------
-        elif new_status == "accepted" and a.status == "pending":
-            slot = db.get_or_404(ClinicianTimeslot, a.slot_id)
+                if has_overlap(a.patient_id, new_slot, exclude_appointment_id=appointment_id):
+                    return jsonify({"error": "The new slot conflicts with the patient's existing appointments."}), 409
+
+                # Update appointment to new slot. Old slot is NOT touched.
+                a.slot_id = new_slot.slot_id
+                a.consultation_date = str(new_slot.slot_date)
+
+            # ----------------------------------------------------------------
+            # Accept a pending appointment — check max_patients auto-block
+            # ----------------------------------------------------------------
+            elif new_status == "accepted" and a.status == "pending":
+                slot = db.get_or_404(ClinicianTimeslot, a.slot_id)
+                a.status = new_status
+                db.session.flush()  # Ensure count includes this appointment
+                _maybe_auto_block_slot(slot)
+
             a.status = new_status
-            db.session.flush()  # Ensure count includes this appointment
-            _maybe_auto_block_slot(slot)
 
-        a.status = new_status
+        # Non-status field updates
+        for field in ["chief_complaint", "chief_complaint_description", "payment_type"]:
+            if field in data:
+                setattr(a, field, data[field])
 
-    # Non-status field updates
-    for field in ["chief_complaint", "chief_complaint_description", "payment_type"]:
-        if field in data:
-            setattr(a, field, data[field])
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
 
-    db.session.commit()
+    # Post-commit notifications — failures are caught inside each function and logged;
+    # they never propagate back to the caller or affect the HTTP response.
+    if new_status and new_status != original_status:
+        if new_status == "accepted" and original_status == "pending":
+            send_appointment_confirmation(a)
+        elif new_status == "reschedule_requested":
+            # Determine who initiated: if caller is patient, notify clinician; else notify patient
+            role = (data.get("role") or "").lower()
+            if role == "patient":
+                send_reschedule_request_to_clinician(a)
+            else:
+                send_reschedule_request_to_patient(a)
+        elif new_status == "cancelled":
+            send_cancellation_notice(a, "patient")
+            send_cancellation_notice(a, "clinician")
+
     return jsonify({"message": "updated"})
 
 
@@ -246,9 +290,18 @@ def cancel_appointment(appointment_id: int):
     warning = _warning_for_cancellation(slot)
 
     # Slot status is NOT changed — other patients on this slot are unaffected.
-    a.status = "cancelled"
-    a.reschedule_reason = cancellation_reason  # reuse field for audit trail
-    db.session.commit()
+    # B1-D-patch: transaction boundary added
+    try:
+        a.status = "cancelled"
+        a.reschedule_reason = cancellation_reason  # reuse field for audit trail
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+
+    # Post-commit notifications
+    send_cancellation_notice(a, "patient")
+    send_cancellation_notice(a, "clinician")
 
     response = {"message": "Appointment cancelled"}
     if warning:

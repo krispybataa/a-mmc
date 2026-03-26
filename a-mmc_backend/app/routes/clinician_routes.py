@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from datetime import date as date_type
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models.clinician import (
     Clinician,
@@ -7,7 +8,7 @@ from app.models.clinician import (
     ClinicianHMO,
     ClinicianInfo,
 )
-from app.services.timeslot_service import generate_slots
+from app.services.timeslot_service import generate_slots, regenerate_slots_for_schedule_change
 
 clinician_bp = Blueprint("clinicians", __name__)
 
@@ -171,6 +172,88 @@ def create_schedule(clinician_id: int):
 
     return jsonify({"schedule_id": schedule.schedule_id, "slots_created": slots_created}), 201
 
+
+@clinician_bp.patch("/<int:clinician_id>/schedules/<int:schedule_id>")
+@jwt_required()
+def update_schedule(clinician_id: int, schedule_id: int):
+    """
+    Edit a ClinicianSchedule row and regenerate timeslots for the affected range.
+
+    Requires a valid JWT with role "clinician" or "secretary".
+
+    Body (JSON, all fields optional — only present fields are updated):
+        day_of_week  (str)
+        am_start     (str, "HH:MM")
+        am_end       (str, "HH:MM")
+        pm_start     (str, "HH:MM")
+        pm_end       (str, "HH:MM")
+
+    Returns 200:
+        {
+            "schedule": { updated schedule fields },
+            "slot_regeneration": {
+                "deleted": int,
+                "stuck": [ { slot_id, slot_date, start_time, end_time,
+                              active_appointment_count }, ... ]
+            }
+        }
+
+    The slot_regeneration.stuck list contains slots that C/S must manually
+    resolve (cancel or reschedule each appointment) before the old slot can be
+    removed from the system. The schedule update is NOT blocked by stuck slots —
+    the information is surfaced so C/S can act on it.
+    """
+    identity = get_jwt_identity()
+    if identity.get("role") not in ("clinician", "secretary"):
+        return jsonify({"error": "Forbidden — clinician or secretary role required"}), 403
+
+    db.get_or_404(Clinician, clinician_id)
+    schedule = db.get_or_404(ClinicianSchedule, schedule_id)
+
+    if schedule.clinician_id != clinician_id:
+        return jsonify({"error": "Schedule not found for this clinician"}), 404
+
+    data = request.get_json(force=True) or {}
+
+    from datetime import date, timedelta
+    today = date.today()
+    regen_to = today + timedelta(days=60)
+
+    try:
+        for field in ["day_of_week", "am_start", "am_end", "pm_start", "pm_end"]:
+            if field in data:
+                setattr(schedule, field, data[field])
+
+        # Flush schedule update so generate_slots() queries the updated values
+        db.session.flush()
+
+        result = regenerate_slots_for_schedule_change(
+            clinician_id=clinician_id,
+            from_date=today,
+            to_date=regen_to,
+        )
+        # regenerate_slots_for_schedule_change() commits internally.
+        # This commit is a safety-net no-op if the service already committed.
+        db.session.commit()
+
+    except Exception:
+        db.session.rollback()
+        raise
+
+    def _fmt(t) -> str | None:
+        return str(t)[:5] if t else None
+
+    return jsonify({
+        "schedule": {
+            "schedule_id": schedule.schedule_id,
+            "day_of_week": schedule.day_of_week,
+            "am_start": _fmt(schedule.am_start),
+            "am_end": _fmt(schedule.am_end),
+            "pm_start": _fmt(schedule.pm_start),
+            "pm_end": _fmt(schedule.pm_end),
+        },
+        "slot_regeneration": result,
+    })
 
 
 # ---------------------------------------------------------------------------

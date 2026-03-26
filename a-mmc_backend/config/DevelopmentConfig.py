@@ -7,6 +7,8 @@ load_dotenv()
 
 class DevelopmentConfig(BaseConfig):
     DEBUG: bool = True
+    # Cookies do not require HTTPS over localhost
+    JWT_COOKIE_SECURE: bool = False
     SQLALCHEMY_DATABASE_URI: str = (
         "postgresql://{user}:{password}@{host}:{port}/{name}".format(
             user=os.environ.get("DB_USER", "postgres"),
