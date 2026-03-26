@@ -6,14 +6,20 @@ services:
     container_name: "${FRONTEND_CONTAINER}"
     networks:
       - a-mmc-network
+    depends_on:
+      a-mmc-backend:
+        condition: service_healthy
 
   a-mmc-backend:
     image: "${BACKEND_IMAGE}"
     container_name: "${BACKEND_CONTAINER}"
     networks:
       - a-mmc-network
+    env_file:
+      - ../a-mmc_backend/.env.example
     depends_on:
-      - "${POSTGRES_CONTAINER}"
+      a-mmc-postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:${BACKEND_PORT}/health || exit 1"]
       interval: ${CONTAINER_INTERVAL}
@@ -44,10 +50,16 @@ services:
     container_name: "${POSTGRES_CONTAINER}"
     networks:
       - a-mmc-network
+    env_file:
+      - ../a-mmc_backend/.env.example
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - "${POSTGRES_DATA_VOLUME}:/var/lib/postgresql/data"
     healthcheck:
-      test: ["CMD-SHELL", "psql -U ${DB_USER} -d ${DB_NAME} -c 'SELECT 1' || exit 1"]
+      test: ["CMD-SHELL", "psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c 'SELECT 1' || exit 1"]
       interval: ${CONTAINER_INTERVAL}
       timeout: ${CONTAINER_TIMEOUT}
       retries: ${CONTAINER_RETRIES}
@@ -66,7 +78,7 @@ services:
     environment:
       MINIO_ROOT_USER_FILE: /run/secrets/minio-root-user
       MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio-root-password
-    command: server /data --console-address ":9001"
+    command: server /data --console-address ":${MINIO_PORT}"
     networks:
       - a-mmc-network
     volumes:
@@ -80,6 +92,8 @@ networks:
 volumes:
   a-mmc-postgres-data:
       driver: local
+
+  #MINIO ALT
   a-mmc-minio-data:
       driver: local
 
