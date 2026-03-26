@@ -1,1 +1,2 @@
 *.sh eol=lf
+a-mmc_backend/migrations/** eol=lf

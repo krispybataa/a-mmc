@@ -13,13 +13,13 @@ a-mmc_frontend/yarn-debug.log*
 a-mmc_frontend/yarn-error.log*
 a-mmc_frontend/pnpm-debug.log*
 
-a-mmc_backend/__pycache__/
-a-mmc_backend/*.py[cod]
-a-mmc_backend/*.pyo
-a-mmc_backend/*.pyd
-a-mmc_backend/venv/
-a-mmc_backend/.venv/
-a-mmc_backend/env/
+**/__pycache__/
+**/*.py[cod]
+**/*.pyo
+**/*.pyd
+**/venv/
+**/.venv/
+**/env/
 a-mmc_backend/.env
 a-mmc_backend/.env.*
 a-mmc_backend/build/
