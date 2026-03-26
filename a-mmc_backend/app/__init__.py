@@ -4,7 +4,9 @@ from flask_migrate import Migrate
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 
-from db.pool import DatabasePool
+db = SQLAlchemy()
+migrate = Migrate()
+jwt = JWTManager()
 
 from app.routes.clinician_routes import clinician_bp
 from app.routes.secretary_routes import secretary_bp
@@ -13,23 +15,14 @@ from app.routes.timeslot_routes import timeslot_bp
 from app.routes.auth_routes import auth_bp
 from app.routes.appointment_routes import appointment_bp
 from app.models import clinician, secretary, patient, appointment  # noqa: F401
-from app.config import config_by_name
 
 from config.DevelopmentConfig import DevelopmentConfig
 from config.ProductionConfig import ProductionConfig
 
-from dotenv import load_dotenv, find_dotenv
-
-load_dotenv(find_dotenv())
-
-db = SQLAlchemy()
-migrate = Migrate()
-jwt = JWTManager()
 config_by_name: dict = {
     "development": DevelopmentConfig,
     "production": ProductionConfig,
 }
-
 
 def create_app(config_name: str = "development") -> Flask:
     """Application factory."""
@@ -41,11 +34,11 @@ def create_app(config_name: str = "development") -> Flask:
     migrate.init_app(app, db)
     CORS(app)
     jwt.init_app(app)
-    DatabasePool.initialize(
-        dsn=os.environ.get("DB_DSN"),
-        min_conn=os.environ.get("DB_MIN_CONN", 1),
-        max_conn=os.environ.get("DB_MAX_CONN", 10)
-    )
+    # DatabasePool.initialize(
+    #     dsn=os.environ.get("DB_DSN"),
+    #     min_conn=os.environ.get("DB_MIN_CONN", 1),
+    #     max_conn=os.environ.get("DB_MAX_CONN", 10)
+    # )
 
     app.register_blueprint(clinician_bp, url_prefix="/api/clinicians")
     app.register_blueprint(secretary_bp, url_prefix="/api/secretaries")
