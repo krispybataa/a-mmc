@@ -1,93 +1,54 @@
-import { useState } from 'react'
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import Navbar from './components/Navbar'
+import Home from './pages/public/Home'
+import ClinicianProfile from './pages/public/ClinicianProfile'
+import Login from './pages/public/Login'
+import Register from './pages/public/Register'
+import BookAppointment from './pages/public/BookAppointment'
+import PatientDashboard from './pages/dashboard/PatientDashboard'
+import PatientAppointments from './pages/dashboard/PatientAppointments'
+import ClinicianDashboard from './pages/dashboard/ClinicianDashboard'
+import ClinicianProfileManager from './pages/dashboard/ClinicianProfileManager'
+import ScheduleManager from './pages/dashboard/ScheduleManager'
+import UpdateProfile from './pages/dashboard/UpdateProfile'
+import FindDoctor from './pages/public/FindDoctor'
+import GuidedSearch from './pages/public/GuidedSearch'
+import Doctors from './pages/public/Doctors'
+import StaffLogin from './pages/staff/StaffLogin'
 
-function App() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [isLogin, setIsLogin] = useState(true)
-  const [message, setMessage] = useState('')
-  const [loading, setLoading] = useState(false)
+// Routes where the navbar should be hidden
+const NO_NAV = ['/login', '/register', '/staff/login']
 
-  const API_BASE = 'http://localhost:8000'
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setMessage('')
-
-    try {
-      const endpoint = isLogin ? '/login' : '/register'
-      const response = await fetch(`${API_BASE}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        if (isLogin) {
-          localStorage.setItem('token', data.token)
-          setMessage('Login successful! Token stored.')
-        } else {
-          setMessage('Registration successful! Please login.')
-          setEmail('')
-          setPassword('')
-        }
-      } else {
-        setMessage(data.error || 'Error occurred')
-      }
-    } catch (error) {
-      setMessage('Network error. Is backend running?')
-    }
-
-    setLoading(false)
-  }
-
+function Layout() {
+  const { pathname } = useLocation()
   return (
-    <div className="login-container">
-      <form onSubmit={handleSubmit} className="login-form">
-        <h2>{isLogin ? 'Login' : 'Register'}</h2>
-        {message && <p className="message">{message}</p>}
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="input-field"
-          required
-          disabled={loading}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="input-field"
-          required
-          disabled={loading}
-        />
-        <div className="button-group">
-          <button type="submit" className="login-btn" disabled={loading}>
-            {loading ? 'Processing...' : (isLogin ? 'Login' : 'Register')}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(!isLogin)
-              setMessage('')
-              setEmail('')
-              setPassword('')
-            }}
-            className="register-btn"
-            disabled={loading}
-          >
-            {isLogin ? 'Register' : 'Login'}
-          </button>
-        </div>
-      </form>
-    </div>
+    <>
+      {!NO_NAV.includes(pathname) && <Navbar />}
+      <Routes>
+        <Route path="/" element={<Navigate to="/find" replace />} />
+        <Route path="/clinician/:id" element={<ClinicianProfile />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/book/:id" element={<BookAppointment />} />
+        <Route path="/dashboard" element={<PatientDashboard />} />
+        <Route path="/dashboard/appointments" element={<PatientAppointments />} />
+        <Route path="/clinician-dashboard" element={<ClinicianDashboard />} />
+        <Route path="/clinician-dashboard/profile" element={<ClinicianProfileManager />} />
+        <Route path="/clinician-dashboard/schedule" element={<ScheduleManager />} />
+        <Route path="/dashboard/profile" element={<UpdateProfile />} />
+        <Route path="/find" element={<FindDoctor />} />
+        <Route path="/find/triage" element={<GuidedSearch />} />
+        <Route path="/doctors" element={<Doctors />} />
+        <Route path="/staff/login" element={<StaffLogin />} />
+      </Routes>
+    </>
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Layout />
+    </BrowserRouter>
+  )
+}
