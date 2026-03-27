@@ -1,25 +1,17 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { SlidersHorizontal, X } from 'lucide-react'
-import { mockClinicians } from '../../data/mockClinicians'
+import api from '../../services/api'
 import ClinicianCard from '../../components/ClinicianCard'
 
-// ── Static derived data ────────────────────────────────────────────────────────
-
-const ALL_HMOS = [...new Set(mockClinicians.flatMap(c => c.hmos))].sort()
+// ── Constants ──────────────────────────────────────────────────────────────────
 
 const DAYS    = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const PERIODS = ['AM', 'PM']
 
-// Full day names keyed by 3-letter abbrev — used for schedule matching
-const DAY_FULL = {
-  Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday',
-  Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday',
-}
-
 // ── Filter logic ───────────────────────────────────────────────────────────────
 
-function applyFilters(clinicians, { name, spec, days, periods, hmo, gender }) {
+function applyFilters(clinicians, { name, spec, days, periods, hmo }) {
   return clinicians.filter(c => {
     // Name
     if (name.trim()) {
@@ -33,7 +25,7 @@ function applyFilters(clinicians, { name, spec, days, periods, hmo, gender }) {
     }
     // Day + Period
     if (days.size > 0 || periods.size > 0) {
-      const match = c.schedule.some(s => {
+      const match = c.schedules.some(s => {
         const dayOk    = days.size === 0    || days.has(s.day_of_week.slice(0, 3))
         const amOk     = periods.has('AM') && s.am_start != null
         const pmOk     = periods.has('PM') && s.pm_start != null
@@ -42,10 +34,8 @@ function applyFilters(clinicians, { name, spec, days, periods, hmo, gender }) {
       })
       if (!match) return false
     }
-    // HMO
+    // HMO — hmos from list endpoint are flat name strings
     if (hmo && !c.hmos.includes(hmo)) return false
-    // Gender
-    if (gender.size > 0 && !gender.has(c.gender)) return false
 
     return true
   })
@@ -60,25 +50,46 @@ export default function Doctors() {
   const paramSpec = searchParams.get('specialty') ?? ''
   const paramHMO  = searchParams.get('hmo')       ?? ''
 
+  const [clinicians,    setClinicians]    = useState([])
+  const [fetchLoading,  setFetchLoading]  = useState(true)
+  const [fetchError,    setFetchError]    = useState('')
+
   const [nameQuery,       setNameQuery]       = useState('')
   const [specQuery,       setSpecQuery]       = useState(paramSpec)
   const [selectedDays,    setSelectedDays]    = useState(new Set())
   const [selectedPeriods, setSelectedPeriods] = useState(new Set())
   const [selectedHMO,     setSelectedHMO]     = useState(paramHMO)
-  const [selectedGender,  setSelectedGender]  = useState(new Set())
   const [filtersOpen,     setFiltersOpen]     = useState(!!(paramSpec || paramHMO))
   const [showBanner,      setShowBanner]      = useState(!!(paramSpec || paramHMO))
 
-  // ── Derived filtered list ──────────────────────────────────────────────────
+  useEffect(() => {
+    async function load() {
+      try {
+        const { data } = await api.get('/api/clinicians/')
+        setClinicians(data)
+      } catch {
+        setFetchError('Unable to load clinicians. Please try again.')
+      } finally {
+        setFetchLoading(false)
+      }
+    }
+    load()
+  }, [])
 
-  const visible = useMemo(() => applyFilters(mockClinicians, {
+  // ── Derived data ───────────────────────────────────────────────────────────
+
+  const allHmos = useMemo(
+    () => [...new Set(clinicians.flatMap(c => c.hmos))].sort(),
+    [clinicians]
+  )
+
+  const visible = useMemo(() => applyFilters(clinicians, {
     name:    nameQuery,
     spec:    specQuery,
     days:    selectedDays,
     periods: selectedPeriods,
     hmo:     selectedHMO,
-    gender:  selectedGender,
-  }), [nameQuery, specQuery, selectedDays, selectedPeriods, selectedHMO, selectedGender])
+  }), [clinicians, nameQuery, specQuery, selectedDays, selectedPeriods, selectedHMO])
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -98,21 +109,12 @@ export default function Doctors() {
     })
   }
 
-  function toggleGender(g) {
-    setSelectedGender(prev => {
-      const next = new Set(prev)
-      next.has(g) ? next.delete(g) : next.add(g)
-      return next
-    })
-  }
-
   function resetFilters() {
     setNameQuery('')
     setSpecQuery('')
     setSelectedDays(new Set())
     setSelectedPeriods(new Set())
     setSelectedHMO('')
-    setSelectedGender(new Set())
     setShowBanner(false)
     setSearchParams({})
   }
@@ -170,7 +172,6 @@ export default function Doctors() {
             selectedHMO !== '',
             selectedDays.size > 0,
             selectedPeriods.size > 0,
-            selectedGender.size > 0,
           ].filter(Boolean).length
 
           return (
@@ -234,7 +235,7 @@ export default function Doctors() {
                         className={inputCls}
                       >
                         <option value="">All HMOs</option>
-                        {ALL_HMOS.map(h => (
+                        {allHmos.map(h => (
                           <option key={h} value={h}>{h}</option>
                         ))}
                       </select>
@@ -273,26 +274,6 @@ export default function Doctors() {
                       </div>
                     </div>
 
-                    {/* Gender */}
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                        Gender
-                      </label>
-                      <div className="flex gap-5">
-                        {[{ id: 'M', label: 'Male' }, { id: 'F', label: 'Female' }].map(g => (
-                          <label key={g.id} className="flex items-center gap-1.5 cursor-pointer select-none">
-                            <input
-                              type="checkbox"
-                              checked={selectedGender.has(g.id)}
-                              onChange={() => toggleGender(g.id)}
-                              className="w-4 h-4 rounded border-slate-300 accent-[var(--color-primary)]"
-                            />
-                            <span className="text-sm text-[var(--color-dark)]">{g.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
                   </div>
 
                   {/* Filter actions */}
@@ -318,7 +299,15 @@ export default function Doctors() {
         })()}
 
         {/* ── Clinician grid ── */}
-        {visible.length === 0 ? (
+        {fetchLoading ? (
+          <div className="text-center py-20">
+            <p className="text-slate-400 text-sm">Loading clinicians…</p>
+          </div>
+        ) : fetchError ? (
+          <div className="text-center py-20">
+            <p className="text-[var(--color-accent)] text-sm font-medium">{fetchError}</p>
+          </div>
+        ) : visible.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-slate-500 font-medium">No clinicians match your search.</p>
             <button

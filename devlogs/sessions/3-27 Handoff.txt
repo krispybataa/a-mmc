@@ -1,0 +1,52 @@
+This is a continuation of an active project. Before anything else, read CLAUDE.md
+in full — it is the source of truth for the entire system.
+
+Project: Alagang MMC — patient care coordination app for Makati Medical Center.
+Undergraduate special project at UP Manila under the CeHRes Roadmap (HCD framework).
+Stack: React + Vite frontend, Flask + SQLAlchemy backend, PostgreSQL 16.
+All three services Dockerized via compose.yaml in /a-mmc_infra.
+
+## Mission nomenclature
+- Backend missions: B<number>-<letter> (e.g. B1-A, B1-B)
+- Frontend missions: F<number>-<letter> (e.g. F6-A, F6-B)
+- Integration missions: FB-<letter><number> (e.g. FB-A1, FB-B3)
+- Patches append -patch to the parent (e.g. B1-A-patch, B1-A-patch-2)
+
+## Current state as of 2026-03-27
+
+### Backend — fully complete and smoke-tested against live DB
+- B1 series complete: auth (all 3 roles), overlap check, slot generation,
+  email service, transaction boundaries
+- B1-A-patch through B1-A-patch-3: password hashing fixes, full route audit,
+  string time handling fix in timeslot_service
+- B2: first migration run, full smoke test passed end-to-end
+- Two new DELETE routes added during FB-C1: HMO and info delete endpoints
+- Refresh endpoint fixed to return { access_token, user } — was missing user
+
+### Frontend — fully complete and fully integrated
+- F5 series: full patient-facing frontend
+- F6 series: full C/S frontend (inbox, profile manager, schedule manager)
+- FB series complete: all pages wired to live API via api.js
+- mockClinicians.js and mockAppointments.js deleted — no mock data remains
+
+### Docker
+- a-mmc-postgres: up and running, all 10 tables present
+- a-mmc-backend: up and running, smoke-tested
+- a-mmc-frontend: NOT YET UP — collaborator bringing up
+
+### Known debt
+- Frontend container not yet up — no browser visual verification done yet
+- Profile picture upload not wired (TODO(integration) in ClinicianProfileManager)
+- send_noshow_confirmation_prompt() not wired (needs scheduler)
+- TODO(security) markers throughout auth: blocklist, CSRF, rate limiting
+- triageLogic.js pending domain expert validation
+- window.confirm() still present in some paths (Register flow)
+
+## What comes next (priority order)
+1. Collaborator brings up frontend container
+2. Full browser smoke test: register → find clinician → book appointment →
+   C/S login → accept appointment
+3. Begin usability testing per CeHRes roadmap (SRET with stakeholder groups)
+4. Address known debt items as they surface during testing
+
+Confirm you have read CLAUDE.md and are ready to proceed.

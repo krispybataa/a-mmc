@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { CheckCircle, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { mockAppointments } from '../../data/mockAppointments'
+import api from '../../services/api'
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -43,6 +43,10 @@ export default function PatientDashboard() {
     location.state?.bookingSuccess === true
   )
 
+  const [appointments, setAppointments] = useState([])
+  const [apptLoading,  setApptLoading]  = useState(false)
+  const [apptError,    setApptError]    = useState('')
+
   // Auth guard
   useEffect(() => {
     if (!user) navigate('/login?redirect=/dashboard')
@@ -55,10 +59,21 @@ export default function PatientDashboard() {
     return () => clearTimeout(t)
   }, [showBanner])
 
+  // Fetch appointments when user is available
+  useEffect(() => {
+    if (!user?.id) return
+    setApptLoading(true)
+    setApptError('')
+    api.get('/api/appointments/', { params: { patient_id: user.id } })
+      .then(({ data }) => setAppointments(data))
+      .catch(() => setApptError('Unable to load appointments.'))
+      .finally(() => setApptLoading(false))
+  }, [user?.id])
+
   if (!user) return null
 
   const fullName     = `${user.first_name} ${user.last_name}`
-  const pendingAppts = mockAppointments.filter(a => NON_TERMINAL.has(a.status))
+  const pendingAppts = appointments.filter(a => NON_TERMINAL.has(a.status))
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -110,7 +125,11 @@ export default function PatientDashboard() {
             Pending Appointments
           </h2>
 
-          {pendingAppts.length === 0 ? (
+          {apptLoading ? (
+            <p className="text-center text-slate-400 py-12 text-sm">Loading…</p>
+          ) : apptError ? (
+            <p className="text-center text-[var(--color-accent)] py-12 text-sm font-medium">{apptError}</p>
+          ) : pendingAppts.length === 0 ? (
             <p className="text-center text-slate-400 py-12">No pending appointments.</p>
           ) : (
             <>

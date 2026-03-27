@@ -1,7 +1,8 @@
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, MapPin, Mail, Clock, ShieldCheck } from 'lucide-react'
-import { mockClinicians } from '../../data/mockClinicians'
 import { useAuth } from '../../context/AuthContext'
+import api from '../../services/api'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -55,14 +56,66 @@ export default function ClinicianProfile() {
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  const clinician = mockClinicians.find((c) => c.clinician_id === Number(clinician_id))
+  const [clinician, setClinician] = useState(null)
+  const [loading, setLoading]     = useState(true)
+  const [notFound, setNotFound]   = useState(false)
+  const [fetchError, setFetchError] = useState('')
 
-  if (!clinician) {
+  useEffect(() => {
+    async function load() {
+      try {
+        const { data } = await api.get(`/api/clinicians/${clinician_id}`)
+        setClinician(data)
+      } catch (err) {
+        if (err.response?.status === 404) {
+          setNotFound(true)
+        } else {
+          setFetchError('Unable to load clinician profile. Please try again.')
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [clinician_id])
+
+  function handleBook() {
+    if (user) {
+      navigate(`/book/${clinician_id}`)
+    } else {
+      navigate(`/login?redirect=/clinician/${clinician_id}`)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <p className="text-slate-400 text-sm">Loading…</p>
+      </div>
+    )
+  }
+
+  if (notFound) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4 px-6">
         <p className="text-slate-500 text-base font-medium">Clinician not found.</p>
         <Link
-          to="/"
+          to="/doctors"
+          className="inline-flex items-center gap-1.5 text-sm text-[var(--color-primary)] hover:underline"
+        >
+          <ArrowLeft size={13} />
+          Back to Directory
+        </Link>
+      </div>
+    )
+  }
+
+  if (fetchError) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4 px-6">
+        <p className="text-[var(--color-accent)] text-sm font-medium">{fetchError}</p>
+        <Link
+          to="/doctors"
           className="inline-flex items-center gap-1.5 text-sm text-[var(--color-primary)] hover:underline"
         >
           <ArrowLeft size={13} />
@@ -78,29 +131,21 @@ export default function ClinicianProfile() {
     room_number,
     contact_email,
     profile_picture,
-    schedule,
+    schedules,
     hmos,
-    info = [],
+    infos = [],
   } = clinician
 
-  const fullName = formatName(clinician)
-  const initials = getInitials(clinician.first_name, clinician.last_name)
-  const scheduleRows = buildScheduleRows(schedule)
-
-  function handleBook() {
-    if (user) {
-      navigate(`/book/${clinician_id}`)
-    } else {
-      navigate(`/login?redirect=/clinician/${clinician_id}`)
-    }
-  }
+  const fullName    = formatName(clinician)
+  const initials    = getInitials(clinician.first_name, clinician.last_name)
+  const scheduleRows = buildScheduleRows(schedules)
 
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Back link */}
       <div className="max-w-5xl mx-auto px-6 pt-6">
         <Link
-          to="/"
+          to="/doctors"
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-[var(--color-primary)] transition-colors"
         >
           <ArrowLeft size={13} />
@@ -216,10 +261,10 @@ export default function ClinicianProfile() {
               <div className="flex flex-wrap gap-2">
                 {hmos.map((hmo) => (
                   <span
-                    key={hmo}
+                    key={hmo.hmo_id}
                     className="px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-[var(--color-primary)] border border-blue-100"
                   >
-                    {hmo}
+                    {hmo.hmo_name}
                   </span>
                 ))}
               </div>
@@ -229,10 +274,10 @@ export default function ClinicianProfile() {
           </section>
 
           {/* Clinician info (background, awards, etc.) */}
-          {info.length > 0 && (
+          {infos.length > 0 && (
             <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 space-y-5">
-              {info.map((entry, i) => (
-                <div key={i} className={i > 0 ? 'pt-5 border-t border-slate-100' : ''}>
+              {infos.map((entry, i) => (
+                <div key={entry.info_id} className={i > 0 ? 'pt-5 border-t border-slate-100' : ''}>
                   <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
                     {entry.label}
                   </h3>

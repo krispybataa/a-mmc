@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { mockAppointments } from '../../data/mockAppointments'
-import { mockClinicians } from '../../data/mockClinicians'
+import api from '../../services/api'
 import SlotPicker from '../../components/shared/SlotPicker'
 import AppointmentDrawer from '../../components/shared/AppointmentDrawer'
 
@@ -42,7 +41,9 @@ export default function PatientAppointments() {
   const { user }  = useAuth()
   const navigate  = useNavigate()
 
-  const [appointments,  setAppointments]  = useState(mockAppointments)
+  const [appointments,  setAppointments]  = useState([])
+  const [fetchLoading,  setFetchLoading]  = useState(false)
+  const [fetchError,    setFetchError]    = useState('')
   const [filterDate,    setFilterDate]    = useState('')
   const [currentPage,   setCurrentPage]   = useState(1)
 
@@ -54,12 +55,17 @@ export default function PatientAppointments() {
   const [reschedSlot,     setReschedSlot]     = useState(null)
   const [reschedMessage,  setReschedMessage]  = useState('')
   const [reschedErrors,   setReschedErrors]   = useState({})
+  const [reschedLoading,  setReschedLoading]  = useState(false)
 
   // Detail drawer
   const [drawerAppointment, setDrawerAppointment] = useState(null)
 
   // Inline success message
   const [successApptId, setSuccessApptId] = useState(null)
+
+  // Inline cancel confirm
+  const [cancelConfirmId, setCancelConfirmId] = useState(null)
+  const [cancelError,     setCancelError]     = useState(null)  // null | { id, msg }
 
   // Auth guard
   useEffect(() => {
@@ -72,6 +78,17 @@ export default function PatientAppointments() {
     const t = setTimeout(() => setSuccessApptId(null), 3000)
     return () => clearTimeout(t)
   }, [successApptId])
+
+  // Fetch appointments when user is available
+  useEffect(() => {
+    if (!user?.id) return
+    setFetchLoading(true)
+    setFetchError('')
+    api.get('/api/appointments/', { params: { patient_id: user.id } })
+      .then(({ data }) => setAppointments(data))
+      .catch(() => setFetchError('Unable to load appointments. Please try again.'))
+      .finally(() => setFetchLoading(false))
+  }, [user?.id])
 
   if (!user) return null
 
@@ -95,27 +112,46 @@ export default function PatientAppointments() {
     setCurrentPage(1)
   }
 
+  // Show inline confirm row — actual DELETE fires in confirmCancel
   function handleCancel(id) {
-    if (window.confirm('Are you sure you want to cancel this appointment?')) {
+    setCancelConfirmId(id)
+    setCancelError(null)
+  }
+
+  async function confirmCancel(id) {
+    try {
+      await api.delete(`/api/appointments/${id}`, {
+        data: { cancellation_reason: 'Cancelled by patient.', role: 'patient' },
+      })
+      setCancelConfirmId(null)
+      setCancelError(null)
       setAppointments(prev =>
         prev.map(a => a.appointment_id === id ? { ...a, status: 'cancelled' } : a)
       )
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Unable to cancel. Please try again.'
+      setCancelError({ id, msg })
     }
   }
 
-  function openModal(apptId) {
-    const appt          = appointments.find(a => a.appointment_id === apptId)
-    const fullClinician = appt
-      ? mockClinicians.find(c => c.clinician_id === appt.clinician.clinician_id)
-      : null
-
+  async function openModal(apptId) {
+    const appt = appointments.find(a => a.appointment_id === apptId)
     setModalApptId(apptId)
-    setModalClinician(fullClinician ?? null)
+    setModalClinician(null)
     setReschedDate('')
     setReschedSlot(null)
     setReschedMessage('')
     setReschedErrors({})
     setModalOpen(true)
+
+    if (appt) {
+      try {
+        const { data } = await api.get(`/api/clinicians/${appt.clinician_id}`)
+        setModalClinician(data)
+      } catch {
+        // Leave modalClinician null — modal shows "Clinician schedule unavailable."
+      }
+    }
   }
 
   function closeModal() {
@@ -130,7 +166,7 @@ export default function PatientAppointments() {
     setReschedErrors(prev => ({ ...prev, date: undefined, slot: undefined }))
   }
 
-  function handleReschedSubmit() {
+  async function handleReschedSubmit() {
     const errs = {}
     if (!reschedDate)            errs.date    = 'Consultation date is required.'
     if (!reschedSlot)            errs.slot    = 'Please select a time slot.'
@@ -141,14 +177,25 @@ export default function PatientAppointments() {
       return
     }
 
-    setAppointments(prev => prev.map(a =>
-      a.appointment_id === modalApptId
-        ? { ...a, status: 'reschedule_requested', reschedule_reason: reschedMessage.trim() }
-        : a
-    ))
-
-    setSuccessApptId(modalApptId)
-    closeModal()
+    setReschedLoading(true)
+    try {
+      await api.patch(`/api/appointments/${modalApptId}`, {
+        status: 'reschedule_requested',
+        reschedule_reason: reschedMessage.trim(),
+        role: 'patient',
+      })
+      setAppointments(prev => prev.map(a =>
+        a.appointment_id === modalApptId
+          ? { ...a, status: 'reschedule_requested', reschedule_reason: reschedMessage.trim() }
+          : a
+      ))
+      setSuccessApptId(modalApptId)
+      closeModal()
+    } catch (err) {
+      setReschedErrors({ submit: err.response?.data?.error || 'Failed to request reschedule.' })
+    } finally {
+      setReschedLoading(false)
+    }
   }
 
   // ── Shared styles ──────────────────────────────────────────────────────────
@@ -194,13 +241,18 @@ export default function PatientAppointments() {
         </div>
 
         {/* ── Appointment list ── */}
-        {paged.length === 0 ? (
+        {fetchLoading ? (
+          <p className="text-center text-slate-400 py-16 text-sm">Loading…</p>
+        ) : fetchError ? (
+          <p className="text-center text-[var(--color-accent)] py-16 text-sm font-medium">{fetchError}</p>
+        ) : paged.length === 0 ? (
           <p className="text-center text-slate-400 py-16 text-base">No appointments found.</p>
         ) : (
           <div className="space-y-3">
             {paged.map(appt => {
               const docName  = `${appt.clinician.title} ${appt.clinician.last_name}`
               const eligible = ELIGIBLE.has(appt.status)
+              const showCancelConfirm = cancelConfirmId === appt.appointment_id
 
               return (
                 <div key={appt.appointment_id}>
@@ -237,6 +289,28 @@ export default function PatientAppointments() {
 
                     </div>
                   </div>
+
+                  {/* Inline cancel confirm */}
+                  {showCancelConfirm && (
+                    <div className="mt-2 px-1 flex flex-wrap items-center gap-3">
+                      <p className="text-sm text-slate-600">Cancel this appointment?</p>
+                      <button
+                        onClick={() => confirmCancel(appt.appointment_id)}
+                        className="min-h-[40px] px-4 rounded-lg bg-[var(--color-accent)] text-white text-sm font-medium hover:opacity-90 transition-opacity"
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => { setCancelConfirmId(null); setCancelError(null) }}
+                        className="min-h-[40px] px-4 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                      >
+                        Back
+                      </button>
+                      {cancelError?.id === appt.appointment_id && (
+                        <p className="text-xs text-[var(--color-accent)]">{cancelError.msg}</p>
+                      )}
+                    </div>
+                  )}
 
                   {successApptId === appt.appointment_id && (
                     <p className="text-sm text-green-600 mt-2 px-1">Reschedule request sent.</p>
@@ -305,7 +379,7 @@ export default function PatientAppointments() {
               {modalClinician ? (
                 <div>
                   <SlotPicker
-                    schedule={modalClinician.schedule}
+                    schedule={modalClinician.schedules}
                     clinicianName={`${modalClinician.title} ${modalClinician.first_name} ${modalClinician.last_name}`}
                     selectedDate={reschedDate}
                     onDateChange={handleReschedDateChange}
@@ -347,12 +421,16 @@ export default function PatientAppointments() {
             </div>
 
             {/* Footer — fixed */}
-            <div className="px-6 pb-6 pt-4 border-t border-slate-100 shrink-0">
+            <div className="px-6 pb-6 pt-4 border-t border-slate-100 shrink-0 space-y-3">
+              {reschedErrors.submit && (
+                <p className="text-xs text-[var(--color-accent)] text-center">{reschedErrors.submit}</p>
+              )}
               <button
                 onClick={handleReschedSubmit}
-                className="w-full min-h-[48px] rounded-lg bg-[var(--color-primary)] text-white font-semibold text-sm hover:opacity-90 transition-opacity"
+                disabled={reschedLoading}
+                className="w-full min-h-[48px] rounded-lg bg-[var(--color-primary)] text-white font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Request
+                {reschedLoading ? 'Sending…' : 'Request'}
               </button>
             </div>
 

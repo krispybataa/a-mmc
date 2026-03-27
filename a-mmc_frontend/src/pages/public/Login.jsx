@@ -2,14 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-
-const MOCK_USER = {
-  patient_id: 1,
-  first_name: 'Augustus',
-  last_name: 'Rodriguez',
-  email: 'aug@mmc.com.ph',
-  role: 'patient',
-}
+import api, { configureApiAuth } from '../../services/api'
 
 function validate(email, password) {
   const errs = {}
@@ -27,7 +20,7 @@ function validate(email, password) {
 export default function Login() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { setUser } = useAuth()
+  const { setUser, setToken, logout } = useAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -35,20 +28,27 @@ export default function Login() {
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     const errs = validate(email, password)
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs)
-      return
-    }
+    if (Object.keys(errs).length > 0) { setErrors(errs); return }
     setErrors({})
     setLoading(true)
-    setTimeout(() => {
-      setUser(MOCK_USER)
-      const redirect = searchParams.get('redirect')
-      navigate(redirect || '/dashboard')
-    }, 300)
+    try {
+      const { data } = await api.post('/api/auth/patient/login', { email, password })
+      configureApiAuth(data.access_token, setToken, logout)
+      setToken(data.access_token)
+      setUser(data.user)
+      navigate(searchParams.get('redirect') || '/dashboard')
+    } catch (err) {
+      const status = err.response?.status
+      setErrors({
+        submit: status === 401
+          ? 'Invalid email or password.'
+          : 'Something went wrong. Please try again.',
+      })
+      setLoading(false)
+    }
   }
 
   const inputCls = (hasError) =>
@@ -142,6 +142,9 @@ export default function Login() {
               >
                 {loading ? 'Signing in…' : 'Sign In'}
               </button>
+              {errors.submit && (
+                <p className="mt-3 text-xs text-[var(--color-accent)] text-center">{errors.submit}</p>
+              )}
             </div>
           </form>
 

@@ -25,13 +25,13 @@ export default function ClinicianCard({ clinician }) {
     specialty,
     room_number,
     profile_picture,
-    schedule,
+    schedules,
     hmos,
   } = clinician
 
   const fullName    = formatName(clinician)
   const initials    = getInitials(first_name, last_name)
-  const scheduleDays = schedule.map((s) => DAY_ABBREV[s.day_of_week]).join(', ')
+  const scheduleDays = schedules.map((s) => DAY_ABBREV[s.day_of_week]).join(', ')
   const hmoCount    = hmos.length
 
   return (
