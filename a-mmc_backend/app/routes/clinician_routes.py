@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from datetime import date as date_type
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt
 from app import db
 from app.models.clinician import (
     Clinician,
@@ -91,7 +91,11 @@ def get_clinician(clinician_id: int):
 
 
 @clinician_bp.post("/")
+@jwt_required()
 def create_clinician():
+    claims = get_jwt()
+    if claims.get("role") != "admin":
+        return {"error": "Admin access required"}, 403
     data = request.get_json(force=True) or {}
     # B1-A-patch-2: require_fields added (KeyError risk); "password" replaces "login_password_hash"
     err = require_fields(data, "first_name", "last_name", "login_email", "password")
@@ -135,7 +139,11 @@ def update_clinician(clinician_id: int):
 
 
 @clinician_bp.delete("/<int:clinician_id>")
+@jwt_required()
 def delete_clinician(clinician_id: int):
+    claims = get_jwt()
+    if claims.get("role") != "admin":
+        return {"error": "Admin access required"}, 403
     c = db.get_or_404(Clinician, clinician_id)
     # B1-A-patch-2: cascade deletes child rows (schedules, hmos, infos, timeslots,
     # secretary_links) — multi-table write requires transaction boundary
@@ -235,8 +243,8 @@ def update_schedule(clinician_id: int, schedule_id: int):
     removed from the system. The schedule update is NOT blocked by stuck slots —
     the information is surfaced so C/S can act on it.
     """
-    identity = get_jwt_identity()
-    if identity.get("role") not in ("clinician", "secretary"):
+    claims = get_jwt()
+    if claims.get("role") not in ("clinician", "secretary"):
         return jsonify({"error": "Forbidden — clinician or secretary role required"}), 403
 
     db.get_or_404(Clinician, clinician_id)

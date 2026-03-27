@@ -1,8 +1,9 @@
 To test backend and database migration setup(docker engine is open):
 1. Build the backend image: 
 docker build .\a-mmc_backend\ -t krispybata/a-mmc-backend:latest
+docker build .\a-mmc_frontend\ -t krispybata/a-mmc-frontend:latest
 
-2. cd .\a-mmc_infra\ ; docker compose up -d a-mmc-backend a-mmc-postgres
+2. cd .\a-mmc_infra\ ; docker compose up -d a-mmc-backend a-mmc-postgres a-mmc-frontend
 
 3. In docker desktop, if both containers show green go to exec for a-mmc-postgres
 
@@ -13,3 +14,10 @@ Misc:
 docker compose down -v
 
 docker build .\a-mmc_backend\ -t krispybata/a-mmc-backend:latest ; docker compose down -v ; docker compose up -d a-mmc-backend a-mmc-postgres
+
+
+LIST 
+docker build .\a-mmc_backend\ -t krispybata/a-mmc-backend:latest
+docker build .\a-mmc_frontend\ -t krispybata/a-mmc-frontend:latest
+
+cd .\a-mmc_infra\ ; docker compose up -d 
