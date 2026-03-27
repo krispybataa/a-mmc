@@ -1,0 +1,79 @@
+Project Description: Rodriguez-SP-Proposal.tex / Rodriguez-SP-Proposal.pdf
+Brief TL;DR: multi-role clinical appointment management (doctor/secretary, patient) 
+Medium: PostGre SQL 
+Bar Napkin ERD: 
+
+USERS: 
+	Clinician: 
+	- title, firstname, lastname, middlename, suffix [robust name fields, essentially] 
+	- department 
+	- specialty/practice
+	- Local Number [this is NOT a phone number] 
+	- Room Number [ex. "Hall A Rm 230"] 
+	- Schedule [From Mon-Sat and contains AM/PM, usually displayed in a table and ranges, refer to attached picture] 
+	- Profile Picture 
+	- Contact Details (phone, email (separate from login but allows it to be the same)) 
+	- HMO Accreditaition (array of text displayed that is flexible) (can be empty) 
+	- "More information" (same with HMO) (can be empty) 
+	- login credentials (email,pwd) 
+
+	Secretary: 
+	(Mainly an assistive administrative role, has the same permissions as Clinician, and if a diagram is drawn, is attached to their respective clinician) 
+	- title, firstname, lastname, suffix
+	- Contact Details (phone, email (separate from login but allows it to be the same)) 
+	- login credentials (email,pwd) 
+
+	-> To elaborate on the secretary role, they basically manage the clincian's profile, so they can edit and update schedules, accept/reschedule appointments. 
+
+	Patient ('*' == required): 
+	- Lastname*, Firstname*, Middle Name 
+	- Birthday* (MM/DD/YYYY)
+	- Gender*
+	- Civil Status
+	- Nationality 
+	- Religion 
+	- Occupation 
+	- Mobile Number* 
+	- Next of Kin/Relationship (ex. Jane Doe / Daughter) 
+	- Next of Kin Contact
+	- Address Line 1*
+	- Province*
+	- City*
+	- Barangay*
+	- Country*
+	- email (serves as login)*
+	- SC/PWD ID no. 
+	- PWD ID Front Picture 
+	- PWD ID Back Picture 
+	- Preferred Language*
+	- Culture 
+	- Educational Attainment*
+	- Disability Type (Applicable for PWD only) 
+ARTIFACTS: 
+	Appointments: 
+	Information: 
+	A patient can book many appointments so long as their schedules don't overlap with one another 
+	A patient can book many appointments across multiple doctors (again so long as schedules don't overlap) 
+	A doctor/secretary may choose to accept an appointment or request for its reschedule. 
+	An appointment is booked within time frames (ex. 13:00-14:00) 
+	- Clinic (This may be autofilled since a patient books an appointment within a doctor's profile, so the system should pull data wherever the patient is) 
+	- Consultation Date (MM/DD/YYYY) 
+	- Time Slot (Dropdown with the aforementioned 13:00-14:00) 
+	- Appointment Type /*/
+	- Chief Complaint 
+	- Chief Complaint Description 
+	- Appointment State (Accept, Reschedule, Reject) (only seen by doctor/sec) 
+	- Payment type (text field) 
+	
+Let me know how you plan to generate the ERD, where I can render it (if you haven't), and ask me if anything isn't clear. 
+
+
+1. Agree
+2. Yes, make it M2M but a majority of applicable cases are 1 sec - 1 doc 
+3. We're using 24hr time, hopefully this is simpler? 
+4. If tying it to the current clinician wouldn't cause too much hassle down the line should there be database adjustments. 
+5. That sounds fine. 
+6. String 
+
+Remark: 
+- I would like the eventual database to not be so rigid when I need to change something

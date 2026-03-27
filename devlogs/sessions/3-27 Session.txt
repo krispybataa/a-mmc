@@ -1,0 +1,61 @@
+TOMORROW: 
+
+This is a continuation of an active project. Before anything else, read CLAUDE.md
+in full — it is the source of truth for the entire system.
+
+Project: Alagang MMC — patient care coordination app for Makati Medical Center.
+Undergraduate special project at UP Manila under the CeHRes Roadmap (HCD framework).
+
+Stack: React + Vite frontend, Flask + SQLAlchemy backend, PostgreSQL 16.
+All three services Dockerized via compose.yaml in /misc.
+
+Current state as of 2026-03-25:
+- Patient-facing frontend complete: missions 5a through 5g-patch
+- Full public flow: / → /find → /find/triage → /doctors → /clinician/:id → /book/:id
+- Full patient dashboard: /dashboard + /dashboard/appointments with AppointmentDrawer,
+  SlotPicker, reschedule modal, pagination, date filter
+- Auth flow: /login + /register with ?redirect= chain
+- Navbar persistent, excluded from /login + /register
+- triageLogic.js scaffolded, posted to domain expert for clinical review
+- Backend fully scaffolded, first migration NOT yet run, auth stubs return 501
+- No frontend-backend integration yet, all data is mock
+
+We write missions as plain text inside a single code block for Claude Code CLI.
+Desktop-first, degrades to mobile. 24hr time only. Brand tokens only.
+No AM/PM. All hooks before conditional returns. Touch targets min 44px.
+
+Next up is Mission 6a — C/S (Clinician/Secretary) login page at /staff/login.
+Confirm you have read CLAUDE.md and are ready to receive Mission 6a.
+
+
+
+CLI: 
+
+Resume this session with:
+claude --resume 8fa287c3-06fa-484e-b27a-8fb5ae66edba
+Before we start, read CLAUDE.md in full. Here is a summary of where we are:
+
+We are building Alagang MMC — a patient care coordination app for Makati Medical Center. React + Vite frontend, Flask backend, PostgreSQL 16, all Dockerized.
+
+Patient-facing frontend is complete through Mission 5g-patch:
+- / redirects to /find
+- /find → FindDoctor.jsx (aware vs unaware split)
+- /find/triage → GuidedSearch.jsx (3-step triage, triageLogic.js posted for domain expert review)
+- /doctors → Doctors.jsx (full filter panel, reads triage query params)
+- /clinician/:id → ClinicianProfile.jsx
+- /dashboard → PatientDashboard.jsx
+- /dashboard/appointments → PatientAppointments.jsx (with AppointmentDrawer, SlotPicker, reschedule modal)
+- Login, Register, Navbar all complete with ?redirect= chain
+
+Backend is fully scaffolded but first migration has not been run yet. Auth endpoints are stubs returning 501. No frontend-backend integration yet.
+
+Next up is the C/S (Clinician/Secretary) frontend, Mission 6 series:
+- 6a: /staff/login
+- 6b: C/S Appointment Inbox
+- 6c: Clinician Profile Manager
+- 6d: Schedule Manager
+
+We write missions as plain text inside a single code block so Claude Code CLI can copy them directly. Desktop-first, degrades to mobile. 24hr time only. Brand tokens only. All hooks before conditional returns.
+
+Confirm you have read CLAUDE.md and are ready for Mission 6a.
+

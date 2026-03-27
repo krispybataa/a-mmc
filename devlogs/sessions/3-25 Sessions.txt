@@ -1,0 +1,288 @@
+March 25
+Session 1: 
+● Clean build. Everything is in place. Here's a summary of what was set up:
+
+  Dependencies installed:
+  - react-router-dom, axios — routing and HTTP client
+  - tailwindcss, @tailwindcss/vite — Tailwind v4
+  - clsx, tailwind-merge, lucide-react — shadcn peer deps
+
+  shadcn init was bypassed (the CLI is too interactive to automate) and replaced with:
+  - components.json — manually written with Default/Slate/CSS-variables config
+  - src/lib/utils.js — the cn() helper shadcn components expect
+  - You can now run npx shadcn add <component> normally when you need components
+
+  Files created/modified:
+  - vite.config.js — Tailwind plugin + @/ path alias
+  - src/index.css — brand design tokens via @theme
+  - src/App.jsx — BrowserRouter with all 8 routes
+  - src/main.jsx — wrapped with AuthProvider
+  - src/services/api.js — axios instance
+  - src/context/AuthContext.jsx — auth context shell
+  - 8 page stubs under src/pages/public/ and src/pages/dashboard/
+
+  Run npm run dev in a-mmc_frontend/ — all routes will render their stub page title. To verify Tailwind is wired,
+   add className="text-primary" to any stub's <h1> and you should see #1D409C blue.
+
+✻ Crunched for 3m 15s
+
+Session 2: 
+● Clean build. Here's what was built:
+
+  src/data/mockClinicians.js — 3 clinicians: Maria Reyes (Rheumatology), Jose Cruz Jr. (Interventional Cardiology),
+  Ana Dela Cruz (Pediatrics). All Filipino names, varied schedules and HMO counts.
+
+  src/components/ClinicianCard.jsx
+  - Initials avatar (bg-[var(--color-primary)]) when profile_picture is null
+  - Name formatted as "Dr. Maria S. Reyes, Jr." with suffix/middle initial handling
+  - Lucide icons for room, schedule days, and HMO badge
+  - Specialty and department shown (department hidden when it matches specialty to avoid redundancy)
+  - HMO count badge in soft blue
+  - "View Profile" → Link to /clinician/:id
+
+  src/pages/public/Home.jsx
+  - Dark primary hero with MMC label, headline, and tagline
+  - Search bar card that overlaps the hero (-mt-6) with a name input (Search icon) and department dropdown
+  (SlidersHorizontal icon)
+  - Both filters compose via useMemo
+  - Department options derived from mock data — nothing hardcoded
+  - Empty state with a "Clear filters" button
+  - Responsive grid: 1 → 2 → 3 columns
+
+  Run npm run dev and hit /.
+
+✻ Baked for 2m 19s
+
+Session 3 (plus fixes): 
+ Clean build. Here's what was done:
+
+  mockClinicians.js — added info arrays (additive, no shape changes):
+  - Reyes: Background + Clinical Interests
+  - Cruz: Background + Awards & Recognition
+  - Dela Cruz: Background only
+
+  ClinicianProfile.jsx
+
+  - Not found state — shown for /clinician/99 (or any unknown id) with a back link
+  - Layout — grid-cols-1 md:grid-cols-3; left sidebar (1 col) for profile card + CTA, right (2 col) for
+  schedule/HMOs/info
+  - Profile card — large initials avatar (w-24 h-24), full formatted name, specialty/department, room + email with
+  Lucide icons
+  - Schedule table — all Mon–Sat rows, inactive days dimmed at 35% opacity, times formatted as 8:00 AM – 12:00 PM,
+  individual AM/PM cells show — when null
+  - HMOs — full badge list; falls back to a text message if empty
+  - Info section — rendered only when info.length > 0; each entry gets a label subheading + paragraph body; entries
+  2+ separated by a top border
+  - Book CTA — single button: user === null → /login?redirect=/clinician/:id, otherwise → /book/:id; "must be logged
+  in" note visible only when unauthenticated
+
+✻ Churned for 2m 21s
+
+● Fixed. The useParams() key is clinician_id (the route is /clinician/:clinician_id), so params.id from the bug
+  report would have been wrong — the correct form is Number(clinician_id). All three mock clinicians (ids 1, 2, 3)
+  will now resolve correctly; /clinician/99 still hits the not-found state since Number("99") won't match any entry.
+
+● Root cause: App.jsx defines the route as /clinician/:id, so useParams() exposes { id: "1" } — not clinician_id.
+  Destructuring clinician_id always gave undefined, making the find return nothing.
+
+  Fix: const { id: clinician_id } = useParams() — destructures the id param and aliases it locally to clinician_id,
+  so the rest of the component is unchanged. /clinician/1, /clinician/2, /clinician/3 all resolve now; /clinician/99
+  still hits the not-found state.
+
+
+Session 4: 
+● Clean. Here's a summary of all decisions made:
+
+  App.jsx — added import BookAppointment and <Route path="/book/:id">.
+
+  BookAppointment.jsx — structured in this order to satisfy Rules of Hooks:
+  1. All useState + useEffect at the top
+  2. useEffect fires immediately if user is null → navigates to /login?redirect=/book/:id
+  3. return null while redirecting (no flash)
+  4. Clinician lookup and "not found" state after hooks
+  5. All derived values (fullName, minDate/maxDate, paymentOptions, split slot groups) after the early returns where
+  clinician is guaranteed non-null
+
+  Step 1 — date input with min/max enforced; getDayOfWeek builds date from new Date(y, mo-1, d) (local time, avoids
+  UTC shift); slots generated with generateSlots() which stamps each slot with a globalIdx; TAKEN_INDICES =
+  Set([1,3]) checked via slot.globalIdx; "Continue" button disabled until both date and slot are set.
+
+  Step 2 — character counters on complaint and description; HMO dynamically excluded from payment options when
+  clinician.hmos.length === 0; reminder banner in soft blue (bg-blue-50), no red or warning icons.
+
+  Step 3 — fully read-only ReviewRow layout; accent-[var(--color-primary)] on checkbox; submit disabled until
+  checkbox is checked; 500ms mock then navigate('/dashboard', { state: { bookingSuccess: true } }).
+
+✻ Churned for 6m 19s
+
+● Both fixes in, clean build. Summary of changes:
+
+  BookAppointment.jsx (2 edits):
+  - Added availableDaySet to derived values — filters schedule entries where am_start || pm_start is truthy, maps to
+  3-char abbreviations ("Monday".slice(0,3) → "Mon")
+  - Inserted a chips row immediately above the date label: ['Mon','Tue','Wed','Thu','Fri','Sat'] mapped to
+  bg-[var(--color-primary)] text-white or bg-gray-100 text-gray-400 based on set membership — non-interactive, purely
+   visual
+
+  Register.jsx (3 edits):
+  - Added useSearchParams to the router import
+  - Added const [searchParams] = useSearchParams() alongside the other hook calls
+  - Changed navigate('/dashboard') → navigate(searchParams.get('redirect') || '/dashboard') — mirrors the identical
+  pattern in Login.jsx exactly
+
+✻ Worked for 1m 6s
+
+
+Session 5f: 
+● Clean. Summary of everything written:
+
+  Navbar.jsx — sticky h-16 bar. Unauthenticated: Sign In (text) + Register (primary pill). Authenticated: first name
+  (hidden on mobile) + initials avatar → dropdown with My Appointments + divider + Sign Out (accent color).
+  Outside-click closes the dropdown via mousedown listener added only while open (cleaned up on close).
+
+  App.jsx — extracted a Layout component that sits inside BrowserRouter so it can call useLocation. It checks
+  pathname against ['/login', '/register'] and omits <Navbar /> on those two routes. All existing routes preserved.
+
+  mockAppointments.js — 4 appointments one per status: pending (Apr 7, Dr. Reyes), accepted (Apr 16, Dr. Cruz),
+  reschedule_requested (Apr 23, Dr. Dela Cruz — includes a reschedule_reason), cancelled (May 6, Dr. Reyes).
+  Clinician objects are denormalized as the spec requires.
+
+  PatientDashboard.jsx — showBanner initialized from location.state?.bookingSuccess; useEffect auto-dismisses it
+  after 5s. Status config map drives badge color + label. Cards: avatar + name/specialty, 3-col details grid (Date,
+  Time, Room, Chief Complaint, Booking Type, Payment), optional orange reschedule reason note, action buttons gated
+  by status (Cancel always shows for non-cancelled; Request Reschedule only for accepted). window.confirm dialogs as
+  instructed. Empty state with Find a Clinician link.
+
+  Login.jsx — register link now forwards ?redirect= param: /register?redirect=${redirect} when set, plain /register
+  when not. Completes the full chain: Clinician Profile → Login → Register → back to Clinician Profile.
+
+✻ Baked for 3m 24s
+
+Session 5G + Patches: 
+● Zero errors. Here's what was built:
+
+  ---
+  src/data/triageLogic.js — full warning block at top, 6 symptom options
+  (joints/heart/child/general/breathing/unsure), specialty strings matching mockClinicians exactly, null for
+  non-matched options.
+
+  src/data/mockClinicians.js — gender field added: Reyes 'F', Cruz 'M', Dela Cruz 'F'.
+
+  src/components/ClinicianCard.jsx — image/avatar now full-width aspect-square at top of card; overflow-hidden on
+  the card clips it to rounded-xl; initials render as text-5xl centered in the same square; name/specialty moved to
+   a px-5 pt-4 pb-3 section below.
+
+  src/pages/public/FindDoctor.jsx (/find) — centered, two tap cards with ChevronRight, → /doctors and →
+  /find/triage.
+
+  src/pages/public/GuidedSearch.jsx (/find/triage) — 3-step flow:
+  - Step 1: first-visit yes/no (both proceed, annotated TODO for domain expert review)
+  - Step 2: 2-column HMO grid (10 HMOs + full-width "no HMO" option, annotated TODO for backend list)
+  - Step 3: 2-column symptom cards from TRIAGE_STEPS[0] — on tap, immediately builds ?specialty=&hmo= params and
+  navigates to /doctors
+
+  src/pages/public/Doctors.jsx (/doctors) — filter panel in white card above grid:
+  - Name + Specialization: live filter on keystroke
+  - Clinic Day checkboxes (Mon–Sat) + AM/PM period checkboxes: live filter on change
+  - HMO dropdown: derived from all unique HMOs in mockClinicians
+  - Gender checkboxes (Male/Female): uses the new gender field
+  - Reset clears everything + removes URL params; Search button present (filters already live)
+  - Initializes specQuery/selectedHMO directly from URL params (no useEffect needed — reads from useSearchParams()
+  in useState initializers)
+  - Blue dismissible banner when triage params are present
+  - Filter panel collapses on mobile (toggle button md:hidden), always open on md+
+
+  src/App.jsx — three new routes added: /find, /find/triage, /doctors.
+
+  src/pages/dashboard/PatientDashboard.jsx — "Find a Doctor" button now navigates to /find.
+
+✻ Worked for 6m 28s
+
+● Zero errors. Summary:
+
+  App.jsx — Added Navigate to the react-router-dom import; replaced <Route path="/" element={<Home />} /> with
+  <Route path="/" element={<Navigate to="/find" replace />} />. Home import stays untouched.
+
+  Doctors.jsx — Two targeted changes:
+  1. filtersOpen initial state: false → !!(paramSpec || paramHMO) — panel auto-opens when triage params are present
+   so applied filters are immediately visible
+  2. Filter panel rebuilt:
+    - Collapsed default: single row with the name search input (flex-1) + "Filters" button with SlidersHorizontal
+  icon
+    - Active badge: computed inline via an IIFE (activeCount tallies 5 non-name filter signals); shown as Filters ·
+   N label + a small bg-[var(--color-primary)] rounded pill when > 0
+    - Expandable body: max-h-0 opacity-0 → max-h-[800px] opacity-100 with transition-all duration-200 — pure CSS,
+  no JS animation; overflow-hidden keeps it clean at rest
+    - "Doctor's Name" moved out of the grid into the always-visible search bar; the remaining four filter groups
+  (Specialization, HMO, Clinic Day, Gender) live in the collapsible section
+
+✻ Baked for 1m 45s
+
+
+
+Backend Patch: 
+● ---
+  Audit report — B1-A-patch-2
+
+  ISSUE 1  clinician_routes.py  create_clinician
+    Category:  Password handling + required fields
+    Before:    login_password_hash=data["login_password_hash"] — plaintext storage;
+               no require_fields — KeyError on missing first_name/last_name/login_email
+    Action:    Added require_fields("first_name","last_name","login_email","password");
+               hash_password(data["password"]) on write
+
+  ISSUE 2  secretary_routes.py  create_secretary
+    Category:  Password handling + required fields
+    Before:    login_password_hash=data["login_password_hash"] — plaintext storage;
+               no require_fields — KeyError on missing fields
+    Action:    Added require_fields("first_name","last_name","login_email","password");
+               hash_password(data["password"]) on write
+
+  ISSUE 3  appointment_routes.py  create_appointment
+    Category:  FK assumption
+    Before:    patient_id accepted and used in INSERT with no existence check;
+               FK violation would produce 500 instead of 404
+    Action:    Added db.get_or_404(Patient, data["patient_id"]) before INSERT
+               (clinician_id is implicitly verified by the slot.clinician_id check)
+
+  ISSUE 4  secretary_routes.py  link_clinician
+    Category:  FK assumption
+    Before:    clinician_id accepted with no existence check — FK violation → 500
+    Action:    Added db.get_or_404(Clinician, clinician_id) before INSERT
+
+  ISSUE 5  timeslot_routes.py  update_timeslot (PATCH)
+    Category:  Status value mismatch
+    Before:    Any string accepted for status — "booked" or any value could be stored
+    Action:    Added guard: status must be "available" or "blocked" → 422 otherwise
+
+  ISSUE 6  clinician_routes.py  delete_clinician
+    Category:  Transaction boundary
+    Before:    Bare db.session.commit() with no rollback guard;
+               cascade deletes schedules, hmos, infos, timeslots, secretary_links
+    Action:    Wrapped in try/except with db.session.rollback()
+
+  ISSUE 7  secretary_routes.py  delete_secretary
+    Category:  Transaction boundary
+    Before:    Bare db.session.commit() with no rollback guard;
+               cascade deletes SecretaryClinicianLink rows
+    Action:    Wrapped in try/except with db.session.rollback()
+
+  ISSUE 8  clinician_routes.py  create_schedule
+    Category:  Transaction boundary
+    Before:    Two separate commits — schedule committed first, then generate_slots
+               committed separately; generate_slots failure orphaned the schedule row
+    Action:    Changed to db.session.flush() + generate_slots(commit=False) +
+               single db.session.commit() wrapped in try/except; fully atomic
+
+  CLEAN    All PATCH routes (update_patient, update_clinician, update_secretary)
+    login_password_hash absent from all updatable field lists — no plaintext exposure
+
+  CLEAN    appointment_routes all status transitions + slot writes
+    VALID_TRANSITIONS matches CLAUDE.md lifecycle; auto-block only via max_patients;
+    no slot status written on booking/reschedule/cancellation
+
+  OUT OF SCOPE  appointment model missing cancellation_reason column
+    Route comment documents intentional reuse of reschedule_reason field;
+    column addition requires a migration — deferred
+
+✻ Sautéed for 3m 58s
