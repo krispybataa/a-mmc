@@ -8,6 +8,8 @@ import BookAppointment from './pages/public/BookAppointment'
 import PatientDashboard from './pages/dashboard/PatientDashboard'
 import PatientAppointments from './pages/dashboard/PatientAppointments'
 import ClinicianDashboard from './pages/dashboard/ClinicianDashboard'
+import ClinicianProfileManager from './pages/dashboard/ClinicianProfileManager'
+import ScheduleManager from './pages/dashboard/ScheduleManager'
 import UpdateProfile from './pages/dashboard/UpdateProfile'
 import FindDoctor from './pages/public/FindDoctor'
 import GuidedSearch from './pages/public/GuidedSearch'
@@ -31,6 +33,8 @@ function Layout() {
         <Route path="/dashboard" element={<PatientDashboard />} />
         <Route path="/dashboard/appointments" element={<PatientAppointments />} />
         <Route path="/clinician-dashboard" element={<ClinicianDashboard />} />
+        <Route path="/clinician-dashboard/profile" element={<ClinicianProfileManager />} />
+        <Route path="/clinician-dashboard/schedule" element={<ScheduleManager />} />
         <Route path="/dashboard/profile" element={<UpdateProfile />} />
         <Route path="/find" element={<FindDoctor />} />
         <Route path="/find/triage" element={<GuidedSearch />} />

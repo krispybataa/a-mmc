@@ -317,11 +317,33 @@ def cancel_appointment(appointment_id: int):
 # ---------------------------------------------------------------------------
 
 def _serialize(a: Appointment) -> dict:
+    c = a.clinician
+    s = a.slot
     return {
         "appointment_id": a.appointment_id,
         "patient_id": a.patient_id,
+        "patient_first_name": a.patient.first_name,
+        "patient_last_name": a.patient.last_name,
+        "patient": {
+            "patient_id": a.patient_id,
+            "first_name": a.patient.first_name,
+            "last_name": a.patient.last_name,
+        },
         "clinician_id": a.clinician_id,
+        "clinician": {
+            "clinician_id": c.clinician_id,
+            "title": c.title,
+            "first_name": c.first_name,
+            "last_name": c.last_name,
+            "specialty": c.specialty,
+            "room_number": c.room_number,
+        },
         "slot_id": a.slot_id,
+        "slot": {
+            "slot_id": s.slot_id,
+            "slot_date": str(s.slot_date),
+            "start_time": str(s.start_time)[:5],   # HH:MM
+        },
         "consultation_date": str(a.consultation_date),
         "chief_complaint": a.chief_complaint,
         "chief_complaint_description": a.chief_complaint_description,

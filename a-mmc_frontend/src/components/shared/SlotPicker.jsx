@@ -85,6 +85,7 @@ function SlotButton({ slot, isSelected, isTaken, onSelect }) {
 
 export default function SlotPicker({
   schedule,
+  availableSlots,
   clinicianName,
   selectedDate,
   onDateChange,
@@ -105,13 +106,37 @@ export default function SlotPicker({
       .map(s => s.day_of_week.slice(0, 3))
   )
 
-  // Derive everything from selectedDate + schedule — no internal state needed
-  const dow        = selectedDate ? getDayOfWeek(selectedDate) : null
-  const dayEntry   = dow ? schedule.find(s => s.day_of_week === dow) : null
-  const unavailable = selectedDate && (!dayEntry || (!dayEntry.am_start && !dayEntry.pm_start))
-  const slots      = (dayEntry && !unavailable) ? generateSlots(dayEntry) : []
-  const amSlots    = slots.filter(s => s.period === 'AM')
-  const pmSlots    = slots.filter(s => s.period === 'PM')
+  // Derive everything from selectedDate + schedule/availableSlots — no internal state needed
+  const dow = selectedDate ? getDayOfWeek(selectedDate) : null
+
+  let slots = []
+  let unavailable = false
+
+  if (selectedDate) {
+    if (availableSlots) {
+      const realDaySlots = availableSlots[selectedDate] ?? []
+      if (realDaySlots.length === 0) {
+        unavailable = true
+      } else {
+        slots = realDaySlots.map(s => ({
+          slot_id: s.slot_id,
+          slot_date: s.slot_date,
+          id: s.start_time.slice(0, 5),
+          label: s.start_time.slice(0, 5),
+          period: parseInt(s.start_time.slice(0, 2), 10) < 12 ? 'AM' : 'PM',
+        }))
+      }
+    } else {
+      const dayEntry = dow ? schedule.find(s => s.day_of_week === dow) : null
+      unavailable = !dayEntry || (!dayEntry.am_start && !dayEntry.pm_start)
+      if (!unavailable && dayEntry) {
+        slots = generateSlots(dayEntry)
+      }
+    }
+  }
+
+  const amSlots = slots.filter(s => s.period === 'AM')
+  const pmSlots = slots.filter(s => s.period === 'PM')
 
   return (
     <div className="space-y-5">
@@ -160,7 +185,9 @@ export default function SlotPicker({
       {unavailable && (
         <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
           <p className="text-sm text-amber-800">
-            {clinicianName} is not available on {dow}. Please select another date.
+            {availableSlots
+              ? `${clinicianName} has no available slots on this date. Please try another date.`
+              : `${clinicianName} is not available on ${dow}. Please select another date.`}
           </p>
         </div>
       )}
@@ -184,7 +211,7 @@ export default function SlotPicker({
                     key={slot.id}
                     slot={slot}
                     isSelected={selectedSlot?.id === slot.id}
-                    isTaken={TAKEN_INDICES.has(slot.globalIdx)}
+                    isTaken={!availableSlots && TAKEN_INDICES.has(slot.globalIdx)}
                     onSelect={onSlotSelect}
                   />
                 ))}
@@ -203,7 +230,7 @@ export default function SlotPicker({
                     key={slot.id}
                     slot={slot}
                     isSelected={selectedSlot?.id === slot.id}
-                    isTaken={TAKEN_INDICES.has(slot.globalIdx)}
+                    isTaken={!availableSlots && TAKEN_INDICES.has(slot.globalIdx)}
                     onSelect={onSlotSelect}
                   />
                 ))}

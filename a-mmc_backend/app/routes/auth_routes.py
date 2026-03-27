@@ -127,7 +127,7 @@ def refresh():
         identity=identity,
         additional_claims={"role": identity["role"]},
     )
-    return jsonify({"access_token": access_token}), 200
+    return jsonify({"access_token": access_token, "user": identity}), 200
 
 
 # ---------------------------------------------------------------------------

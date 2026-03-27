@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff, Check } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import api, { configureApiAuth } from '../../services/api'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -115,7 +116,7 @@ function validateStep(step, fd) {
 export default function Register() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { setUser } = useAuth()
+  const { setUser, setToken, logout } = useAuth()
 
   const [step, setStep]           = useState(1)
   const [formData, setFormData]   = useState(INIT)
@@ -143,21 +144,57 @@ export default function Register() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const errs = validateStep(3, formData)
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
     setLoading(true)
-    setTimeout(() => {
-      setUser({
-        patient_id: Date.now(),
-        first_name: formData.first_name,
-        last_name:  formData.last_name,
-        email:      formData.email,
-        role:       'patient',
+
+    const payload = {
+      login_email:           formData.email,
+      password:              formData.password,
+      first_name:            formData.first_name,
+      last_name:             formData.last_name,
+      birthday:              formData.birthday,
+      gender:                formData.gender,
+      mobile_number:         formData.mobile_number,
+      address_line_1:        formData.address_line_1,
+      barangay:              formData.barangay,
+      city:                  formData.city,
+      province:              formData.province,
+      country:               formData.country,
+      preferred_language:    formData.preferred_language,
+      educational_attainment: formData.educational_attainment,
+      // optional fields — omit empty strings so backend receives clean nulls
+      ...(formData.middle_name           && { middle_name:              formData.middle_name }),
+      ...(formData.suffix                && { suffix:                   formData.suffix }),
+      ...(formData.civil_status          && { civil_status:             formData.civil_status }),
+      ...(formData.occupation            && { occupation:               formData.occupation }),
+      ...(formData.nationality           && { nationality:              formData.nationality }),
+      ...(formData.religion              && { religion:                 formData.religion }),
+      ...(formData.culture               && { culture:                  formData.culture }),
+      ...(formData.next_of_kin_name      && { next_of_kin_name:         formData.next_of_kin_name }),
+      ...(formData.next_of_kin_relationship && { next_of_kin_relationship: formData.next_of_kin_relationship }),
+      ...(formData.next_of_kin_contact   && { next_of_kin_contact:      formData.next_of_kin_contact }),
+      ...(formData.sc_pwd_id_number      && { sc_pwd_id_number:         formData.sc_pwd_id_number }),
+      ...(formData.disability_type       && { disability_type:          formData.disability_type }),
+      // pwd_id_front / pwd_id_back are File objects — omitted until file upload endpoint exists
+    }
+
+    try {
+      await api.post('/api/patients/', payload)
+      const { data } = await api.post('/api/auth/patient/login', {
+        email: formData.email,
+        password: formData.password,
       })
-      const redirect = searchParams.get('redirect')
-      navigate(redirect || '/dashboard')
-    }, 300)
+      configureApiAuth(data.access_token, setToken, logout)
+      setToken(data.access_token)
+      setUser(data.user)
+      navigate(searchParams.get('redirect') || '/dashboard')
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Registration failed. Please try again.'
+      setErrors({ submit: msg })
+      setLoading(false)
+    }
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -587,7 +624,10 @@ export default function Register() {
           )}
 
           {/* ── Navigation buttons ── */}
-          <div className="flex items-center gap-3 mt-8 pt-6 border-t border-slate-100">
+          {errors.submit && (
+            <p className="mt-6 text-xs text-[var(--color-accent)] text-center">{errors.submit}</p>
+          )}
+          <div className="flex items-center gap-3 mt-4 pt-6 border-t border-slate-100">
             {step > 1 && (
               <button
                 type="button"

@@ -38,6 +38,17 @@ def list_clinicians():
             "profile_picture": c.profile_picture,
             "contact_phone": c.contact_phone,
             "contact_email": c.contact_email,
+            "schedules": [
+                {
+                    "day_of_week": s.day_of_week,
+                    "am_start": str(s.am_start) if s.am_start else None,
+                    "am_end": str(s.am_end) if s.am_end else None,
+                    "pm_start": str(s.pm_start) if s.pm_start else None,
+                    "pm_end": str(s.pm_end) if s.pm_end else None,
+                }
+                for s in c.schedules
+            ],
+            "hmos": [h.hmo_name for h in c.hmos],
         }
         for c in clinicians
     ])
@@ -298,6 +309,17 @@ def create_hmo(clinician_id: int):
     return jsonify({"hmo_id": hmo.hmo_id}), 201
 
 
+@clinician_bp.delete("/<int:clinician_id>/hmos/<int:hmo_id>")
+def delete_hmo(clinician_id: int, hmo_id: int):
+    db.get_or_404(Clinician, clinician_id)
+    hmo = db.get_or_404(ClinicianHMO, hmo_id)
+    if hmo.clinician_id != clinician_id:
+        return jsonify({"error": "HMO not found for this clinician"}), 404
+    db.session.delete(hmo)
+    db.session.commit()
+    return jsonify({"message": "deleted"})
+
+
 # ---------------------------------------------------------------------------
 # Infos (nested under clinician)
 # ---------------------------------------------------------------------------
@@ -324,6 +346,17 @@ def create_info(clinician_id: int):
     db.session.add(info)
     db.session.commit()
     return jsonify({"info_id": info.info_id}), 201
+
+
+@clinician_bp.delete("/<int:clinician_id>/infos/<int:info_id>")
+def delete_info(clinician_id: int, info_id: int):
+    db.get_or_404(Clinician, clinician_id)
+    info = db.get_or_404(ClinicianInfo, info_id)
+    if info.clinician_id != clinician_id:
+        return jsonify({"error": "Info not found for this clinician"}), 404
+    db.session.delete(info)
+    db.session.commit()
+    return jsonify({"message": "deleted"})
 
 
 # ---------------------------------------------------------------------------

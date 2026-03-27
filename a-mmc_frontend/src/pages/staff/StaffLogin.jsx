@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import api from '../../services/api'
+import api, { configureApiAuth } from '../../services/api'
 
 // Role options — radio/segmented control, not a dropdown
 const ROLES = [
@@ -26,7 +26,7 @@ function validate(email, password) {
 export default function StaffLogin() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { setUser, setToken } = useAuth()
+  const { setUser, setToken, logout } = useAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -52,12 +52,17 @@ export default function StaffLogin() {
         email: email.trim(),
         password,
       })
+      configureApiAuth(data.access_token, setToken, logout)
       setToken(data.access_token)
       setUser(data.user)
       const redirect = searchParams.get('redirect')
       navigate(redirect || '/clinician-dashboard', { replace: true })
-    } catch {
-      setServerError('Invalid email or password.')
+    } catch (err) {
+      setServerError(
+        err.response?.status === 401
+          ? 'Invalid email or password.'
+          : 'Something went wrong. Please try again.',
+      )
     } finally {
       setLoading(false)
     }

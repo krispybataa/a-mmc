@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, Check, MapPin } from 'lucide-react'
-import { mockClinicians } from '../../data/mockClinicians'
 import { useAuth } from '../../context/AuthContext'
+import api from '../../services/api'
 import SlotPicker from '../../components/shared/SlotPicker'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -98,9 +98,9 @@ function StepIndicator({ step }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function BookAppointment() {
-  const { id }      = useParams()
-  const navigate    = useNavigate()
-  const { user }    = useAuth()
+  const { id }                  = useParams()
+  const navigate                = useNavigate()
+  const { user, authLoading }   = useAuth()
 
   // ── All hooks first (Rules of Hooks) ────────────────────────────────────────
   const [step, setStep]               = useState(1)
@@ -116,23 +116,64 @@ export default function BookAppointment() {
   // Step 3
   const [confirmed, setConfirmed] = useState(false)
   const [loading, setLoading]     = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  // Data
+  const [clinician, setClinician]         = useState(null)
+  const [availableSlots, setAvailableSlots] = useState(null)
+  const [fetchLoading, setFetchLoading]   = useState(true)
+  const [fetchError, setFetchError]       = useState('')
 
-  // Auth guard — redirect immediately, nothing renders while user is null
+  // Auth guard — wait for auth to resolve before redirecting
   useEffect(() => {
-    if (!user) navigate(`/login?redirect=/book/${id}`, { replace: true })
-  }, [user, id, navigate])
+    if (!authLoading && !user) navigate(`/login?redirect=/book/${id}`, { replace: true })
+  }, [authLoading, user, id, navigate])
+
+  // Fetch clinician profile + available slots
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setFetchLoading(true)
+      setFetchError('')
+      try {
+        const [clinRes, slotsRes] = await Promise.all([
+          api.get(`/api/clinicians/${id}`),
+          api.get('/api/timeslots/', { params: { clinician_id: id, status: 'available' } }),
+        ])
+        if (cancelled) return
+        setClinician(clinRes.data)
+        const map = {}
+        for (const s of slotsRes.data) {
+          if (!map[s.slot_date]) map[s.slot_date] = []
+          map[s.slot_date].push(s)
+        }
+        setAvailableSlots(map)
+      } catch {
+        if (!cancelled) setFetchError('Failed to load clinician information. Please try again.')
+      } finally {
+        if (!cancelled) setFetchLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [id])
 
   // ── Early returns (after all hooks) ─────────────────────────────────────────
-  if (!user) return null
+  if (authLoading || !user) return null
 
-  const clinician = mockClinicians.find((c) => c.clinician_id === Number(id))
+  if (fetchLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <p className="text-slate-400 text-sm">Loading…</p>
+      </div>
+    )
+  }
 
-  if (!clinician) {
+  if (fetchError || !clinician) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4 px-6">
-        <p className="text-slate-500 text-base font-medium">Clinician not found.</p>
+        <p className="text-slate-500 text-base font-medium">{fetchError || 'Clinician not found.'}</p>
         <Link
-          to="/"
+          to="/doctors"
           className="inline-flex items-center gap-1.5 text-sm text-[var(--color-primary)] hover:underline"
         >
           <ArrowLeft size={13} />
@@ -180,11 +221,24 @@ export default function BookAppointment() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     setLoading(true)
-    setTimeout(() => {
+    setSubmitError('')
+    try {
+      await api.post('/api/appointments/', {
+        patient_id: user.id,
+        clinician_id: Number(id),
+        slot_id: selectedSlot.slot_id,
+        consultation_date: selectedDate,
+        chief_complaint: chiefComplaint.trim(),
+        chief_complaint_description: description.trim() || undefined,
+        payment_type: paymentType,
+      })
       navigate('/dashboard', { state: { bookingSuccess: true } })
-    }, 500)
+    } catch (err) {
+      setSubmitError(err?.response?.data?.error ?? 'Failed to submit. Please try again.')
+      setLoading(false)
+    }
   }
 
   // ── Render ────────────────────────────────────────────────────────────────────
@@ -242,7 +296,8 @@ export default function BookAppointment() {
           ════════════════════════════════════════════════ */}
           {step === 1 && (
             <SlotPicker
-              schedule={clinician.schedule}
+              schedule={clinician.schedules}
+              availableSlots={availableSlots}
               clinicianName={fullName}
               selectedDate={selectedDate}
               onDateChange={handleDateChange}
@@ -459,6 +514,10 @@ export default function BookAppointment() {
                   time for my appointment.
                 </span>
               </label>
+
+              {submitError && (
+                <p className="text-sm text-[var(--color-accent)]">{submitError}</p>
+              )}
             </div>
           )}
 

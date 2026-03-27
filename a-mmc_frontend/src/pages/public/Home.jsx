@@ -1,25 +1,34 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Search, SlidersHorizontal } from 'lucide-react'
-import { mockClinicians } from '../../data/mockClinicians'
+import api from '../../services/api'
 import ClinicianCard from '../../components/ClinicianCard'
 
 export default function Home() {
-  const [searchQuery, setSearchQuery] = useState('')
+  const [clinicians, setClinicians]       = useState([])
+  const [loading, setLoading]             = useState(true)
+  const [searchQuery, setSearchQuery]     = useState('')
   const [selectedDepartment, setSelectedDepartment] = useState('')
 
-  const departments = useMemo(() => {
-    const unique = [...new Set(mockClinicians.map((c) => c.department))]
-    return unique.sort()
+  useEffect(() => {
+    api.get('/api/clinicians/')
+      .then(({ data }) => setClinicians(data))
+      .catch(() => setClinicians([]))
+      .finally(() => setLoading(false))
   }, [])
+
+  const departments = useMemo(() => {
+    const unique = [...new Set(clinicians.map((c) => c.department))]
+    return unique.sort()
+  }, [clinicians])
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
-    return mockClinicians.filter((c) => {
+    return clinicians.filter((c) => {
       const nameMatch = !q || `${c.first_name} ${c.last_name}`.toLowerCase().includes(q)
       const deptMatch = !selectedDepartment || c.department === selectedDepartment
       return nameMatch && deptMatch
     })
-  }, [searchQuery, selectedDepartment])
+  }, [clinicians, searchQuery, selectedDepartment])
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -81,7 +90,9 @@ export default function Home() {
 
       {/* Clinician grid */}
       <main className="max-w-5xl mx-auto px-6 pt-8 pb-16">
-        {filtered.length > 0 ? (
+        {loading ? (
+          <p className="text-slate-400 text-sm text-center py-24">Loading…</p>
+        ) : filtered.length > 0 ? (
           <>
             <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-5">
               {filtered.length} clinician{filtered.length !== 1 ? 's' : ''} found

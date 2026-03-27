@@ -14,7 +14,8 @@ billing, diagnostics, or post-consultation records.
 ## Mission nomenclature
 - Backend missions: `B<number>-<letter>` (e.g. B1-A, B1-B, B1-C...)
 - Frontend missions: `F<number>-<letter>` (e.g. F6-A, F6-B, F6-C...)
-- Patch missions append `-patch` to the parent (e.g. B1-B-patch, B1-D-patch)
+- Integration missions: `FB-<letter><number>` (e.g. FB-A1, FB-B3, FB-C2...)
+- Patch missions append `-patch` to the parent (e.g. B1-A-patch, B1-A-patch-2)
 
 ---
 
@@ -24,7 +25,7 @@ billing, diagnostics, or post-consultation records.
 | Frontend | React + Vite |
 | Backend | Flask + Flask-SQLAlchemy + Flask-Migrate |
 | Database | PostgreSQL 16 (transactional) |
-| Containerization | Docker — all three services (frontend, backend, PostgreSQL) via `compose.yaml` in `/misc` |
+| Containerization | Docker — all three services (frontend, backend, PostgreSQL) via `compose.yaml` in `/a-mmc_infra` |
 | Reverse proxy | Planned — Nginx, SSL termination at proxy level, requires signed certs |
 | Auth | flask-jwt-extended (JWT), bcrypt |
 | Email | stdlib smtplib + email.mime — config-driven, Mailtrap for dev |
@@ -44,7 +45,7 @@ a-mmc/
 ├── a-mmc_backend/
 │   ├── .venv/
 │   ├── .env              ← not committed, use .env.example as template
-│   ├── .env.example      ← safe-to-commit template
+│   ├── .env.example      ← safe-to-commit template (also used as env_file in compose)
 │   ├── requirements.txt
 │   ├── run.py            ← entry point
 │   └── app/
@@ -56,12 +57,12 @@ a-mmc/
 │       │   ├── patient.py
 │       │   └── appointment.py
 │       ├── routes/
-│       │   ├── auth_routes.py        ← login/logout/me/refresh — all 3 roles implemented
-│       │   ├── clinician_routes.py   ← includes PATCH schedules/<id> (schedule edit)
-│       │   ├── secretary_routes.py
+│       │   ├── auth_routes.py        ← login/logout/me/refresh — all 3 roles
+│       │   ├── clinician_routes.py   ← CRUD + schedules, hmos, infos, timeslots; DELETE hmo + info added FB-C1
+│       │   ├── secretary_routes.py   ← CRUD + link/unlink clinician (REST: /secretaries/<id>/clinicians/<id>)
 │       │   ├── patient_routes.py
 │       │   ├── timeslot_routes.py
-│       │   └── appointment_routes.py ← full lifecycle, transaction boundaries verified
+│       │   └── appointment_routes.py ← full lifecycle; _serialize includes nested clinician, slot, patient
 │       ├── services/
 │       │   ├── auth_service.py       ← hash_password / verify_password + get_*_by_email + build_identity
 │       │   ├── appointment_service.py ← has_overlap()
@@ -77,31 +78,30 @@ a-mmc/
 │   │   │   ├── Navbar.jsx                 ← persistent, excluded from /login, /register, /staff/login
 │   │   │   └── shared/
 │   │   │       ├── AppointmentDrawer.jsx  ← slide-in detail drawer (right desktop, bottom mobile)
-│   │   │       └── SlotPicker.jsx         ← controlled date + slot selection component
+│   │   │       └── SlotPicker.jsx         ← controlled date + slot selection; optional availableSlots prop
 │   │   ├── context/
 │   │   │   └── AuthContext.jsx       ← real JWT, authLoading, silent refresh on mount, role-aware logout
-│   │   ├── data/
-│   │   │   ├── mockAppointments.js   ← 4 appointments, one per status
-│   │   │   ├── mockClinicians.js     ← 3 clinicians, includes gender field
-│   │   │   └── triageLogic.js        ← ⚠️ PLACEHOLDER — pending domain expert review
 │   │   ├── lib/
 │   │   │   └── utils.js              ← cn() helper
 │   │   ├── pages/
 │   │   │   ├── public/
-│   │   │   │   ├── Home.jsx              ← legacy browse page, kept but no longer on / route
+│   │   │   │   ├── Home.jsx              ← legacy browse page, live API fetch, no longer on / route
 │   │   │   │   ├── FindDoctor.jsx        ← /find — aware vs unaware entry point
 │   │   │   │   ├── GuidedSearch.jsx      ← /find/triage — 3-step unaware triage flow
-│   │   │   │   ├── Doctors.jsx           ← /doctors — full directory + collapsible filter panel
-│   │   │   │   ├── ClinicianProfile.jsx  ← /clinician/:id
-│   │   │   │   ├── Login.jsx             ← /login, ?redirect= chain
-│   │   │   │   └── Register.jsx          ← /register, 3-step, ?redirect= chain
+│   │   │   │   ├── Doctors.jsx           ← /doctors — live clinician list, collapsible filter panel
+│   │   │   │   ├── ClinicianProfile.jsx  ← /clinician/:id — live clinician detail
+│   │   │   │   ├── BookAppointment.jsx   ← appointment booking, live clinician + slot fetch
+│   │   │   │   ├── Login.jsx             ← /login, real auth, ?redirect= chain
+│   │   │   │   └── Register.jsx          ← /register, real registration + auto-login, ?redirect= chain
 │   │   │   ├── staff/
-│   │   │   │   └── StaffLogin.jsx        ← /staff/login, role selector, ?redirect= chain
+│   │   │   │   └── StaffLogin.jsx        ← /staff/login, role selector, real auth, ?redirect= chain
 │   │   │   └── dashboard/
-│   │   │       ├── PatientDashboard.jsx      ← /dashboard
-│   │   │       ├── PatientAppointments.jsx   ← /dashboard/appointments
-│   │   │       ├── ClinicianDashboard.jsx    ← /clinician-dashboard [STUB]
-│   │   │       └── UpdateProfile.jsx         ← /dashboard/profile [STUB]
+│   │   │       ├── PatientDashboard.jsx       ← /dashboard, live appointments
+│   │   │       ├── PatientAppointments.jsx    ← /dashboard/appointments, live appointments
+│   │   │       ├── ClinicianDashboard.jsx     ← /clinician-dashboard, live C/S inbox
+│   │   │       ├── ClinicianProfileManager.jsx ← /clinician-dashboard/profile, live profile edit
+│   │   │       ├── ScheduleManager.jsx        ← /clinician-dashboard/schedule, live schedule edit
+│   │   │       └── UpdateProfile.jsx          ← /dashboard/profile [STUB]
 │   │   ├── services/
 │   │   │   └── api.js                ← axios instance, configureApiAuth, request + 401 retry interceptors
 │   │   ├── App.jsx                   ← BrowserRouter, Layout, all routes
@@ -109,9 +109,9 @@ a-mmc/
 │   │   └── index.css                 ← Tailwind v4 + @theme brand tokens
 │   ├── public/
 │   └── vite.config.js
-└── misc/
+└── a-mmc_infra/
     ├── compose.yaml
-    └── alagang_mmc_erd.html
+    └── nginx.conf (planned)
 ```
 
 ---
@@ -130,7 +130,9 @@ a-mmc/
 | /dashboard | PatientDashboard.jsx | Yes → /login?redirect=/dashboard |
 | /dashboard/appointments | PatientAppointments.jsx | Yes |
 | /dashboard/profile | UpdateProfile.jsx | Yes [STUB] |
-| /clinician-dashboard | ClinicianDashboard.jsx | Yes [STUB] |
+| /clinician-dashboard | ClinicianDashboard.jsx | Yes → /staff/login?redirect=... |
+| /clinician-dashboard/profile | ClinicianProfileManager.jsx | Yes |
+| /clinician-dashboard/schedule | ScheduleManager.jsx | Yes |
 
 **?redirect= chain (patient):** Unauthenticated patient hitting a gated page →
 `/login?redirect=X` → `/register?redirect=X` → back to X after auth.
@@ -219,8 +221,6 @@ Required fields marked. Account required to book appointments.
 
 **APPOINTMENT**
 A patient books an appointment within a clinician's timeslot.
-A patient may have many appointments across many clinicians, so long as timeslots
-do not overlap. Secretary or clinician can accept or request reschedule.
 - `appointment_id` PK
 - `patient_id` FK, `clinician_id` FK, `slot_id` FK
 - `consultation_date` (date)
@@ -240,9 +240,10 @@ do not overlap. Secretary or clinician can accept or request reschedule.
 - **SECRETARY_CLINICIAN** as a junction table — supports M2M even though 1:1 is the common case
 - **No integration** with external MMC systems (iHIMS, EMR) — operates as a standalone system
 - **No billing, diagnostics, or post-consultation data** — strictly pre-consultation coordination
+- **Gender filter removed** from Doctors.jsx — field not present in Clinician schema
 
 ### Auth token strategy
-- Access token: 60 minutes, returned in response body as `{ "access_token": "..." }`
+- Access token: 60 minutes, returned in response body as `{ "access_token": "...", "user": {...} }`
 - Refresh token: 7 days, set as `httpOnly` cookie named `refresh_token`
 - No blocklist — logout clears cookie client-side only. `# TODO(security)` marked for production hardening
 - Cookie settings: `httpOnly=True`, `secure=True` (False in DevelopmentConfig), `samesite="Lax"`
@@ -261,18 +262,18 @@ do not overlap. Secretary or clinician can accept or request reschedule.
 ### Schedule change handling (timeslot invariant)
 - `generate_slots()` is idempotent — it skips existing `(clinician, date, start_time)` keys and never deletes
 - `generate_slots()` accepts `commit=False` param for parent-transaction participation
+- `_time_to_minutes()` handles all three types: `timedelta`, `str` ("HH:MM" or "HH:MM:SS"), `datetime.time`
 - If a `ClinicianSchedule` row is edited, `regenerate_slots_for_schedule_change()` handles cleanup:
   - **Safe orphans** (available, zero active appointments) → deleted automatically
   - **Stuck slots** (have active appointments) → returned to C/S for manual action
 - Schedule-edit PATCH wraps schedule update + regeneration in a single atomic transaction
-- Stuck slot list is surfaced in the response — does not block the save
+- Stuck slot list is surfaced in the response and in the ScheduleManager UI — does not block the save
 
 ### Slot model invariants (DO NOT CHANGE without design review)
 - A slot (`CLINICIAN_TIMESLOT`) may hold **multiple appointments** — it is NOT 1:1 with a patient
 - Slot `status` is **only ever written by C/S explicitly** (`available` → `blocked` and back), or auto-blocked when `max_patients` is reached. **Booking, rescheduling, and cancelling an appointment never write to slot status**
 - `"booked"` is NOT a valid slot status. Valid values: `available | blocked`
 - `max_patients` is nullable. When set, the slot auto-blocks after that many `accepted` appointments (opt-in soft capacity). Slot count is NOT shown to patients.
-- Slot booking count is derived from `Appointment` rows for audit; it is informational only, never enforced unless `max_patients` is set
 
 ### Appointment status lifecycle
 ```
@@ -307,6 +308,25 @@ Verified routes:
 - `PATCH /api/appointments/<id>` — all status transition branches including flush + auto-block
 - `DELETE /api/appointments/<id>` — cancellation
 - `PATCH /api/clinicians/<id>/schedules/<schedule_id>` — schedule update + slot regeneration
+- `DELETE /api/clinicians/<id>` — cascade deletes child rows
+- `DELETE /api/secretaries/<id>` — cascade deletes SecretaryClinicianLink rows
+
+### Secretary-clinician link route
+- REST-style URL: `POST /api/secretaries/<secretary_id>/clinicians/<clinician_id>`
+- No request body needed — both IDs are in the URL
+- Unlink: `DELETE /api/secretaries/<secretary_id>/clinicians/<clinician_id>`
+
+### Role-based clinician_id resolution (frontend)
+Used in ClinicianDashboard, ClinicianProfileManager, and ScheduleManager:
+- `role === "clinician"` → use `user.id` directly
+- `role === "secretary"` → `GET /api/secretaries/<user.id>` → `clinician_ids[0]`
+
+### Appointment serializer (_serialize in appointment_routes.py)
+Returns nested objects for related entities:
+- `clinician: { clinician_id, title, first_name, last_name, specialty, room_number }`
+- `slot: { slot_id, slot_date, start_time }` (start_time sliced to HH:MM)
+- `patient: { patient_id, first_name, last_name }` (nested object)
+- `patient_first_name`, `patient_last_name` (flat fields, preserved for compatibility)
 
 ---
 
@@ -333,53 +353,53 @@ Patients can browse clinicians without an account but must register to book.
 ## Where things stand
 
 ### Backend
-- ✅ Flask backend fully scaffolded (app factory, config, models, routes, services, utils)
+- ✅ Flask backend fully scaffolded and smoke-tested against live DB
 - ✅ All 8 schema tables implemented as SQLAlchemy models
-- ✅ All 5 domain route blueprints scaffolded with full CRUD
+- ✅ All domain route blueprints with full CRUD
 - ✅ Appointment lifecycle, slot model invariants, and cancellation time gates enforced
 - ✅ Auth layer fully implemented — all 3 roles, access + refresh tokens, httpOnly cookie
-- ✅ 60-day rolling slot generation on schedule save (`timeslot_service.generate_slots`)
-- ✅ `regenerate_slots_for_schedule_change()` fully implemented and wired into schedule-edit route
-- ✅ Patient overlap check implemented (`appointment_service.has_overlap`) and wired
+- ✅ 60-day rolling slot generation on schedule save
+- ✅ `regenerate_slots_for_schedule_change()` fully implemented and wired
+- ✅ Patient overlap check implemented and wired
 - ✅ Email service scaffolded (Mailtrap) — 5 notification functions wired post-commit
 - ✅ Transaction boundaries verified on all multi-table write routes
-- ✅ Unit test scaffolds in place: `tests/test_appointment_service.py`, `tests/test_timeslot_service.py`, `tests/test_email_service.py`
-- ✅ `.env.example` template in place (JWT, DB, MAIL_* vars)
-- ⏳ First migration not yet run — Postgres not yet touched (with collaborators)
-- ⏳ No smoke-testing against live DB yet (B2 mission — pinned)
+- ✅ Password hashing on all three registration routes
+- ✅ Full route audit completed (B1-A-patch-2) — FK checks, status guards, boundaries
+- ✅ DELETE routes for HMO and info entries added (FB-C1)
+- ✅ Refresh endpoint returns full user identity (FB-A1 fix)
+- ✅ B2 smoke test passed end-to-end against live DB
+- ⏳ Unit tests not yet run against live DB (scaffolds in place)
 
 ### Frontend
-- ✅ F5-A through F5-G-patch: full patient-facing frontend complete
-- ✅ F6-A: StaffLogin.jsx (/staff/login), AuthContext real JWT + silent refresh,
-      api.js request + 401 retry interceptors, configureApiAuth token bridge
-- ⏳ F6-B: C/S Appointment Inbox
-- ⏳ F6-C: Clinician Profile Manager
-- ⏳ F6-D: Schedule Manager
+- ✅ Full patient-facing frontend (F5 series)
+- ✅ Full C/S frontend (F6 series): inbox, profile manager, schedule manager
+- ✅ Full frontend-backend integration (FB series): all pages on live API
+- ✅ mockClinicians.js and mockAppointments.js deleted
+- ✅ SlotPicker supports optional availableSlots prop for real slot objects
+- ⏳ Frontend container not yet up — no browser visual verification
+
+### Docker
+- ✅ a-mmc-postgres: up and running, all 10 tables migrated
+- ✅ a-mmc-backend: up and running, smoke-tested
+- ⏳ a-mmc-frontend: not yet up (collaborator)
 
 ### Known debt
-- `window.confirm()` dialogs are placeholders throughout (cancel, reschedule flows)
-- Cancellation/reschedule time gates not yet enforced on frontend
-- `triageLogic.js` routing logic pending domain expert validation
-- `Home.jsx` kept but unused — can be deleted once confirmed no longer needed
-- `ClinicianDashboard.jsx` and `UpdateProfile.jsx` are stubs
-- `send_noshow_confirmation_prompt()` not wired — requires scheduler (`# TODO(scheduler)`)
+- Frontend container not yet up — browser smoke test pending
+- `UpdateProfile.jsx` is a stub
+- Profile picture upload not wired (`# TODO(integration)` in ClinicianProfileManager)
+- `send_noshow_confirmation_prompt()` not wired (needs scheduler — `# TODO(scheduler)`)
 - `# TODO(security)` markers throughout auth: blocklist, CSRF, rate limiting, brute-force protection
+- `triageLogic.js` routing logic pending domain expert validation
+- `window.confirm()` still present in Register flow
 
 ---
 
 ## Next steps (priority order)
-
-### Immediate — C/S frontend
-- F6-B: C/S Appointment Inbox — paginated list, accept / request reschedule actions
-- F6-C: Clinician Profile Manager — edit profile fields, upload profile picture
-- F6-D: Schedule Manager — weekly schedule editor, triggers slot regeneration, surfaces stuck slots
-
-### Backend (once DB is up with collaborators) — B2
-1. Copy `.env.example` → `.env`; fill in DB credentials, `JWT_SECRET_KEY`, `MAIL_*`
-2. `flask db init && flask db migrate -m "initial schema" && flask db upgrade`
-3. Smoke-test all routes against live DB
-4. Run full unit test suite (`pytest tests/`)
-5. Begin frontend → backend integration (replace mock data with real API calls via `api.js`)
+1. Collaborator brings up frontend container
+2. Full browser smoke test: register → find clinician → book → C/S login → accept
+3. Begin usability testing per CeHRes roadmap (SRET with stakeholder groups)
+4. Wire profile picture upload endpoint
+5. Address TODO(security) markers before any real user testing
 
 ---
 
@@ -397,3 +417,6 @@ Patients can browse clinicians without an account but must register to book.
 - Use brand tokens only — no arbitrary hex colors in frontend code
 - All React hooks before any conditional returns (Rules of Hooks)
 - No localStorage or sessionStorage for tokens — memory only
+- Registration endpoints accept `"password"` field — hashed internally before storage
+- Secretary-clinician link uses REST URL pattern, no request body
+- All routes use trailing slash consistently (Flask redirects without it)
