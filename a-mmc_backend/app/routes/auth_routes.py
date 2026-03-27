@@ -17,7 +17,7 @@ TODO(security) items deferred for production hardening:
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import (
     jwt_required,
-    get_jwt_identity,
+    get_jwt,
     create_access_token,
     create_refresh_token,
     set_refresh_cookies,
@@ -29,6 +29,7 @@ from app.services.auth_service import (
     get_patient_by_email,
     get_clinician_by_email,
     get_secretary_by_email,
+    get_admin_by_email,
     build_identity,
 )
 from app.utils.validators import require_fields
@@ -62,13 +63,16 @@ def _login(get_by_email_fn, role: str):
         return jsonify(_INVALID_CREDENTIALS), 401
 
     identity = build_identity(user, role)
+    # flask_jwt_extended 4.7+ requires the JWT sub claim to be a string.
+    # Use the user's numeric ID as the sub; store the full identity dict in
+    # additional_claims["user"] so /me and /refresh can reconstruct it.
     access_token = create_access_token(
-        identity=identity,
-        additional_claims={"role": role},
+        identity=str(identity["id"]),
+        additional_claims={"user": identity, "role": role},
     )
     refresh_token = create_refresh_token(
-        identity=identity,
-        additional_claims={"role": role},
+        identity=str(identity["id"]),
+        additional_claims={"user": identity, "role": role},
     )
 
     response = jsonify({"access_token": access_token, "user": identity})
@@ -110,6 +114,17 @@ def secretary_login():
 
 
 # ---------------------------------------------------------------------------
+# POST /api/auth/admin/login
+# ---------------------------------------------------------------------------
+
+@auth_bp.post("/admin/login")
+def admin_login():
+    # TODO(security): Add rate-limiting to prevent brute-force attacks
+    # TODO(security): Add account lockout after N consecutive failed attempts
+    return _login(get_admin_by_email, "admin")
+
+
+# ---------------------------------------------------------------------------
 # POST /api/auth/refresh
 # ---------------------------------------------------------------------------
 
@@ -122,10 +137,11 @@ def refresh():
     The refresh token is read automatically by flask-jwt-extended from the
     "refresh_token" cookie (JWT_TOKEN_LOCATION includes "cookies").
     """
-    identity = get_jwt_identity()
+    claims = get_jwt()
+    identity = claims["user"]
     access_token = create_access_token(
-        identity=identity,
-        additional_claims={"role": identity["role"]},
+        identity=str(identity["id"]),
+        additional_claims={"user": identity, "role": identity["role"]},
     )
     return jsonify({"access_token": access_token, "user": identity}), 200
 
@@ -163,7 +179,7 @@ def me():
     Return the identity of the currently authenticated user from the token.
 
     No DB query — identity is read directly from the JWT payload as set at
-    login time via build_identity().
+    login time via build_identity() and stored in the "user" additional claim.
     """
-    identity = get_jwt_identity()
-    return jsonify({"user": identity}), 200
+    claims = get_jwt()
+    return jsonify({"user": claims["user"]}), 200

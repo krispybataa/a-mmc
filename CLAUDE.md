@@ -55,16 +55,18 @@ a-mmc/
 │       │   ├── clinician.py   ← Clinician, Schedule, HMO, Info, Timeslot
 │       │   ├── secretary.py   ← Secretary + SecretaryClinicianLink
 │       │   ├── patient.py
-│       │   └── appointment.py
+│       │   ├── appointment.py
+│       │   └── admin.py       ← Admin (admin_id, first_name, last_name, login_email, login_password_hash)
 │       ├── routes/
-│       │   ├── auth_routes.py        ← login/logout/me/refresh — all 3 roles
-│       │   ├── clinician_routes.py   ← CRUD + schedules, hmos, infos, timeslots; DELETE hmo + info added FB-C1
-│       │   ├── secretary_routes.py   ← CRUD + link/unlink clinician (REST: /secretaries/<id>/clinicians/<id>)
+│       │   ├── auth_routes.py        ← login/logout/me/refresh — all 4 roles; JWT sub fix (str id + user claim)
+│       │   ├── clinician_routes.py   ← CRUD + schedules, hmos, infos, timeslots; POST+DELETE guarded by admin role
+│       │   ├── secretary_routes.py   ← CRUD + link/unlink clinician; POST/DELETE/link/unlink guarded by admin role
 │       │   ├── patient_routes.py
 │       │   ├── timeslot_routes.py
-│       │   └── appointment_routes.py ← full lifecycle; _serialize includes nested clinician, slot, patient
+│       │   ├── appointment_routes.py ← full lifecycle; _serialize includes nested clinician, slot, patient
+│       │   └── admin_routes.py       ← /api/admin — dashboard counts, clinician/secretary/patient lists, create admin, seed endpoint
 │       ├── services/
-│       │   ├── auth_service.py       ← hash_password / verify_password + get_*_by_email + build_identity
+│       │   ├── auth_service.py       ← hash_password / verify_password + get_*_by_email (all 4 roles) + build_identity
 │       │   ├── appointment_service.py ← has_overlap()
 │       │   ├── email_service.py      ← Mailtrap scaffold, 5 notification functions
 │       │   └── timeslot_service.py   ← generate_slots + regenerate_slots_for_schedule_change
@@ -207,6 +209,11 @@ M2M junction between secretaries and clinicians. In practice mostly 1:1,
 but the schema supports multiple secretaries per clinician.
 - `id` PK, `secretary_id` FK, `clinician_id` FK
 
+**ADMIN**
+System administrator. Account management and monitoring only — no clinical access.
+- `admin_id` PK, `first_name`, `last_name`
+- `login_email` (unique), `login_password_hash`
+
 **PATIENT**
 Required fields marked. Account required to book appointments.
 - `patient_id` PK
@@ -331,9 +338,11 @@ Returns nested objects for related entities:
 ---
 
 ## Auth layer
-`flask-jwt-extended` is fully wired. All three login endpoints are implemented.
-- `app/services/auth_service.py` — `hash_password()`, `verify_password()`, `get_*_by_email()`, `build_identity()`
-- `app/routes/auth_routes.py` — `/patient/login`, `/clinician/login`, `/secretary/login`, `/refresh`, `/logout`, `/me`
+`flask-jwt-extended` is fully wired. All four login endpoints are implemented.
+- `app/services/auth_service.py` — `hash_password()`, `verify_password()`, `get_*_by_email()` (all 4 roles), `build_identity()`
+- `app/routes/auth_routes.py` — `/patient/login`, `/clinician/login`, `/secretary/login`, `/admin/login`, `/refresh`, `/logout`, `/me`
+- JWT token strategy (B2-A fix): `sub` claim is the user's numeric ID as a string (flask_jwt_extended 4.7+ requirement);
+  full user identity dict stored in `additional_claims["user"]`; `get_jwt()` used everywhere instead of `get_jwt_identity()`
 - All security hardening decisions marked `# TODO(security)`: blocklist, CSRF protection, rate limiting, brute-force protection
 
 ---
@@ -354,20 +363,22 @@ Patients can browse clinicians without an account but must register to book.
 
 ### Backend
 - ✅ Flask backend fully scaffolded and smoke-tested against live DB
-- ✅ All 8 schema tables implemented as SQLAlchemy models
+- ✅ All 9 schema tables implemented as SQLAlchemy models (Admin added B2-A)
 - ✅ All domain route blueprints with full CRUD
 - ✅ Appointment lifecycle, slot model invariants, and cancellation time gates enforced
-- ✅ Auth layer fully implemented — all 3 roles, access + refresh tokens, httpOnly cookie
+- ✅ Auth layer fully implemented — all 4 roles, access + refresh tokens, httpOnly cookie
+- ✅ JWT sub-claim fix (B2-A): flask_jwt_extended 4.7+ requires string sub; user dict in additional_claims["user"]
 - ✅ 60-day rolling slot generation on schedule save
 - ✅ `regenerate_slots_for_schedule_change()` fully implemented and wired
 - ✅ Patient overlap check implemented and wired
 - ✅ Email service scaffolded (Mailtrap) — 5 notification functions wired post-commit
 - ✅ Transaction boundaries verified on all multi-table write routes
-- ✅ Password hashing on all three registration routes
+- ✅ Password hashing on all four registration routes
 - ✅ Full route audit completed (B1-A-patch-2) — FK checks, status guards, boundaries
 - ✅ DELETE routes for HMO and info entries added (FB-C1)
-- ✅ Refresh endpoint returns full user identity (FB-A1 fix)
-- ✅ B2 smoke test passed end-to-end against live DB
+- ✅ Admin role added (B2-A): Admin model + migration, admin login, route guards on account
+  creation/deletion routes, admin blueprint with dashboard counts + user lists + create admin
+- ✅ Seed endpoint for first admin bootstrap (POST /api/admin/seed-first-admin — REMOVE BEFORE PRODUCTION)
 - ⏳ Unit tests not yet run against live DB (scaffolds in place)
 
 ### Frontend
