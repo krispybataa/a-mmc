@@ -9,6 +9,8 @@ from app.models.clinician import (
     ClinicianInfo,
 )
 from app.services.timeslot_service import generate_slots, regenerate_slots_for_schedule_change
+from app.utils.validators import require_fields
+from app.services.auth_service import hash_password
 
 clinician_bp = Blueprint("clinicians", __name__)
 
@@ -79,7 +81,11 @@ def get_clinician(clinician_id: int):
 
 @clinician_bp.post("/")
 def create_clinician():
-    data = request.get_json(force=True)
+    data = request.get_json(force=True) or {}
+    # B1-A-patch-2: require_fields added (KeyError risk); "password" replaces "login_password_hash"
+    err = require_fields(data, "first_name", "last_name", "login_email", "password")
+    if err:
+        return err
     clinician = Clinician(
         title=data.get("title"),
         first_name=data["first_name"],
@@ -94,7 +100,7 @@ def create_clinician():
         contact_phone=data.get("contact_phone"),
         contact_email=data.get("contact_email"),
         login_email=data["login_email"],
-        login_password_hash=data["login_password_hash"],
+        login_password_hash=hash_password(data["password"]),  # B1-A-patch-2: hash on write
     )
     db.session.add(clinician)
     db.session.commit()
@@ -120,8 +126,14 @@ def update_clinician(clinician_id: int):
 @clinician_bp.delete("/<int:clinician_id>")
 def delete_clinician(clinician_id: int):
     c = db.get_or_404(Clinician, clinician_id)
-    db.session.delete(c)
-    db.session.commit()
+    # B1-A-patch-2: cascade deletes child rows (schedules, hmos, infos, timeslots,
+    # secretary_links) — multi-table write requires transaction boundary
+    try:
+        db.session.delete(c)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return jsonify({"message": "deleted"})
 
 
@@ -159,16 +171,25 @@ def create_schedule(clinician_id: int):
         pm_end=data.get("pm_end"),
     )
     db.session.add(schedule)
-    db.session.commit()
+    # B1-A-patch-2: flush (not commit) so generate_slots can query the new schedule row;
+    # a single commit at the end makes schedule creation + slot generation atomic.
+    # Previously two separate commits meant a generate_slots failure would leave the
+    # schedule committed but with no slots.
+    db.session.flush()
 
-    # Auto-generate a 60-day rolling window of slots from today
     from datetime import date, timedelta
     today = date.today()
-    slots_created = generate_slots(
-        clinician_id=clinician_id,
-        from_date=today,
-        to_date=today + timedelta(days=60),
-    )
+    try:
+        slots_created = generate_slots(
+            clinician_id=clinician_id,
+            from_date=today,
+            to_date=today + timedelta(days=60),
+            commit=False,  # B1-A-patch-2: participate in parent transaction
+        )
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
 
     return jsonify({"schedule_id": schedule.schedule_id, "slots_created": slots_created}), 201
 

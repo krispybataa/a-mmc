@@ -1,6 +1,9 @@
 from flask import Blueprint, jsonify, request
 from app import db
 from app.models.secretary import Secretary, SecretaryClinicianLink
+from app.models.clinician import Clinician
+from app.utils.validators import require_fields
+from app.services.auth_service import hash_password
 
 secretary_bp = Blueprint("secretaries", __name__)
 
@@ -39,7 +42,11 @@ def get_secretary(secretary_id: int):
 
 @secretary_bp.post("/")
 def create_secretary():
-    data = request.get_json(force=True)
+    data = request.get_json(force=True) or {}
+    # B1-A-patch-2: require_fields added (KeyError risk); "password" replaces "login_password_hash"
+    err = require_fields(data, "first_name", "last_name", "login_email", "password")
+    if err:
+        return err
     secretary = Secretary(
         title=data.get("title"),
         first_name=data["first_name"],
@@ -48,7 +55,7 @@ def create_secretary():
         contact_phone=data.get("contact_phone"),
         contact_email=data.get("contact_email"),
         login_email=data["login_email"],
-        login_password_hash=data["login_password_hash"],
+        login_password_hash=hash_password(data["password"]),  # B1-A-patch-2: hash on write
     )
     db.session.add(secretary)
     db.session.commit()
@@ -69,8 +76,13 @@ def update_secretary(secretary_id: int):
 @secretary_bp.delete("/<int:secretary_id>")
 def delete_secretary(secretary_id: int):
     s = db.get_or_404(Secretary, secretary_id)
-    db.session.delete(s)
-    db.session.commit()
+    # B1-A-patch-2: cascade deletes SecretaryClinicianLink rows — multi-table write
+    try:
+        db.session.delete(s)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return jsonify({"message": "deleted"})
 
 
@@ -81,6 +93,7 @@ def delete_secretary(secretary_id: int):
 @secretary_bp.post("/<int:secretary_id>/clinicians/<int:clinician_id>")
 def link_clinician(secretary_id: int, clinician_id: int):
     db.get_or_404(Secretary, secretary_id)
+    db.get_or_404(Clinician, clinician_id)  # B1-A-patch-2: verify clinician FK before insert
     link = SecretaryClinicianLink(secretary_id=secretary_id, clinician_id=clinician_id)
     db.session.add(link)
     db.session.commit()

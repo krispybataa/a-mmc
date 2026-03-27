@@ -217,3 +217,72 @@ Session 5G + Patches:
   (Specialization, HMO, Clinic Day, Gender) live in the collapsible section
 
 ✻ Baked for 1m 45s
+
+
+
+Backend Patch: 
+● ---
+  Audit report — B1-A-patch-2
+
+  ISSUE 1  clinician_routes.py  create_clinician
+    Category:  Password handling + required fields
+    Before:    login_password_hash=data["login_password_hash"] — plaintext storage;
+               no require_fields — KeyError on missing first_name/last_name/login_email
+    Action:    Added require_fields("first_name","last_name","login_email","password");
+               hash_password(data["password"]) on write
+
+  ISSUE 2  secretary_routes.py  create_secretary
+    Category:  Password handling + required fields
+    Before:    login_password_hash=data["login_password_hash"] — plaintext storage;
+               no require_fields — KeyError on missing fields
+    Action:    Added require_fields("first_name","last_name","login_email","password");
+               hash_password(data["password"]) on write
+
+  ISSUE 3  appointment_routes.py  create_appointment
+    Category:  FK assumption
+    Before:    patient_id accepted and used in INSERT with no existence check;
+               FK violation would produce 500 instead of 404
+    Action:    Added db.get_or_404(Patient, data["patient_id"]) before INSERT
+               (clinician_id is implicitly verified by the slot.clinician_id check)
+
+  ISSUE 4  secretary_routes.py  link_clinician
+    Category:  FK assumption
+    Before:    clinician_id accepted with no existence check — FK violation → 500
+    Action:    Added db.get_or_404(Clinician, clinician_id) before INSERT
+
+  ISSUE 5  timeslot_routes.py  update_timeslot (PATCH)
+    Category:  Status value mismatch
+    Before:    Any string accepted for status — "booked" or any value could be stored
+    Action:    Added guard: status must be "available" or "blocked" → 422 otherwise
+
+  ISSUE 6  clinician_routes.py  delete_clinician
+    Category:  Transaction boundary
+    Before:    Bare db.session.commit() with no rollback guard;
+               cascade deletes schedules, hmos, infos, timeslots, secretary_links
+    Action:    Wrapped in try/except with db.session.rollback()
+
+  ISSUE 7  secretary_routes.py  delete_secretary
+    Category:  Transaction boundary
+    Before:    Bare db.session.commit() with no rollback guard;
+               cascade deletes SecretaryClinicianLink rows
+    Action:    Wrapped in try/except with db.session.rollback()
+
+  ISSUE 8  clinician_routes.py  create_schedule
+    Category:  Transaction boundary
+    Before:    Two separate commits — schedule committed first, then generate_slots
+               committed separately; generate_slots failure orphaned the schedule row
+    Action:    Changed to db.session.flush() + generate_slots(commit=False) +
+               single db.session.commit() wrapped in try/except; fully atomic
+
+  CLEAN    All PATCH routes (update_patient, update_clinician, update_secretary)
+    login_password_hash absent from all updatable field lists — no plaintext exposure
+
+  CLEAN    appointment_routes all status transitions + slot writes
+    VALID_TRANSITIONS matches CLAUDE.md lifecycle; auto-block only via max_patients;
+    no slot status written on booking/reschedule/cancellation
+
+  OUT OF SCOPE  appointment model missing cancellation_reason column
+    Route comment documents intentional reuse of reschedule_reason field;
+    column addition requires a migration — deferred
+
+✻ Sautéed for 3m 58s

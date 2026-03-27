@@ -1,0 +1,68 @@
+/app # curl http://localhost:5000/api/health
+{
+  "status": "ok"
+}
+/app # curl -s -X POST http://localhost:5000/api/patients \
+>   -H "Content-Type: application/json" \
+>   -d '{
+>     "first_name": "Test",
+>     "last_name": "Patient",
+>     "birthday": "1990-01-01",
+>     "gender": "M",
+>     "mobile_number": "09171234567",
+>     "address_line_1": "123 Test St",
+>     "province": "Metro Manila",
+>     "city": "Makati",
+>     "barangay": "Bel-Air",
+>     "country": "Philippines",
+>     "login_email": "patient@test.com",
+>     "login_password_hash": "testpassword123",
+>     "preferred_language": "Filipino",
+>     "educational_attainment": "College"
+>   }'
+<!doctype html>
+<html lang=en>
+<title>Redirecting...</title>
+<h1>Redirecting...</h1>
+<p>You should be redirected automatically to the target URL: <a href="http://localhost:5000/api/patients/">http://localhost:5000/api/patients/</a>. If not, click the link.
+/app # curl -s -X POST http://localhost:5000/api/patients/ \
+>   -H "Content-Type: application/json" \
+>   -d '{
+>     "first_name": "Test",
+>     "last_name": "Patient",
+>     "birthday": "1990-01-01",
+>     "gender": "M",
+>     "mobile_number": "09171234567",
+>     "address_line_1": "123 Test St",
+>     "province": "Metro Manila",
+>     "city": "Makati",
+>     "barangay": "Bel-Air",
+>     "country": "Philippines",
+>     "login_email": "patient@test.com",
+>     "login_password_hash": "testpassword123",
+>     "preferred_language": "Filipino",
+>     "educational_attainment": "College"
+>   }'
+{
+  "patient_id": 1
+}
+/app # curl -s -X POST http://localhost:5000/api/auth/patient/login \
+>   -H "Content-Type: application/json" \
+>   -d '{
+>     "email": "patient@test.com",
+>     "password": "testpassword123"
+>   }'
+<html>
+  <head>
+    <title>Internal Server Error</title>
+  </head>
+  <body>
+    <h1><p>Internal Server Error</p></h1>
+    
+  </body>
+</html>
+/app # ^C
+
+/app # docker logs a-mmc-backend --tail 50
+/bin/sh: docker: not found
+/app # 
