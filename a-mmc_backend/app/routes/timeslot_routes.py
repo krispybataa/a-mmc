@@ -49,6 +49,10 @@ def create_timeslot():
 def update_timeslot(slot_id: int):
     s = db.get_or_404(ClinicianTimeslot, slot_id)
     data = request.get_json(force=True)
+    # B1-A-patch-2: validate status value — "booked" and other invalid strings
+    # must not reach the DB (valid: available | blocked per CLAUDE.md)
+    if "status" in data and data["status"] not in ("available", "blocked"):
+        return jsonify({"error": "status must be 'available' or 'blocked'"}), 422
     for field in ["slot_date", "start_time", "end_time", "status", "max_patients"]:
         if field in data:
             setattr(s, field, data[field])

@@ -27,11 +27,21 @@ _DAY_MAP = {
 
 
 def _time_to_minutes(t) -> int:
-    """Convert a datetime.time (or timedelta from Postgres) to minutes since midnight."""
+    """Convert a time value to minutes since midnight.
+
+    Handles three types returned by SQLAlchemy depending on driver and session state:
+      - timedelta  : Postgres TIME columns sometimes returned as timedelta
+      - str        : "HH:MM" or "HH:MM:SS" — seen when reading from a flushed-but-
+                     not-committed session (B1-A-patch-3)
+      - datetime.time : standard Python time object
+    """
     if t is None:
         return None
     if isinstance(t, timedelta):
         return int(t.total_seconds() // 60)
+    if isinstance(t, str):  # B1-A-patch-3: handle "HH:MM" / "HH:MM:SS" strings
+        h, m = map(int, t.split(":")[:2])
+        return h * 60 + m
     return t.hour * 60 + t.minute
 
 

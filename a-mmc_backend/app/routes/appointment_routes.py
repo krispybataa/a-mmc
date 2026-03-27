@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, request
 from app import db
 from app.models.appointment import Appointment
 from app.models.clinician import ClinicianTimeslot
+from app.models.patient import Patient
 from app.utils.validators import require_fields
 from app.services.appointment_service import has_overlap
 from app.services.email_service import (
@@ -130,6 +131,8 @@ def create_appointment():
     err = require_fields(data, "patient_id", "clinician_id", "slot_id", "consultation_date")
     if err:
         return err
+
+    db.get_or_404(Patient, data["patient_id"])  # B1-A-patch-2: verify patient FK before insert
 
     slot = db.get_or_404(ClinicianTimeslot, data["slot_id"])
 

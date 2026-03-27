@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from app import db
 from app.models.patient import Patient
 from app.utils.validators import require_fields
+from app.services.auth_service import hash_password
 
 patient_bp = Blueprint("patients", __name__)
 
@@ -62,7 +63,7 @@ def create_patient():
         data,
         "last_name", "first_name", "birthday", "gender",
         "mobile_number", "address_line_1", "province", "city",
-        "barangay", "login_email", "login_password_hash", "educational_attainment",
+        "barangay", "login_email", "password", "educational_attainment",
     )
     if err:
         return err
@@ -87,7 +88,7 @@ def create_patient():
         barangay=data["barangay"],
         country=data.get("country", "Philippines"),
         login_email=data["login_email"],
-        login_password_hash=data["login_password_hash"],
+        login_password_hash=hash_password(data["password"]),  # B1-A-patch: hash on write
         sc_pwd_id_number=data.get("sc_pwd_id_number"),
         pwd_id_front=data.get("pwd_id_front"),
         pwd_id_back=data.get("pwd_id_back"),
