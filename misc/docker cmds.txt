@@ -21,3 +21,4 @@ docker build .\a-mmc_backend\ -t krispybata/a-mmc-backend:latest
 docker build .\a-mmc_frontend\ -t krispybata/a-mmc-frontend:latest
 
 cd .\a-mmc_infra\ ; docker compose up -d 
+cd .\a-mmc_infra\ ; docker compose down -v

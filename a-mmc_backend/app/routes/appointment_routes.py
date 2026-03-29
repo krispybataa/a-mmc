@@ -142,6 +142,13 @@ def create_appointment():
     if slot.clinician_id != data["clinician_id"]:
         return jsonify({"error": "Slot does not belong to the specified clinician"}), 409
 
+    consultation_type = data.get("consultation_type", "f2f")
+    if slot.consultation_type != consultation_type:
+        return jsonify({
+            "error": f"Slot consultation type '{slot.consultation_type}' does not match "
+                     f"requested type '{consultation_type}'"
+        }), 400
+
     if has_overlap(data["patient_id"], slot):
         return jsonify({"error": "This time slot conflicts with an existing appointment."}), 409
 
@@ -157,6 +164,7 @@ def create_appointment():
             chief_complaint=data.get("chief_complaint"),
             chief_complaint_description=data.get("chief_complaint_description"),
             payment_type=data.get("payment_type"),
+            consultation_type=consultation_type,
             status="pending",
         )
         db.session.add(appointment)
@@ -348,6 +356,7 @@ def _serialize(a: Appointment) -> dict:
         "chief_complaint": a.chief_complaint,
         "chief_complaint_description": a.chief_complaint_description,
         "payment_type": a.payment_type,
+        "consultation_type": a.consultation_type,
         "status": a.status,
         "reschedule_reason": a.reschedule_reason,
         "created_at": a.created_at.isoformat() if a.created_at else None,
