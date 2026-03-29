@@ -10,7 +10,7 @@ export default function Home() {
   const [selectedDepartment, setSelectedDepartment] = useState('')
 
   useEffect(() => {
-    api.get('/api/clinicians/')
+    api.get('/clinicians/')
       .then(({ data }) => setClinicians(data))
       .catch(() => setClinicians([]))
       .finally(() => setLoading(false))

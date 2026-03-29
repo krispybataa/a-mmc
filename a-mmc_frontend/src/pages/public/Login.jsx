@@ -35,7 +35,7 @@ export default function Login() {
     setErrors({})
     setLoading(true)
     try {
-      const { data } = await api.post('/api/auth/patient/login', { email, password })
+      const { data } = await api.post('/auth/patient/login', { email, password })
       configureApiAuth(data.access_token, setToken, logout)
       setToken(data.access_token)
       setUser(data.user)

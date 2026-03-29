@@ -181,8 +181,8 @@ export default function Register() {
     }
 
     try {
-      await api.post('/api/patients/', payload)
-      const { data } = await api.post('/api/auth/patient/login', {
+      await api.post('/patients/', payload)
+      const { data } = await api.post('/auth/patient/login', {
         email: formData.email,
         password: formData.password,
       })
