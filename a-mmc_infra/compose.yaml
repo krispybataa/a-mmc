@@ -70,26 +70,6 @@ services:
       retries: ${CONTAINER_RETRIES}
       start_period: 20s
 
-  #MINIO ALT
-  a-mmc-minio-test:
-    image: "${MINIO_IMAGE}"
-    container_name: "${MINIO_CONTAINER}"
-    ports:
-      - "${MINIO_PORT}:${MINIO_PORT}"
-      - "${MINIO_API_PORT}:${MINIO_API_PORT}"
-    secrets:
-      - minio-root-user
-      - minio-root-password
-    environment:
-      MINIO_ROOT_USER_FILE: /run/secrets/minio-root-user
-      MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio-root-password
-    command: server /data --console-address ":${MINIO_PORT}"
-    networks:
-      - a-mmc-network
-    volumes:
-      - a-mmc-minio-data:/data
-    restart: unless-stopped
-
 networks:
   a-mmc-network:
     driver: bridge
@@ -98,13 +78,3 @@ volumes:
   a-mmc-postgres-data:
       driver: local
 
-  #MINIO ALT
-  a-mmc-minio-data:
-      driver: local
-
-secrets:
-  #MINIO ALT
-  minio-root-user:
-    file: ./secrets/minio-root-user.txt
-  minio-root-password:
-    file: ./secrets/minio-root-password.txt
