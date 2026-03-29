@@ -64,7 +64,7 @@ api.interceptors.response.use(
       _isRefreshing = true
 
       try {
-        const { data } = await api.post('/api/auth/refresh')
+        const { data } = await api.post('/auth/refresh')
         const newToken = data.access_token
 
         // Update module-level ref immediately so the retried request uses it

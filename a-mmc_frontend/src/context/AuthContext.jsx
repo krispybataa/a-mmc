@@ -46,7 +46,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     async function tryRestore() {
       try {
-        const { data } = await api.post('/api/auth/refresh')
+        const { data } = await api.post('/auth/refresh')
         setToken(data.access_token)
         setUser(data.user)
       } catch {

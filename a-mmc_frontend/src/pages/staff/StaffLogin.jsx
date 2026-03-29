@@ -48,7 +48,7 @@ export default function StaffLogin() {
     setLoading(true)
 
     try {
-      const { data } = await api.post(`/api/auth/${role}/login`, {
+      const { data } = await api.post(`/auth/${role}/login`, {
         email: email.trim(),
         password,
       })

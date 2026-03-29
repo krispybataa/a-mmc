@@ -84,7 +84,7 @@ export default function PatientAppointments() {
     if (!user?.id) return
     setFetchLoading(true)
     setFetchError('')
-    api.get('/api/appointments/', { params: { patient_id: user.id } })
+    api.get('/appointments/', { params: { patient_id: user.id } })
       .then(({ data }) => setAppointments(data))
       .catch(() => setFetchError('Unable to load appointments. Please try again.'))
       .finally(() => setFetchLoading(false))
@@ -120,7 +120,7 @@ export default function PatientAppointments() {
 
   async function confirmCancel(id) {
     try {
-      await api.delete(`/api/appointments/${id}`, {
+      await api.delete(`/appointments/${id}`, {
         data: { cancellation_reason: 'Cancelled by patient.', role: 'patient' },
       })
       setCancelConfirmId(null)
@@ -146,7 +146,7 @@ export default function PatientAppointments() {
 
     if (appt) {
       try {
-        const { data } = await api.get(`/api/clinicians/${appt.clinician_id}`)
+        const { data } = await api.get(`/clinicians/${appt.clinician_id}`)
         setModalClinician(data)
       } catch {
         // Leave modalClinician null — modal shows "Clinician schedule unavailable."
@@ -179,7 +179,7 @@ export default function PatientAppointments() {
 
     setReschedLoading(true)
     try {
-      await api.patch(`/api/appointments/${modalApptId}`, {
+      await api.patch(`/appointments/${modalApptId}`, {
         status: 'reschedule_requested',
         reschedule_reason: reschedMessage.trim(),
         role: 'patient',

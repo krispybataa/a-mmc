@@ -43,10 +43,11 @@ All three services Dockerized via compose.yaml in /a-mmc_infra.
 - window.confirm() still present in some paths (Register flow)
 
 ## What comes next (priority order)
-1. Collaborator brings up frontend container
+1. Frontend container is already setup and all 3 necessary containers (db, back,front) are running and accessible by typing 'localhost' in browser. 
 2. Full browser smoke test: register → find clinician → book appointment →
    C/S login → accept appointment
-3. Begin usability testing per CeHRes roadmap (SRET with stakeholder groups)
+3. Formal connection of back to front
 4. Address known debt items as they surface during testing
+5. Furthermore, kindly help me address the fact that this is a multi-role application meaning the C/S needs their access point different from a public access point. 
 
 Confirm you have read CLAUDE.md and are ready to proceed.

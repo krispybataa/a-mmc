@@ -108,7 +108,7 @@ export default function ClinicianProfileManager() {
     if (user.role === 'clinician') {
       setClinicianId(user.id)
     } else if (user.role === 'secretary') {
-      api.get(`/api/secretaries/${user.id}`)
+      api.get(`/secretaries/${user.id}`)
         .then(({ data }) => setClinicianId(data.clinician_ids?.[0] ?? null))
         .catch(() => setFetchError('Unable to resolve your linked clinician.'))
     }
@@ -119,7 +119,7 @@ export default function ClinicianProfileManager() {
     if (!clinicianId) return
     setFetchLoading(true)
     setFetchError('')
-    api.get(`/api/clinicians/${clinicianId}`)
+    api.get(`/clinicians/${clinicianId}`)
       .then(({ data }) => {
         setBasicInfo(profileToBasic(data))
         setHmos(data.hmos ?? [])
@@ -156,7 +156,7 @@ export default function ClinicianProfileManager() {
     setBasicError('')
     setBasicSuccess(false)
     try {
-      await api.patch(`/api/clinicians/${clinicianId}`, basicInfo)
+      await api.patch(`/clinicians/${clinicianId}`, basicInfo)
       setBasicSuccess(true)
     } catch (err) {
       setBasicError(err?.response?.data?.error ?? 'Failed to save changes.')
@@ -171,7 +171,7 @@ export default function ClinicianProfileManager() {
     setHmoAdding(true)
     setHmoAddError('')
     try {
-      const { data } = await api.post(`/api/clinicians/${clinicianId}/hmos`, { hmo_name: trimmed })
+      const { data } = await api.post(`/clinicians/${clinicianId}/hmos`, { hmo_name: trimmed })
       setHmos(prev => [...prev, { hmo_id: data.hmo_id, hmo_name: trimmed }])
       setNewHmo('')
     } catch (err) {
@@ -184,11 +184,11 @@ export default function ClinicianProfileManager() {
   async function handleRemoveHmo(hmoId) {
     setRemovingHmoId(hmoId)
     try {
-      await api.delete(`/api/clinicians/${clinicianId}/hmos/${hmoId}`)
+      await api.delete(`/clinicians/${clinicianId}/hmos/${hmoId}`)
       setHmos(prev => prev.filter(h => h.hmo_id !== hmoId))
     } catch {
       // Re-fetch to restore accurate state on failure
-      api.get(`/api/clinicians/${clinicianId}`)
+      api.get(`/clinicians/${clinicianId}`)
         .then(({ data }) => setHmos(data.hmos ?? []))
     } finally {
       setRemovingHmoId(null)
@@ -201,7 +201,7 @@ export default function ClinicianProfileManager() {
     setInfoAdding(true)
     setInfoAddError('')
     try {
-      const { data } = await api.post(`/api/clinicians/${clinicianId}/infos`, {
+      const { data } = await api.post(`/clinicians/${clinicianId}/infos`, {
         label: newInfoLabel.trim() || null,
         content,
       })
@@ -218,10 +218,10 @@ export default function ClinicianProfileManager() {
   async function handleRemoveInfo(infoId) {
     setRemovingInfoId(infoId)
     try {
-      await api.delete(`/api/clinicians/${clinicianId}/infos/${infoId}`)
+      await api.delete(`/clinicians/${clinicianId}/infos/${infoId}`)
       setInfos(prev => prev.filter(i => i.info_id !== infoId))
     } catch {
-      api.get(`/api/clinicians/${clinicianId}`)
+      api.get(`/clinicians/${clinicianId}`)
         .then(({ data }) => setInfos(data.infos ?? []))
     } finally {
       setRemovingInfoId(null)
