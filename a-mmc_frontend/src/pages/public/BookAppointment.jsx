@@ -136,8 +136,8 @@ export default function BookAppointment() {
       setFetchError('')
       try {
         const [clinRes, slotsRes] = await Promise.all([
-          api.get(`/api/clinicians/${id}`),
-          api.get('/api/timeslots/', { params: { clinician_id: id, status: 'available' } }),
+          api.get(`/clinicians/${id}`),
+          api.get('/timeslots/', { params: { clinician_id: id, status: 'available' } }),
         ])
         if (cancelled) return
         setClinician(clinRes.data)
@@ -225,7 +225,7 @@ export default function BookAppointment() {
     setLoading(true)
     setSubmitError('')
     try {
-      await api.post('/api/appointments/', {
+      await api.post('/appointments/', {
         patient_id: user.id,
         clinician_id: Number(id),
         slot_id: selectedSlot.slot_id,

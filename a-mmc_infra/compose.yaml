@@ -11,21 +11,26 @@ services:
         condition: service_healthy
 
   a-mmc-backend:
-    image: "${BACKEND_IMAGE}"
-    container_name: "${BACKEND_CONTAINER}"
-    networks:
-      - a-mmc-network
-    env_file:
-      - ../a-mmc_backend/.env.example
-    depends_on:
-      a-mmc-postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:${BACKEND_PORT}/api/health || exit 1"]
-      interval: ${CONTAINER_INTERVAL}
-      timeout: ${CONTAINER_TIMEOUT}
-      retries: ${CONTAINER_RETRIES}
-      start_period: 20s
+      image: "${BACKEND_IMAGE}"
+      container_name: "${BACKEND_CONTAINER}"
+      networks:
+        - a-mmc-network
+      
+      #### FOR DEV ONLY - MOUNT MIGRATIONS, REMOVE IN PRODUCTION
+      volumes:
+        - ../a-mmc_backend/migrations:/app/migrations
+      ####
+      env_file:
+        - ../a-mmc_backend/.env.example
+      depends_on:
+        a-mmc-postgres:
+          condition: service_healthy
+      healthcheck:
+        test: ["CMD-SHELL", "curl -f http://localhost:${BACKEND_PORT}/api/health || exit 1"]
+        interval: ${CONTAINER_INTERVAL}
+        timeout: ${CONTAINER_TIMEOUT}
+        retries: ${CONTAINER_RETRIES}
+        start_period: 20s
 
   a-mmc-nginx:
     image: "${NGINX_IMAGE}"

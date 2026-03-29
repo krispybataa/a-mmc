@@ -14,7 +14,9 @@ from app.routes.patient_routes import patient_bp
 from app.routes.timeslot_routes import timeslot_bp
 from app.routes.auth_routes import auth_bp
 from app.routes.appointment_routes import appointment_bp
+from app.routes.admin_routes import admin_bp
 from app.models import clinician, secretary, patient, appointment  # noqa: F401
+from app.models import admin  # noqa: F401
 
 from config.DevelopmentConfig import DevelopmentConfig
 from config.ProductionConfig import ProductionConfig
@@ -46,6 +48,7 @@ def create_app(config_name: str = "development") -> Flask:
     app.register_blueprint(timeslot_bp, url_prefix="/api/timeslots")
     app.register_blueprint(appointment_bp, url_prefix="/api/appointments")
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
+    app.register_blueprint(admin_bp, url_prefix="/api/admin")
 
     @app.get("/api/health")
     def health():

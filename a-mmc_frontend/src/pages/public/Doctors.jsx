@@ -65,7 +65,7 @@ export default function Doctors() {
   useEffect(() => {
     async function load() {
       try {
-        const { data } = await api.get('/api/clinicians/')
+        const { data } = await api.get('/clinicians/')
         setClinicians(data)
       } catch {
         setFetchError('Unable to load clinicians. Please try again.')

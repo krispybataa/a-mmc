@@ -64,7 +64,7 @@ export default function ClinicianProfile() {
   useEffect(() => {
     async function load() {
       try {
-        const { data } = await api.get(`/api/clinicians/${clinician_id}`)
+        const { data } = await api.get(`/clinicians/${clinician_id}`)
         setClinician(data)
       } catch (err) {
         if (err.response?.status === 404) {
