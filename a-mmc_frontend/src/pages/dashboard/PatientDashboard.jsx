@@ -64,7 +64,7 @@ export default function PatientDashboard() {
     if (!user?.id) return
     setApptLoading(true)
     setApptError('')
-    api.get('/api/appointments/', { params: { patient_id: user.id } })
+    api.get('/appointments/', { params: { patient_id: user.id } })
       .then(({ data }) => setAppointments(data))
       .catch(() => setApptError('Unable to load appointments.'))
       .finally(() => setApptLoading(false))

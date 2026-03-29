@@ -112,7 +112,7 @@ export default function ScheduleManager() {
     if (user.role === 'clinician') {
       setClinicianId(user.id)
     } else if (user.role === 'secretary') {
-      api.get(`/api/secretaries/${user.id}`)
+      api.get(`/secretaries/${user.id}`)
         .then(({ data }) => setClinicianId(data.clinician_ids?.[0] ?? null))
         .catch(() => setFetchError('Unable to resolve your linked clinician.'))
     }
@@ -123,7 +123,7 @@ export default function ScheduleManager() {
     if (!clinicianId) return
     setFetchLoading(true)
     setFetchError('')
-    api.get(`/api/clinicians/${clinicianId}/schedules`)
+    api.get(`/clinicians/${clinicianId}/schedules`)
       .then(({ data }) => setRows(seedFromApi(data)))
       .catch(() => setFetchError('Unable to load schedule.'))
       .finally(() => setFetchLoading(false))
@@ -187,13 +187,13 @@ export default function ScheduleManager() {
         }
         if (row.schedule_id) {
           const { data } = await api.patch(
-            `/api/clinicians/${clinicianId}/schedules/${row.schedule_id}`,
+            `/clinicians/${clinicianId}/schedules/${row.schedule_id}`,
             body
           )
           return { day: row.day, scheduleId: row.schedule_id, data }
         } else {
           const { data } = await api.post(
-            `/api/clinicians/${clinicianId}/schedules`,
+            `/clinicians/${clinicianId}/schedules`,
             body
           )
           return { day: row.day, scheduleId: data.schedule_id, data }

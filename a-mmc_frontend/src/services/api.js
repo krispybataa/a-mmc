@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:5000',
+  baseURL: import.meta.env.VITE_API_URL ?? '/api',
   withCredentials: true, // required for httpOnly refresh cookie
 })
 
@@ -64,7 +64,7 @@ api.interceptors.response.use(
       _isRefreshing = true
 
       try {
-        const { data } = await api.post('/api/auth/refresh')
+        const { data } = await api.post('/auth/refresh')
         const newToken = data.access_token
 
         // Update module-level ref immediately so the retried request uses it

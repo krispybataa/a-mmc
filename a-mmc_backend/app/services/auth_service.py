@@ -70,6 +70,14 @@ def get_secretary_by_email(email: str):
     ).first()
 
 
+def get_admin_by_email(email: str):
+    """Return an Admin row matching login_email (case-insensitive), or None."""
+    from app.models.admin import Admin
+    return Admin.query.filter(
+        func.lower(Admin.login_email) == email.strip().lower()
+    ).first()
+
+
 # ---------------------------------------------------------------------------
 # Identity builder
 # ---------------------------------------------------------------------------
@@ -78,7 +86,7 @@ def build_identity(user, role: str) -> dict:
     """
     Build the JWT identity payload from a user row and role string.
 
-    role must be one of: "patient" | "clinician" | "secretary"
+    role must be one of: "patient" | "clinician" | "secretary" | "admin"
 
     The returned dict is stored as the JWT identity and also returned to the
     client in the login response body — do not include sensitive fields here.

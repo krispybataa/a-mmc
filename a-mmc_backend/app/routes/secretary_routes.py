@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required, get_jwt
 from app import db
 from app.models.secretary import Secretary, SecretaryClinicianLink
 from app.models.clinician import Clinician
@@ -41,7 +42,11 @@ def get_secretary(secretary_id: int):
 
 
 @secretary_bp.post("/")
+@jwt_required()
 def create_secretary():
+    claims = get_jwt()
+    if claims.get("role") != "admin":
+        return {"error": "Admin access required"}, 403
     data = request.get_json(force=True) or {}
     # B1-A-patch-2: require_fields added (KeyError risk); "password" replaces "login_password_hash"
     err = require_fields(data, "first_name", "last_name", "login_email", "password")
@@ -74,7 +79,11 @@ def update_secretary(secretary_id: int):
 
 
 @secretary_bp.delete("/<int:secretary_id>")
+@jwt_required()
 def delete_secretary(secretary_id: int):
+    claims = get_jwt()
+    if claims.get("role") != "admin":
+        return {"error": "Admin access required"}, 403
     s = db.get_or_404(Secretary, secretary_id)
     # B1-A-patch-2: cascade deletes SecretaryClinicianLink rows — multi-table write
     try:
@@ -91,7 +100,11 @@ def delete_secretary(secretary_id: int):
 # ---------------------------------------------------------------------------
 
 @secretary_bp.post("/<int:secretary_id>/clinicians/<int:clinician_id>")
+@jwt_required()
 def link_clinician(secretary_id: int, clinician_id: int):
+    claims = get_jwt()
+    if claims.get("role") != "admin":
+        return {"error": "Admin access required"}, 403
     db.get_or_404(Secretary, secretary_id)
     db.get_or_404(Clinician, clinician_id)  # B1-A-patch-2: verify clinician FK before insert
     link = SecretaryClinicianLink(secretary_id=secretary_id, clinician_id=clinician_id)
@@ -101,7 +114,11 @@ def link_clinician(secretary_id: int, clinician_id: int):
 
 
 @secretary_bp.delete("/<int:secretary_id>/clinicians/<int:clinician_id>")
+@jwt_required()
 def unlink_clinician(secretary_id: int, clinician_id: int):
+    claims = get_jwt()
+    if claims.get("role") != "admin":
+        return {"error": "Admin access required"}, 403
     link = SecretaryClinicianLink.query.filter_by(
         secretary_id=secretary_id, clinician_id=clinician_id
     ).first_or_404()

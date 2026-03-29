@@ -70,7 +70,7 @@ function RescheduleModal({ target, onSubmit, onClose }) {
 
   // Fetch clinician schedule for SlotPicker
   useEffect(() => {
-    api.get(`/api/clinicians/${target.clinician.clinician_id}`)
+    api.get(`/clinicians/${target.clinician.clinician_id}`)
       .then(({ data }) => setSchedule(data.schedules ?? []))
       .catch(() => setSchedule([]))
   }, [target.clinician.clinician_id])
@@ -234,7 +234,7 @@ export default function ClinicianDashboard() {
     if (user.role === 'clinician') {
       setClinicianId(user.id)
     } else if (user.role === 'secretary') {
-      api.get(`/api/secretaries/${user.id}`)
+      api.get(`/secretaries/${user.id}`)
         .then(({ data }) => setClinicianId(data.clinician_ids?.[0] ?? null))
         .catch(() => setFetchError('Unable to resolve your linked clinician.'))
     }
@@ -245,7 +245,7 @@ export default function ClinicianDashboard() {
     if (!clinicianId) return
     setFetchLoading(true)
     setFetchError('')
-    api.get('/api/appointments/', { params: { clinician_id: clinicianId } })
+    api.get('/appointments/', { params: { clinician_id: clinicianId } })
       .then(({ data }) => setAppointments(data))
       .catch(() => setFetchError('Unable to load appointments.'))
       .finally(() => setFetchLoading(false))
@@ -279,7 +279,7 @@ export default function ClinicianDashboard() {
   async function confirmAccept(appt) {
     setAcceptError('')
     try {
-      await api.patch(`/api/appointments/${appt.appointment_id}`, { status: 'accepted' })
+      await api.patch(`/appointments/${appt.appointment_id}`, { status: 'accepted' })
       setAppointments(prev =>
         prev.map(a => a.appointment_id === appt.appointment_id ? { ...a, status: 'accepted' } : a)
       )
@@ -290,7 +290,7 @@ export default function ClinicianDashboard() {
   }
 
   async function handleRescheduleSubmit(appointmentId, reason) {
-    await api.patch(`/api/appointments/${appointmentId}`, {
+    await api.patch(`/appointments/${appointmentId}`, {
       status: 'reschedule_requested',
       reschedule_reason: reason,
       role: 'cs',
