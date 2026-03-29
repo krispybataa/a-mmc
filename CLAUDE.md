@@ -176,11 +176,12 @@ Core clinician profile. Owns several child tables.
 - `login_email`, `login_password_hash`
 
 **CLINICIAN_SCHEDULE**
-One row per day (Mon–Sat). AM and PM slots are independent and nullable.
-Uses 24hr TIME columns.
+One row per day (Mon–Sat) per consultation type. AM and PM slots are independent and nullable.
+Uses 24hr TIME columns. A clinician may have multiple rows per day (e.g. one f2f, one teleconsult).
 - `schedule_id` PK, `clinician_id` FK
 - `day_of_week` (varchar: "Monday"–"Saturday")
 - `am_start`, `am_end`, `pm_start`, `pm_end` (TIME, nullable)
+- `consultation_type` (varchar: `f2f` | `teleconsult`, server_default `f2f`)
 
 **CLINICIAN_HMO**
 Flexible array of HMO accreditations. Can be empty.
@@ -196,6 +197,7 @@ Generated slots derived from CLINICIAN_SCHEDULE. Appointments reference these.
 - `slot_date` (date), `start_time`, `end_time` (TIME)
 - `status` (varchar: `available` | `blocked`)
 - `max_patients` (int, nullable) — optional soft patient cap; auto-blocks slot when reached
+- `consultation_type` (varchar: `f2f` | `teleconsult`, server_default `f2f`) — carried from parent schedule row
 
 **SECRETARY**
 Assistive administrative role. Manages clinician profile, schedule, and appointments
@@ -233,6 +235,7 @@ A patient books an appointment within a clinician's timeslot.
 - `consultation_date` (date)
 - `chief_complaint` (varchar), `chief_complaint_description` (text)
 - `payment_type` (varchar, free text)
+- `consultation_type` (varchar: `f2f` | `teleconsult`, server_default `f2f`) — must match the booked slot's consultation_type
 - `status` (varchar: "pending", "accepted", "reschedule_requested", "rejected", "cancelled")
 - `reschedule_reason` (text, nullable)
 - `cancellation_reason` (text, nullable)

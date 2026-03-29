@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, MapPin, Mail, Clock, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, MapPin, Mail, Clock, ShieldCheck, User, Monitor } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 
@@ -47,6 +47,42 @@ function formatName({ title, first_name, middle_name, last_name, suffix }) {
 
 function getInitials(first_name, last_name) {
   return `${first_name[0]}${last_name[0]}`.toUpperCase()
+}
+
+function ScheduleTable({ rows }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm border-collapse">
+        <thead>
+          <tr className="border-b border-slate-100">
+            <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wide pb-2.5 pr-6 w-16">
+              Day
+            </th>
+            <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wide pb-2.5 pr-6">
+              Morning
+            </th>
+            <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wide pb-2.5">
+              Afternoon
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(({ day, abbrev, am, pm, active }) => (
+            <tr
+              key={day}
+              className={`border-b border-slate-50 last:border-0 ${active ? '' : 'opacity-35'}`}
+            >
+              <td className="py-2.5 pr-6 font-semibold text-[var(--color-dark)] text-xs">
+                {abbrev}
+              </td>
+              <td className="py-2.5 pr-6 text-slate-600">{am}</td>
+              <td className="py-2.5 text-slate-600">{pm}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
 }
 
 // ── component ─────────────────────────────────────────────────────────────────
@@ -138,7 +174,11 @@ export default function ClinicianProfile() {
 
   const fullName    = formatName(clinician)
   const initials    = getInitials(clinician.first_name, clinician.last_name)
-  const scheduleRows = buildScheduleRows(schedules)
+
+  const f2fSchedules         = schedules.filter((s) => s.consultation_type === 'f2f' || !s.consultation_type)
+  const teleconsultSchedules = schedules.filter((s) => s.consultation_type === 'teleconsult')
+  const hasBothTypes         = f2fSchedules.length > 0 && teleconsultSchedules.length > 0
+  const scheduleRows         = buildScheduleRows(schedules)
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -218,37 +258,34 @@ export default function ClinicianProfile() {
               <Clock size={13} />
               Weekly Schedule
             </h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-100">
-                    <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wide pb-2.5 pr-6 w-16">
-                      Day
-                    </th>
-                    <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wide pb-2.5 pr-6">
-                      Morning
-                    </th>
-                    <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wide pb-2.5">
-                      Afternoon
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scheduleRows.map(({ day, abbrev, am, pm, active }) => (
-                    <tr
-                      key={day}
-                      className={`border-b border-slate-50 last:border-0 ${active ? '' : 'opacity-35'}`}
-                    >
-                      <td className="py-2.5 pr-6 font-semibold text-[var(--color-dark)] text-xs">
-                        {abbrev}
-                      </td>
-                      <td className="py-2.5 pr-6 text-slate-600">{am}</td>
-                      <td className="py-2.5 text-slate-600">{pm}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+
+            {hasBothTypes ? (
+              <div className="space-y-6">
+                {/* Face-to-Face sub-section */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+                      <User size={11} />
+                      Face-to-Face
+                    </span>
+                  </div>
+                  <ScheduleTable rows={buildScheduleRows(f2fSchedules)} />
+                </div>
+                <div className="border-t border-slate-100" />
+                {/* Teleconsult sub-section */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-700">
+                      <Monitor size={11} />
+                      Teleconsult
+                    </span>
+                  </div>
+                  <ScheduleTable rows={buildScheduleRows(teleconsultSchedules)} />
+                </div>
+              </div>
+            ) : (
+              <ScheduleTable rows={scheduleRows} />
+            )}
           </section>
 
           {/* HMOs */}

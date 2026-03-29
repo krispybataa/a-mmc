@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Check, MapPin } from 'lucide-react'
+import { ArrowLeft, Check, MapPin, Monitor, User } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import SlotPicker from '../../components/shared/SlotPicker'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const STEPS        = ['Date & Time', 'Details', 'Review']
+const STEPS        = ['Consult Type', 'Date & Time', 'Details', 'Review']
 const BOOKING_TYPES = ['New Consultation', 'Follow-up', 'Referral']
 const PAYMENT_BASE  = ['HMO', 'Out of Pocket', 'Senior Citizen Discount', 'PWD Discount']
 
@@ -51,6 +51,22 @@ function ReviewRow({ label, value }) {
       <span className="text-sm text-slate-400 w-36 shrink-0">{label}</span>
       <span className="text-sm text-[var(--color-dark)] font-medium">{value || '—'}</span>
     </div>
+  )
+}
+
+function ConsultTypePill({ type }) {
+  if (!type) return null
+  const isF2F = type === 'f2f'
+  return (
+    <span className={[
+      'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold',
+      isF2F
+        ? 'bg-blue-50 text-blue-700'
+        : 'bg-teal-50 text-teal-700',
+    ].join(' ')}>
+      {isF2F ? <User size={11} /> : <Monitor size={11} />}
+      {isF2F ? 'Face-to-Face' : 'Teleconsult'}
+    </span>
   )
 }
 
@@ -105,62 +121,83 @@ export default function BookAppointment() {
   // ── All hooks first (Rules of Hooks) ────────────────────────────────────────
   const [step, setStep]               = useState(1)
   // Step 1
+  const [consultationType, setConsultationType] = useState(null)
+  // Step 2
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedSlot, setSelectedSlot] = useState(null)
-  // Step 2
+  // Step 3
   const [chiefComplaint, setChiefComplaint] = useState('')
   const [description, setDescription]       = useState('')
   const [bookingType, setBookingType]       = useState('')
   const [paymentType, setPaymentType]       = useState('')
-  const [step2Errors, setStep2Errors]       = useState({})
-  // Step 3
+  const [step3Errors, setStep3Errors]       = useState({})
+  // Step 4
   const [confirmed, setConfirmed] = useState(false)
   const [loading, setLoading]     = useState(false)
   const [submitError, setSubmitError] = useState('')
   // Data
-  const [clinician, setClinician]         = useState(null)
+  const [clinician, setClinician]           = useState(null)
   const [availableSlots, setAvailableSlots] = useState(null)
-  const [fetchLoading, setFetchLoading]   = useState(true)
-  const [fetchError, setFetchError]       = useState('')
+  const [clinicianLoading, setClinicianLoading] = useState(true)
+  const [slotsLoading, setSlotsLoading]         = useState(false)
+  const [fetchError, setFetchError]             = useState('')
 
   // Auth guard — wait for auth to resolve before redirecting
   useEffect(() => {
     if (!authLoading && !user) navigate(`/login?redirect=/book/${id}`, { replace: true })
   }, [authLoading, user, id, navigate])
 
-  // Fetch clinician profile + available slots
+  // Fetch clinician profile on mount
   useEffect(() => {
     let cancelled = false
-    async function load() {
-      setFetchLoading(true)
+    async function loadClinician() {
+      setClinicianLoading(true)
       setFetchError('')
       try {
-        const [clinRes, slotsRes] = await Promise.all([
-          api.get(`/clinicians/${id}`),
-          api.get('/timeslots/', { params: { clinician_id: id, status: 'available' } }),
-        ])
+        const res = await api.get(`/clinicians/${id}`)
+        if (!cancelled) setClinician(res.data)
+      } catch {
+        if (!cancelled) setFetchError('Failed to load clinician information. Please try again.')
+      } finally {
+        if (!cancelled) setClinicianLoading(false)
+      }
+    }
+    loadClinician()
+    return () => { cancelled = true }
+  }, [id])
+
+  // Fetch slots when consultation type is selected (or changes)
+  useEffect(() => {
+    if (!consultationType) return
+    let cancelled = false
+    async function loadSlots() {
+      setSlotsLoading(true)
+      setAvailableSlots(null)
+      try {
+        const res = await api.get('/timeslots/', {
+          params: { clinician_id: id, status: 'available', consultation_type: consultationType },
+        })
         if (cancelled) return
-        setClinician(clinRes.data)
         const map = {}
-        for (const s of slotsRes.data) {
+        for (const s of res.data) {
           if (!map[s.slot_date]) map[s.slot_date] = []
           map[s.slot_date].push(s)
         }
         setAvailableSlots(map)
       } catch {
-        if (!cancelled) setFetchError('Failed to load clinician information. Please try again.')
+        if (!cancelled) setAvailableSlots({})
       } finally {
-        if (!cancelled) setFetchLoading(false)
+        if (!cancelled) setSlotsLoading(false)
       }
     }
-    load()
+    loadSlots()
     return () => { cancelled = true }
-  }, [id])
+  }, [id, consultationType])
 
   // ── Early returns (after all hooks) ─────────────────────────────────────────
   if (authLoading || !user) return null
 
-  if (fetchLoading) {
+  if (clinicianLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <p className="text-slate-400 text-sm">Loading…</p>
@@ -195,13 +232,22 @@ export default function BookAppointment() {
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
+  function handleSelectConsultationType(type) {
+    if (type === consultationType) return
+    setConsultationType(type)
+    // Reset downstream state when type changes
+    setSelectedDate('')
+    setSelectedSlot(null)
+    setAvailableSlots(null)
+  }
+
   function handleDateChange(dateStr) {
     setSelectedDate(dateStr)
     setSelectedSlot(null)
   }
 
   function handleNext() {
-    if (step === 2) {
+    if (step === 3) {
       const errs = {}
       if (!chiefComplaint.trim())
         errs.chiefComplaint = 'Chief complaint is required.'
@@ -209,8 +255,8 @@ export default function BookAppointment() {
         errs.chiefComplaint = 'Maximum 100 characters.'
       if (!bookingType) errs.bookingType = 'Please select a booking type.'
       if (!paymentType) errs.paymentType = 'Please select a payment type.'
-      if (Object.keys(errs).length > 0) { setStep2Errors(errs); return }
-      setStep2Errors({})
+      if (Object.keys(errs).length > 0) { setStep3Errors(errs); return }
+      setStep3Errors({})
     }
     setStep((s) => s + 1)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -233,6 +279,7 @@ export default function BookAppointment() {
         chief_complaint: chiefComplaint.trim(),
         chief_complaint_description: description.trim() || undefined,
         payment_type: paymentType,
+        consultation_type: consultationType,
       })
       navigate('/dashboard', { state: { bookingSuccess: true } })
     } catch (err) {
@@ -240,6 +287,11 @@ export default function BookAppointment() {
       setLoading(false)
     }
   }
+
+  // Continue button disabled logic per step
+  const continueDisabled =
+    (step === 1 && !consultationType) ||
+    (step === 2 && (!selectedDate || !selectedSlot || slotsLoading))
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -292,28 +344,130 @@ export default function BookAppointment() {
           <div className="border-t border-slate-100 mb-7" />
 
           {/* ════════════════════════════════════════════════
-              STEP 1 — Select Date & Time
+              STEP 1 — Select Consultation Type
           ════════════════════════════════════════════════ */}
           {step === 1 && (
-            <SlotPicker
-              schedule={clinician.schedules}
-              availableSlots={availableSlots}
-              clinicianName={fullName}
-              selectedDate={selectedDate}
-              onDateChange={handleDateChange}
-              selectedSlot={selectedSlot}
-              onSlotSelect={setSelectedSlot}
-              minDate={minDate}
-              maxDate={maxDate}
-              dateInputId="book-appt-date"
-            />
+            <div className="space-y-4">
+              <p className="text-sm font-semibold text-[var(--color-dark)]">
+                How would you like to meet?
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                {/* Face-to-Face card */}
+                <button
+                  type="button"
+                  onClick={() => handleSelectConsultationType('f2f')}
+                  className={[
+                    'flex flex-col items-start gap-3 p-5 rounded-xl border-2 text-left transition-colors',
+                    consultationType === 'f2f'
+                      ? 'border-[var(--color-primary)] bg-blue-50'
+                      : 'border-slate-200 hover:border-slate-300 bg-white',
+                  ].join(' ')}
+                >
+                  <div className={[
+                    'w-10 h-10 rounded-full flex items-center justify-center',
+                    consultationType === 'f2f' ? 'bg-[var(--color-primary)]' : 'bg-slate-100',
+                  ].join(' ')}>
+                    <User
+                      size={18}
+                      className={consultationType === 'f2f' ? 'text-white' : 'text-slate-400'}
+                    />
+                  </div>
+                  <div>
+                    <p className={[
+                      'text-sm font-semibold',
+                      consultationType === 'f2f' ? 'text-[var(--color-primary)]' : 'text-[var(--color-dark)]',
+                    ].join(' ')}>
+                      Face-to-Face
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5 leading-snug">
+                      Visit the clinic in person
+                    </p>
+                  </div>
+                  {consultationType === 'f2f' && (
+                    <span className="ml-auto self-end">
+                      <Check size={16} className="text-[var(--color-primary)]" />
+                    </span>
+                  )}
+                </button>
+
+                {/* Teleconsult card */}
+                <button
+                  type="button"
+                  onClick={() => handleSelectConsultationType('teleconsult')}
+                  className={[
+                    'flex flex-col items-start gap-3 p-5 rounded-xl border-2 text-left transition-colors',
+                    consultationType === 'teleconsult'
+                      ? 'border-teal-500 bg-teal-50'
+                      : 'border-slate-200 hover:border-slate-300 bg-white',
+                  ].join(' ')}
+                >
+                  <div className={[
+                    'w-10 h-10 rounded-full flex items-center justify-center',
+                    consultationType === 'teleconsult' ? 'bg-teal-500' : 'bg-slate-100',
+                  ].join(' ')}>
+                    <Monitor
+                      size={18}
+                      className={consultationType === 'teleconsult' ? 'text-white' : 'text-slate-400'}
+                    />
+                  </div>
+                  <div>
+                    <p className={[
+                      'text-sm font-semibold',
+                      consultationType === 'teleconsult' ? 'text-teal-600' : 'text-[var(--color-dark)]',
+                    ].join(' ')}>
+                      Teleconsult
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5 leading-snug">
+                      Online video consultation
+                    </p>
+                  </div>
+                  {consultationType === 'teleconsult' && (
+                    <span className="ml-auto self-end">
+                      <Check size={16} className="text-teal-500" />
+                    </span>
+                  )}
+                </button>
+
+              </div>
+            </div>
           )}
 
           {/* ════════════════════════════════════════════════
-              STEP 2 — Appointment Details
+              STEP 2 — Select Date & Time
           ════════════════════════════════════════════════ */}
           {step === 2 && (
+            <div>
+              {slotsLoading ? (
+                <p className="text-slate-400 text-sm text-center py-8">Loading available slots…</p>
+              ) : (
+                <SlotPicker
+                  schedule={clinician.schedules}
+                  availableSlots={availableSlots}
+                  clinicianName={fullName}
+                  selectedDate={selectedDate}
+                  onDateChange={handleDateChange}
+                  selectedSlot={selectedSlot}
+                  onSlotSelect={setSelectedSlot}
+                  minDate={minDate}
+                  maxDate={maxDate}
+                  dateInputId="book-appt-date"
+                />
+              )}
+            </div>
+          )}
+
+          {/* ════════════════════════════════════════════════
+              STEP 3 — Appointment Details
+          ════════════════════════════════════════════════ */}
+          {step === 3 && (
             <div className="space-y-5">
+
+              {/* Consultation type pill summary */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400">Consultation type:</span>
+                <ConsultTypePill type={consultationType} />
+              </div>
 
               {/* Chief Complaint */}
               <div>
@@ -328,21 +482,21 @@ export default function BookAppointment() {
                   value={chiefComplaint}
                   onChange={(e) => {
                     setChiefComplaint(e.target.value)
-                    if (step2Errors.chiefComplaint)
-                      setStep2Errors((p) => ({ ...p, chiefComplaint: undefined }))
+                    if (step3Errors.chiefComplaint)
+                      setStep3Errors((p) => ({ ...p, chiefComplaint: undefined }))
                   }}
                   placeholder="e.g. Joint pain, follow-up consultation"
                   className={[
                     'w-full px-4 py-3 rounded-lg border text-sm text-[var(--color-dark)]',
                     'placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:border-transparent',
-                    step2Errors.chiefComplaint
+                    step3Errors.chiefComplaint
                       ? 'border-[var(--color-accent)] focus:ring-[var(--color-accent)]'
                       : 'border-slate-200 focus:ring-[var(--color-primary)]',
                   ].join(' ')}
                 />
                 <div className="flex justify-between items-start mt-1.5">
-                  {step2Errors.chiefComplaint
-                    ? <p className="text-xs text-[var(--color-accent)]">{step2Errors.chiefComplaint}</p>
+                  {step3Errors.chiefComplaint
+                    ? <p className="text-xs text-[var(--color-accent)]">{step3Errors.chiefComplaint}</p>
                     : <span />}
                   <p className="text-xs text-slate-400 ml-auto">{chiefComplaint.length}/100</p>
                 </div>
@@ -377,13 +531,13 @@ export default function BookAppointment() {
                   value={bookingType}
                   onChange={(e) => {
                     setBookingType(e.target.value)
-                    if (step2Errors.bookingType)
-                      setStep2Errors((p) => ({ ...p, bookingType: undefined }))
+                    if (step3Errors.bookingType)
+                      setStep3Errors((p) => ({ ...p, bookingType: undefined }))
                   }}
                   className={[
                     'w-full px-4 py-3 rounded-lg border text-sm text-[var(--color-dark)] bg-white',
                     'focus:outline-none focus:ring-2 focus:border-transparent',
-                    step2Errors.bookingType
+                    step3Errors.bookingType
                       ? 'border-[var(--color-accent)] focus:ring-[var(--color-accent)]'
                       : 'border-slate-200 focus:ring-[var(--color-primary)]',
                   ].join(' ')}
@@ -391,8 +545,8 @@ export default function BookAppointment() {
                   <option value="">Select…</option>
                   {BOOKING_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
-                {step2Errors.bookingType && (
-                  <p className="mt-1.5 text-xs text-[var(--color-accent)]">{step2Errors.bookingType}</p>
+                {step3Errors.bookingType && (
+                  <p className="mt-1.5 text-xs text-[var(--color-accent)]">{step3Errors.bookingType}</p>
                 )}
               </div>
 
@@ -407,13 +561,13 @@ export default function BookAppointment() {
                   value={paymentType}
                   onChange={(e) => {
                     setPaymentType(e.target.value)
-                    if (step2Errors.paymentType)
-                      setStep2Errors((p) => ({ ...p, paymentType: undefined }))
+                    if (step3Errors.paymentType)
+                      setStep3Errors((p) => ({ ...p, paymentType: undefined }))
                   }}
                   className={[
                     'w-full px-4 py-3 rounded-lg border text-sm text-[var(--color-dark)] bg-white',
                     'focus:outline-none focus:ring-2 focus:border-transparent',
-                    step2Errors.paymentType
+                    step3Errors.paymentType
                       ? 'border-[var(--color-accent)] focus:ring-[var(--color-accent)]'
                       : 'border-slate-200 focus:ring-[var(--color-primary)]',
                   ].join(' ')}
@@ -421,8 +575,8 @@ export default function BookAppointment() {
                   <option value="">Select…</option>
                   {paymentOptions.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
-                {step2Errors.paymentType && (
-                  <p className="mt-1.5 text-xs text-[var(--color-accent)]">{step2Errors.paymentType}</p>
+                {step3Errors.paymentType && (
+                  <p className="mt-1.5 text-xs text-[var(--color-accent)]">{step3Errors.paymentType}</p>
                 )}
                 {clinician.hmos.length === 0 && (
                   <p className="mt-1.5 text-xs text-slate-400">
@@ -454,9 +608,9 @@ export default function BookAppointment() {
           )}
 
           {/* ════════════════════════════════════════════════
-              STEP 3 — Review & Confirm
+              STEP 4 — Review & Confirm
           ════════════════════════════════════════════════ */}
-          {step === 3 && (
+          {step === 4 && (
             <div className="space-y-6">
 
               {/* CLINICIAN */}
@@ -479,10 +633,14 @@ export default function BookAppointment() {
                   Appointment
                 </p>
                 <div className="space-y-2.5">
-                  <ReviewRow label="Date"         value={formatFullDate(selectedDate)} />
-                  <ReviewRow label="Time Slot"    value={selectedSlot?.label} />
-                  <ReviewRow label="Booking Type" value={bookingType} />
-                  <ReviewRow label="Payment Type" value={paymentType} />
+                  <ReviewRow label="Date"             value={formatFullDate(selectedDate)} />
+                  <ReviewRow label="Time Slot"        value={selectedSlot?.label} />
+                  <div className="flex gap-4">
+                    <span className="text-sm text-slate-400 w-36 shrink-0">Consult Type</span>
+                    <ConsultTypePill type={consultationType} />
+                  </div>
+                  <ReviewRow label="Booking Type"     value={bookingType} />
+                  <ReviewRow label="Payment Type"     value={paymentType} />
                 </div>
               </div>
 
@@ -533,11 +691,11 @@ export default function BookAppointment() {
               </button>
             )}
 
-            {step < 3 ? (
+            {step < STEPS.length ? (
               <button
                 type="button"
                 onClick={handleNext}
-                disabled={step === 1 && (!selectedDate || !selectedSlot)}
+                disabled={continueDisabled}
                 className="flex-1 py-3 px-6 rounded-lg text-sm font-semibold text-white bg-[var(--color-primary)] hover:opacity-90 transition-opacity duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Continue →
