@@ -66,6 +66,13 @@ export default function Navbar() {
                 >
                   My Appointments
                 </Link>
+                <Link
+                  to="/dashboard/profile"
+                  onClick={() => setOpen(false)}
+                  className="block px-4 py-2.5 text-sm text-[var(--color-dark)] hover:bg-slate-50 transition-colors"
+                >
+                  Edit Profile
+                </Link>
                 <div className="border-t border-slate-100 my-1" />
                 <button
                   onClick={handleSignOut}

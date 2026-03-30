@@ -207,7 +207,7 @@ export default function Register() {
           {/* Header */}
           <div className="mb-7">
             <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-primary-light)] mb-2">
-              Makati Medical Center
+              A-MMC
             </p>
             <h1 className="text-2xl font-bold text-[var(--color-dark)]">Create your account</h1>
             <p className="text-sm text-slate-400 mt-1">
