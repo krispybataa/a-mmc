@@ -8,6 +8,7 @@ import api, { configureApiAuth } from '../../services/api'
 const ROLES = [
   { value: 'clinician', label: 'Clinician' },
   { value: 'secretary', label: 'Secretary' },
+  { value: 'admin',     label: 'Admin'     },
 ]
 
 function validate(email, password) {
@@ -56,7 +57,8 @@ export default function StaffLogin() {
       setToken(data.access_token)
       setUser(data.user)
       const redirect = searchParams.get('redirect')
-      navigate(redirect || '/clinician-dashboard', { replace: true })
+      const defaultTarget = role === 'admin' ? '/admin' : '/clinician-dashboard'
+      navigate(redirect || defaultTarget, { replace: true })
     } catch (err) {
       setServerError(
         err.response?.status === 401
@@ -100,7 +102,7 @@ export default function StaffLogin() {
                 Role
                 <span className="text-[var(--color-accent)] ml-0.5">*</span>
               </p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {ROLES.map(({ value, label }) => (
                   <label
                     key={value}

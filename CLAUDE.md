@@ -76,6 +76,7 @@ a-mmc/
 ├── a-mmc_frontend/
 │   ├── src/
 │   │   ├── components/
+│   │   │   ├── AdminLayout.jsx            ← sidebar + header shell for all /admin/* pages
 │   │   │   ├── ClinicianCard.jsx          ← full-width image/avatar, card info below
 │   │   │   ├── Navbar.jsx                 ← persistent, excluded from /login, /register, /staff/login
 │   │   │   └── shared/
@@ -97,6 +98,11 @@ a-mmc/
 │   │   │   │   └── Register.jsx          ← /register, real registration + auto-login, ?redirect= chain
 │   │   │   ├── staff/
 │   │   │   │   └── StaffLogin.jsx        ← /staff/login, role selector, real auth, ?redirect= chain
+│   │   │   ├── admin/
+│   │   │   │   ├── AdminDashboard.jsx    ← /admin — summary counts + recent activity
+│   │   │   │   ├── AdminClinicians.jsx   ← /admin/clinicians — clinician list, add/delete
+│   │   │   │   ├── AdminSecretaries.jsx  ← /admin/secretaries — secretary list, link/unlink clinician
+│   │   │   │   └── AdminPatients.jsx     ← /admin/patients — patient list, view details
 │   │   │   └── dashboard/
 │   │   │       ├── PatientDashboard.jsx       ← /dashboard, live appointments
 │   │   │       ├── PatientAppointments.jsx    ← /dashboard/appointments, live appointments
@@ -135,6 +141,10 @@ a-mmc/
 | /clinician-dashboard | ClinicianDashboard.jsx | Yes → /staff/login?redirect=... |
 | /clinician-dashboard/profile | ClinicianProfileManager.jsx | Yes |
 | /clinician-dashboard/schedule | ScheduleManager.jsx | Yes |
+| /admin | AdminDashboard.jsx | Yes (role: admin) |
+| /admin/clinicians | AdminClinicians.jsx | Yes (role: admin) |
+| /admin/secretaries | AdminSecretaries.jsx | Yes (role: admin) |
+| /admin/patients | AdminPatients.jsx | Yes (role: admin) |
 
 **?redirect= chain (patient):** Unauthenticated patient hitting a gated page →
 `/login?redirect=X` → `/register?redirect=X` → back to X after auth.
@@ -390,7 +400,8 @@ Patients can browse clinicians without an account but must register to book.
 - ✅ Full frontend-backend integration (FB series): all pages on live API
 - ✅ mockClinicians.js and mockAppointments.js deleted
 - ✅ SlotPicker supports optional availableSlots prop for real slot objects
-- ⏳ Frontend container not yet up — no browser visual verification
+- ✅ Admin frontend (F8-A) — AdminLayout + 4 pages, wired to live API
+- ✅ Schedule Manager and ClinicianProfile show F2F and Teleconsult in separate labeled sections (F9-A-patch complete)
 
 ### Docker
 - ✅ a-mmc-postgres: up and running, all 10 tables migrated
@@ -398,22 +409,24 @@ Patients can browse clinicians without an account but must register to book.
 - ⏳ a-mmc-frontend: not yet up (collaborator)
 
 ### Known debt
-- Frontend container not yet up — browser smoke test pending
 - `UpdateProfile.jsx` is a stub
 - Profile picture upload not wired (`# TODO(integration)` in ClinicianProfileManager)
 - `send_noshow_confirmation_prompt()` not wired (needs scheduler — `# TODO(scheduler)`)
 - `# TODO(security)` markers throughout auth: blocklist, CSRF, rate limiting, brute-force protection
 - `triageLogic.js` routing logic pending domain expert validation
 - `window.confirm()` still present in Register flow
+- Admin "Link Clinician" modal fetches all clinicians — will need pagination or search once clinician count grows
+- AdminSecretaries linked clinician display depends on API response shape — verify `clinician_ids` vs `linked_clinicians` field name against live backend response
 
 ---
 
 ## Next steps (priority order)
-1. Collaborator brings up frontend container
-2. Full browser smoke test: register → find clinician → book → C/S login → accept
-3. Begin usability testing per CeHRes roadmap (SRET with stakeholder groups)
-4. Wire profile picture upload endpoint
-5. Address TODO(security) markers before any real user testing
+1. Wire UpdateProfile.jsx (patient profile edit) — currently a stub
+2. Admin delete-clinician cascade — when a clinician is deleted via the admin UI, any linked SecretaryClinicianLink rows must be cleaned up. Verify backend `DELETE /api/admin/clinicians/<id>` handles this; if not, a B-patch is needed before real admin use.
+3. Full browser smoke test: register → find clinician → book → C/S login → accept
+4. Begin usability testing per CeHRes roadmap (SRET with stakeholder groups)
+5. Wire profile picture upload endpoint
+6. Address TODO(security) markers before any real user testing
 
 ---
 
