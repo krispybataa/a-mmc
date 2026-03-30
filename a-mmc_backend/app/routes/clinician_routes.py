@@ -45,6 +45,7 @@ def list_clinicians():
                     "am_end": str(s.am_end) if s.am_end else None,
                     "pm_start": str(s.pm_start) if s.pm_start else None,
                     "pm_end": str(s.pm_end) if s.pm_end else None,
+                    "consultation_type": s.consultation_type,
                 }
                 for s in c.schedules
             ],
@@ -79,6 +80,7 @@ def get_clinician(clinician_id: int):
                 "am_end": str(s.am_end) if s.am_end else None,
                 "pm_start": str(s.pm_start) if s.pm_start else None,
                 "pm_end": str(s.pm_end) if s.pm_end else None,
+                "consultation_type": s.consultation_type,
             }
             for s in c.schedules
         ],
@@ -172,6 +174,7 @@ def list_schedules(clinician_id: int):
             "am_end": str(s.am_end) if s.am_end else None,
             "pm_start": str(s.pm_start) if s.pm_start else None,
             "pm_end": str(s.pm_end) if s.pm_end else None,
+            "consultation_type": s.consultation_type,
         }
         for s in schedules
     ])
@@ -188,6 +191,7 @@ def create_schedule(clinician_id: int):
         am_end=data.get("am_end"),
         pm_start=data.get("pm_start"),
         pm_end=data.get("pm_end"),
+        consultation_type=data.get("consultation_type", "f2f"),
     )
     db.session.add(schedule)
     # B1-A-patch-2: flush (not commit) so generate_slots can query the new schedule row;
@@ -260,7 +264,7 @@ def update_schedule(clinician_id: int, schedule_id: int):
     regen_to = today + timedelta(days=60)
 
     try:
-        for field in ["day_of_week", "am_start", "am_end", "pm_start", "pm_end"]:
+        for field in ["day_of_week", "am_start", "am_end", "pm_start", "pm_end", "consultation_type"]:
             if field in data:
                 setattr(schedule, field, data[field])
 
@@ -291,6 +295,7 @@ def update_schedule(clinician_id: int, schedule_id: int):
             "am_end": _fmt(schedule.am_end),
             "pm_start": _fmt(schedule.pm_start),
             "pm_end": _fmt(schedule.pm_end),
+            "consultation_type": schedule.consultation_type,
         },
         "slot_regeneration": result,
     })

@@ -70,18 +70,20 @@ def generate_slots(
     if from_date > to_date:
         raise ValueError("from_date must be on or before to_date")
 
-    # Load this clinician's schedule rows, keyed by weekday int
+    # Load this clinician's schedule rows. A clinician may have multiple rows per
+    # day (e.g. one f2f and one teleconsult), so we build a list-of-rows per day.
     schedule_rows = ClinicianSchedule.query.filter_by(clinician_id=clinician_id).all()
-    schedule_by_day: dict[int, ClinicianSchedule] = {
-        _DAY_MAP[row.day_of_week]: row
-        for row in schedule_rows
-        if row.day_of_week in _DAY_MAP
-    }
+    schedule_by_day: dict[int, list] = {}
+    for row in schedule_rows:
+        if row.day_of_week in _DAY_MAP:
+            schedule_by_day.setdefault(_DAY_MAP[row.day_of_week], []).append(row)
 
     if not schedule_by_day:
         return 0  # No schedule defined — nothing to generate
 
-    # Fetch existing slot keys to avoid duplicates
+    # Fetch existing slot keys to avoid duplicates.
+    # Key includes consultation_type so f2f and teleconsult slots at the same
+    # start_time can coexist.
     existing = ClinicianTimeslot.query.filter(
         ClinicianTimeslot.clinician_id == clinician_id,
         ClinicianTimeslot.slot_date >= from_date,
@@ -89,7 +91,7 @@ def generate_slots(
     ).all()
 
     existing_keys: set[tuple] = {
-        (s.slot_date, _minutes_to_time_str(_time_to_minutes(s.start_time)))
+        (s.slot_date, _minutes_to_time_str(_time_to_minutes(s.start_time)), s.consultation_type)
         for s in existing
     }
 
@@ -98,9 +100,9 @@ def generate_slots(
 
     while current <= to_date:
         weekday = current.weekday()
-        sched = schedule_by_day.get(weekday)
+        sched_list = schedule_by_day.get(weekday, [])
 
-        if sched:
+        for sched in sched_list:
             # Generate slots for AM window and PM window independently
             for window_start_raw, window_end_raw in [
                 (sched.am_start, sched.am_end),
@@ -119,7 +121,7 @@ def generate_slots(
                     start_str = _minutes_to_time_str(cursor)
                     end_str = _minutes_to_time_str(cursor + slot_duration_minutes)
 
-                    key = (current, start_str)
+                    key = (current, start_str, sched.consultation_type)
                     if key not in existing_keys:
                         new_slots.append(
                             ClinicianTimeslot(
@@ -128,6 +130,7 @@ def generate_slots(
                                 start_time=start_str,
                                 end_time=end_str,
                                 status="available",
+                                consultation_type=sched.consultation_type,
                             )
                         )
                         existing_keys.add(key)
@@ -159,19 +162,17 @@ def _compute_expected_keys(
     identify orphaned slots after a schedule edit.
     """
     schedule_rows = ClinicianSchedule.query.filter_by(clinician_id=clinician_id).all()
-    schedule_by_day: dict[int, ClinicianSchedule] = {
-        _DAY_MAP[row.day_of_week]: row
-        for row in schedule_rows
-        if row.day_of_week in _DAY_MAP
-    }
+    schedule_by_day: dict[int, list] = {}
+    for row in schedule_rows:
+        if row.day_of_week in _DAY_MAP:
+            schedule_by_day.setdefault(_DAY_MAP[row.day_of_week], []).append(row)
 
     expected: set[tuple] = set()
     current = from_date
 
     while current <= to_date:
         weekday = current.weekday()
-        sched = schedule_by_day.get(weekday)
-        if sched:
+        for sched in schedule_by_day.get(weekday, []):
             for window_start_raw, window_end_raw in [
                 (sched.am_start, sched.am_end),
                 (sched.pm_start, sched.pm_end),
@@ -184,7 +185,7 @@ def _compute_expected_keys(
                     continue
                 cursor = start_min
                 while cursor + slot_duration_minutes <= end_min:
-                    expected.add((current, _minutes_to_time_str(cursor)))
+                    expected.add((current, _minutes_to_time_str(cursor), sched.consultation_type))
                     cursor += slot_duration_minutes
         current += timedelta(days=1)
 
@@ -271,7 +272,7 @@ def regenerate_slots_for_schedule_change(
         # Step 4: Identify orphans — slots whose key is no longer in the schedule
         orphans = [
             s for s in all_slots
-            if (s.slot_date, _minutes_to_time_str(_time_to_minutes(s.start_time)))
+            if (s.slot_date, _minutes_to_time_str(_time_to_minutes(s.start_time)), s.consultation_type)
             not in expected_keys
         ]
 

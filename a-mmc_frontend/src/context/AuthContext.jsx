@@ -20,7 +20,7 @@ export function AuthProvider({ children }) {
   // ---------------------------------------------------------------------------
   const logout = useCallback(async () => {
     try {
-      await api.post('/api/auth/logout')
+      await api.post('/auth/logout')
     } catch {
       // Ignore — we always clear local state regardless of server response
     }

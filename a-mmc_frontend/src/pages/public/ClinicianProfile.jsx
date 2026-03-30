@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, MapPin, Mail, Clock, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, MapPin, Mail, ShieldCheck, Building2, Video } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 
@@ -47,6 +47,42 @@ function formatName({ title, first_name, middle_name, last_name, suffix }) {
 
 function getInitials(first_name, last_name) {
   return `${first_name[0]}${last_name[0]}`.toUpperCase()
+}
+
+function ScheduleTable({ rows }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm border-collapse">
+        <thead>
+          <tr className="border-b border-slate-100">
+            <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wide pb-2.5 pr-6 w-16">
+              Day
+            </th>
+            <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wide pb-2.5 pr-6">
+              Morning
+            </th>
+            <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wide pb-2.5">
+              Afternoon
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(({ day, abbrev, am, pm, active }) => (
+            <tr
+              key={day}
+              className={`border-b border-slate-50 last:border-0 ${active ? '' : 'opacity-35'}`}
+            >
+              <td className="py-2.5 pr-6 font-semibold text-[var(--color-dark)] text-xs">
+                {abbrev}
+              </td>
+              <td className="py-2.5 pr-6 text-slate-600">{am}</td>
+              <td className="py-2.5 text-slate-600">{pm}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
 }
 
 // ── component ─────────────────────────────────────────────────────────────────
@@ -138,7 +174,9 @@ export default function ClinicianProfile() {
 
   const fullName    = formatName(clinician)
   const initials    = getInitials(clinician.first_name, clinician.last_name)
-  const scheduleRows = buildScheduleRows(schedules)
+
+  const f2fSchedules         = schedules.filter((s) => s.consultation_type === 'f2f' || !s.consultation_type)
+  const teleconsultSchedules = schedules.filter((s) => s.consultation_type === 'teleconsult')
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -212,44 +250,34 @@ export default function ClinicianProfile() {
         {/* ── RIGHT: schedule + HMOs + info ── */}
         <div className="md:col-span-2 flex flex-col gap-5">
 
-          {/* Schedule */}
-          <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-            <h2 className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-5">
-              <Clock size={13} />
-              Weekly Schedule
-            </h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-100">
-                    <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wide pb-2.5 pr-6 w-16">
-                      Day
-                    </th>
-                    <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wide pb-2.5 pr-6">
-                      Morning
-                    </th>
-                    <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wide pb-2.5">
-                      Afternoon
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scheduleRows.map(({ day, abbrev, am, pm, active }) => (
-                    <tr
-                      key={day}
-                      className={`border-b border-slate-50 last:border-0 ${active ? '' : 'opacity-35'}`}
-                    >
-                      <td className="py-2.5 pr-6 font-semibold text-[var(--color-dark)] text-xs">
-                        {abbrev}
-                      </td>
-                      <td className="py-2.5 pr-6 text-slate-600">{am}</td>
-                      <td className="py-2.5 text-slate-600">{pm}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+          {/* Clinic Schedule (F2F) */}
+          {f2fSchedules.length > 0 && (
+            <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-primary)] mb-5">
+                <Building2 size={15} className="shrink-0" />
+                Clinic Schedule
+              </h2>
+              <ScheduleTable rows={buildScheduleRows(f2fSchedules)} />
+            </section>
+          )}
+
+          {/* Teleconsultation Schedule */}
+          {teleconsultSchedules.length > 0 && (
+            <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-primary)] mb-5">
+                <Video size={15} className="shrink-0" />
+                Teleconsultation Schedule
+              </h2>
+              <ScheduleTable rows={buildScheduleRows(teleconsultSchedules)} />
+            </section>
+          )}
+
+          {/* Subject-to-change note */}
+          {(f2fSchedules.length > 0 || teleconsultSchedules.length > 0) && (
+            <p className="text-xs text-slate-400 leading-relaxed px-1">
+              Schedule is subject to change. Please contact the clinic for the most up-to-date information.
+            </p>
+          )}
 
           {/* HMOs */}
           <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">

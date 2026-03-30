@@ -13,21 +13,21 @@ function makeEmptyRows() {
   return DAYS.map(day => ({
     day,
     schedule_id: null,
-    active:   false,
-    amStart:  '',
-    amEnd:    '',
-    pmStart:  '',
-    pmEnd:    '',
-    error:    '',
+    active:    false,
+    amStart:   '',
+    amEnd:     '',
+    pmStart:   '',
+    pmEnd:     '',
+    error:     '',
     saveError: '',
-    saved:    false,
+    saved:     false,
   }))
 }
 
-function seedFromApi(scheduleList) {
+function seedFromApi(scheduleList, type) {
   const byDay = {}
   for (const s of scheduleList) {
-    byDay[s.day_of_week] = s
+    if ((s.consultation_type ?? 'f2f') === type) byDay[s.day_of_week] = s
   }
   return DAYS.map(day => {
     const s = byDay[day]
@@ -83,6 +83,20 @@ function TimeInput({ value, onChange, disabled }) {
   )
 }
 
+// ── TypeBadge ─────────────────────────────────────────────────────────────────
+
+function TypeBadge({ type }) {
+  return type === 'f2f' ? (
+    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-[var(--color-primary)] border border-blue-100 shrink-0">
+      F2F
+    </span>
+  ) : (
+    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-100 shrink-0">
+      Teleconsult
+    </span>
+  )
+}
+
 // ── ScheduleManager ────────────────────────────────────────────────────────────
 
 export default function ScheduleManager() {
@@ -94,7 +108,11 @@ export default function ScheduleManager() {
   const [fetchLoading, setFetchLoading] = useState(false)
   const [fetchError, setFetchError]     = useState('')
 
-  const [rows, setRows]           = useState(makeEmptyRows)
+  const [consultationType, setConsultationType] = useState('f2f')
+  const [rowsByType, setRowsByType] = useState({
+    f2f:         makeEmptyRows(),
+    teleconsult: makeEmptyRows(),
+  })
   const [confirmSave, setConfirmSave] = useState(false)
   const [isSaving, setIsSaving]   = useState(false)
   const [stuckSlots, setStuckSlots] = useState([])
@@ -124,7 +142,10 @@ export default function ScheduleManager() {
     setFetchLoading(true)
     setFetchError('')
     api.get(`/clinicians/${clinicianId}/schedules`)
-      .then(({ data }) => setRows(seedFromApi(data)))
+      .then(({ data }) => setRowsByType({
+        f2f:         seedFromApi(data, 'f2f'),
+        teleconsult: seedFromApi(data, 'teleconsult'),
+      }))
       .catch(() => setFetchError('Unable to load schedule.'))
       .finally(() => setFetchLoading(false))
   }, [clinicianId])
@@ -132,6 +153,24 @@ export default function ScheduleManager() {
   // ── All hooks above this line ──────────────────────────────────────────────
 
   if (authLoading || !user) return null
+
+  // ── Derived state ──────────────────────────────────────────────────────────
+
+  const rows = rowsByType[consultationType]
+
+  // Wrapper so all handlers can call setRows(updater) without knowing the type key
+  function setRows(updater) {
+    setRowsByType(prev => ({ ...prev, [consultationType]: updater(prev[consultationType]) }))
+  }
+
+  // ── Tab switch ─────────────────────────────────────────────────────────────
+
+  function handleTabSwitch(type) {
+    if (type === consultationType) return
+    setConsultationType(type)
+    setConfirmSave(false)
+    setStuckSlots([])
+  }
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -154,10 +193,9 @@ export default function ScheduleManager() {
   }
 
   function handleSaveClick() {
-    // Validate first; if errors surface them and don't enter confirm mode
     const validated = validateRows(rows)
     if (validated.some(r => r.error)) {
-      setRows(validated)
+      setRows(() => validated)
       return
     }
     setConfirmSave(true)
@@ -166,7 +204,7 @@ export default function ScheduleManager() {
   async function confirmSaveSchedule() {
     const validated = validateRows(rows)
     if (validated.some(r => r.error)) {
-      setRows(validated)
+      setRows(() => validated)
       setConfirmSave(false)
       return
     }
@@ -179,11 +217,12 @@ export default function ScheduleManager() {
     const results = await Promise.allSettled(
       activeRows.map(async (row) => {
         const body = {
-          day_of_week: row.day,
-          am_start: row.amStart || null,
-          am_end:   row.amEnd   || null,
-          pm_start: row.pmStart || null,
-          pm_end:   row.pmEnd   || null,
+          day_of_week:       row.day,
+          am_start:          row.amStart || null,
+          am_end:            row.amEnd   || null,
+          pm_start:          row.pmStart || null,
+          pm_end:            row.pmEnd   || null,
+          consultation_type: consultationType,
         }
         if (row.schedule_id) {
           const { data } = await api.patch(
@@ -278,7 +317,42 @@ export default function ScheduleManager() {
         </nav>
 
         {/* Heading */}
-        <h1 className="text-3xl font-bold text-[var(--color-dark)] mb-8">Schedule Manager</h1>
+        <h1 className="text-3xl font-bold text-[var(--color-dark)] mb-6">Schedule Manager</h1>
+
+        {/* ── Consultation type tabs ── */}
+        <div className="flex gap-2 mb-8">
+          {[
+            { value: 'f2f',         label: 'Face-to-Face' },
+            { value: 'teleconsult', label: 'Teleconsult'  },
+          ].map(({ value, label }) => {
+            const activeCount = rowsByType[value].filter(r => r.active).length
+            const isActive = consultationType === value
+            return (
+              <button
+                key={value}
+                type="button"
+                disabled={isSaving}
+                onClick={() => handleTabSwitch(value)}
+                className={[
+                  'inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-colors min-h-[44px] disabled:opacity-50',
+                  isActive
+                    ? 'bg-[var(--color-primary)] text-white'
+                    : 'border border-[var(--color-primary)] text-[var(--color-primary)] bg-white hover:bg-blue-50',
+                ].join(' ')}
+              >
+                {label}
+                {activeCount > 0 && (
+                  <span className={[
+                    'text-xs font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none',
+                    isActive ? 'bg-white/25 text-white' : 'bg-[var(--color-primary)] text-white',
+                  ].join(' ')}>
+                    {activeCount}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
 
         {/* Inline fetch error (clinicianId resolved but schedule fetch failed) */}
         {fetchError && clinicianId && (
@@ -290,7 +364,7 @@ export default function ScheduleManager() {
 
           {/* Table header */}
           <div className="flex items-center px-5 py-3.5 bg-slate-50 border-b border-slate-100">
-            <div className="w-32 shrink-0 text-xs font-semibold text-slate-500 uppercase tracking-wide">Day</div>
+            <div className="w-40 shrink-0 text-xs font-semibold text-slate-500 uppercase tracking-wide">Day</div>
             <div className="w-20 shrink-0 text-xs font-semibold text-slate-500 uppercase tracking-wide">Active</div>
             <div className="flex-1 text-xs font-semibold text-slate-500 uppercase tracking-wide">AM Window</div>
             <div className="flex-1 text-xs font-semibold text-slate-500 uppercase tracking-wide">PM Window</div>
@@ -304,16 +378,17 @@ export default function ScheduleManager() {
             >
               <div className="flex items-center px-5 py-4 gap-2">
 
-                {/* Day name */}
-                <div className="w-32 shrink-0 text-sm font-semibold text-[var(--color-dark)]">
-                  {row.day}
+                {/* Day name + type badge */}
+                <div className="w-40 shrink-0 flex items-center gap-2">
+                  <span className="text-sm font-semibold text-[var(--color-dark)]">{row.day}</span>
+                  <TypeBadge type={consultationType} />
                 </div>
 
                 {/* Active toggle */}
                 <div className="w-20 shrink-0 flex items-center">
                   <input
                     type="checkbox"
-                    id={`active-${row.day}`}
+                    id={`active-${row.day}-${consultationType}`}
                     checked={row.active}
                     onChange={() => toggleActive(i)}
                     className="w-5 h-5 rounded border-slate-300 accent-[var(--color-primary)] cursor-pointer"
@@ -355,7 +430,7 @@ export default function ScheduleManager() {
               {/* Per-row status */}
               {(row.error || row.saveError || row.saved) && (
                 <div className="px-5 pb-3 space-y-0.5">
-                  {row.error    && <p className="text-xs text-[var(--color-accent)]">{row.error}</p>}
+                  {row.error     && <p className="text-xs text-[var(--color-accent)]">{row.error}</p>}
                   {row.saveError && <p className="text-xs text-[var(--color-accent)]">{row.saveError}</p>}
                   {row.saved && !row.saveError && <p className="text-xs text-green-700 font-medium">Saved.</p>}
                 </div>
@@ -375,7 +450,10 @@ export default function ScheduleManager() {
             >
               {/* Day + toggle */}
               <div className="flex items-center justify-between">
-                <span className="text-base font-semibold text-[var(--color-dark)]">{row.day}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold text-[var(--color-dark)]">{row.day}</span>
+                  <TypeBadge type={consultationType} />
+                </div>
                 <label className="flex items-center gap-2 cursor-pointer select-none min-h-[44px]">
                   <input
                     type="checkbox"
@@ -426,7 +504,7 @@ export default function ScheduleManager() {
               {/* Per-row status */}
               {(row.error || row.saveError || row.saved) && (
                 <div className="space-y-0.5">
-                  {row.error    && <p className="text-xs text-[var(--color-accent)]">{row.error}</p>}
+                  {row.error     && <p className="text-xs text-[var(--color-accent)]">{row.error}</p>}
                   {row.saveError && <p className="text-xs text-[var(--color-accent)]">{row.saveError}</p>}
                   {row.saved && !row.saveError && <p className="text-xs text-green-700 font-medium">Saved.</p>}
                 </div>

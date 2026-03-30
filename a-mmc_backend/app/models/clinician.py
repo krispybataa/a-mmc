@@ -42,6 +42,7 @@ class ClinicianSchedule(db.Model):
     am_end = db.Column(db.Time, nullable=True)
     pm_start = db.Column(db.Time, nullable=True)
     pm_end = db.Column(db.Time, nullable=True)
+    consultation_type = db.Column(db.String, nullable=False, server_default='f2f')  # f2f | teleconsult
 
     clinician = db.relationship("Clinician", back_populates="schedules")
 
@@ -88,6 +89,7 @@ class ClinicianTimeslot(db.Model):
     # Optional soft patient limit. When set, slot is auto-blocked after this many
     # accepted appointments. NULL = no limit (default).
     max_patients = db.Column(db.Integer, nullable=True)
+    consultation_type = db.Column(db.String, nullable=False, server_default='f2f')  # f2f | teleconsult
 
     clinician = db.relationship("Clinician", back_populates="timeslots")
     appointments = db.relationship("Appointment", back_populates="slot")
