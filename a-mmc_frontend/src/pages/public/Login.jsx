@@ -69,7 +69,7 @@ export default function Login() {
           {/* Header */}
           <div className="mb-8">
             <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-primary-light)] mb-2">
-              Makati Medical Center
+              A-MMC
             </p>
             <h1 className="text-2xl font-bold text-[var(--color-dark)]">Welcome back</h1>
             <p className="text-sm text-slate-400 mt-1">Sign in to your patient account to continue.</p>
