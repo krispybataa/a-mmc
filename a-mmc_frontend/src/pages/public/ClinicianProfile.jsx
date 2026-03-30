@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, MapPin, Mail, Clock, ShieldCheck, User, Monitor } from 'lucide-react'
+import { ArrowLeft, MapPin, Mail, ShieldCheck, Building2, Video } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 
@@ -177,8 +177,6 @@ export default function ClinicianProfile() {
 
   const f2fSchedules         = schedules.filter((s) => s.consultation_type === 'f2f' || !s.consultation_type)
   const teleconsultSchedules = schedules.filter((s) => s.consultation_type === 'teleconsult')
-  const hasBothTypes         = f2fSchedules.length > 0 && teleconsultSchedules.length > 0
-  const scheduleRows         = buildScheduleRows(schedules)
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -252,41 +250,34 @@ export default function ClinicianProfile() {
         {/* ── RIGHT: schedule + HMOs + info ── */}
         <div className="md:col-span-2 flex flex-col gap-5">
 
-          {/* Schedule */}
-          <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-            <h2 className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-5">
-              <Clock size={13} />
-              Weekly Schedule
-            </h2>
+          {/* Clinic Schedule (F2F) */}
+          {f2fSchedules.length > 0 && (
+            <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-primary)] mb-5">
+                <Building2 size={15} className="shrink-0" />
+                Clinic Schedule
+              </h2>
+              <ScheduleTable rows={buildScheduleRows(f2fSchedules)} />
+            </section>
+          )}
 
-            {hasBothTypes ? (
-              <div className="space-y-6">
-                {/* Face-to-Face sub-section */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
-                      <User size={11} />
-                      Face-to-Face
-                    </span>
-                  </div>
-                  <ScheduleTable rows={buildScheduleRows(f2fSchedules)} />
-                </div>
-                <div className="border-t border-slate-100" />
-                {/* Teleconsult sub-section */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-700">
-                      <Monitor size={11} />
-                      Teleconsult
-                    </span>
-                  </div>
-                  <ScheduleTable rows={buildScheduleRows(teleconsultSchedules)} />
-                </div>
-              </div>
-            ) : (
-              <ScheduleTable rows={scheduleRows} />
-            )}
-          </section>
+          {/* Teleconsultation Schedule */}
+          {teleconsultSchedules.length > 0 && (
+            <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-primary)] mb-5">
+                <Video size={15} className="shrink-0" />
+                Teleconsultation Schedule
+              </h2>
+              <ScheduleTable rows={buildScheduleRows(teleconsultSchedules)} />
+            </section>
+          )}
+
+          {/* Subject-to-change note */}
+          {(f2fSchedules.length > 0 || teleconsultSchedules.length > 0) && (
+            <p className="text-xs text-slate-400 leading-relaxed px-1">
+              Schedule is subject to change. Please contact the clinic for the most up-to-date information.
+            </p>
+          )}
 
           {/* HMOs */}
           <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">

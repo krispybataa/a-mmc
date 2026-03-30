@@ -324,22 +324,34 @@ export default function ScheduleManager() {
           {[
             { value: 'f2f',         label: 'Face-to-Face' },
             { value: 'teleconsult', label: 'Teleconsult'  },
-          ].map(({ value, label }) => (
-            <button
-              key={value}
-              type="button"
-              disabled={isSaving}
-              onClick={() => handleTabSwitch(value)}
-              className={[
-                'px-5 py-2.5 rounded-full text-sm font-semibold transition-colors min-h-[44px] disabled:opacity-50',
-                consultationType === value
-                  ? 'bg-[var(--color-primary)] text-white'
-                  : 'border border-slate-200 text-slate-600 bg-white hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]',
-              ].join(' ')}
-            >
-              {label}
-            </button>
-          ))}
+          ].map(({ value, label }) => {
+            const activeCount = rowsByType[value].filter(r => r.active).length
+            const isActive = consultationType === value
+            return (
+              <button
+                key={value}
+                type="button"
+                disabled={isSaving}
+                onClick={() => handleTabSwitch(value)}
+                className={[
+                  'inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-colors min-h-[44px] disabled:opacity-50',
+                  isActive
+                    ? 'bg-[var(--color-primary)] text-white'
+                    : 'border border-[var(--color-primary)] text-[var(--color-primary)] bg-white hover:bg-blue-50',
+                ].join(' ')}
+              >
+                {label}
+                {activeCount > 0 && (
+                  <span className={[
+                    'text-xs font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none',
+                    isActive ? 'bg-white/25 text-white' : 'bg-[var(--color-primary)] text-white',
+                  ].join(' ')}>
+                    {activeCount}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
 
         {/* Inline fetch error (clinicianId resolved but schedule fetch failed) */}
