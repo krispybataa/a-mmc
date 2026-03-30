@@ -26,6 +26,7 @@ from flask_jwt_extended import (
 
 from app.services.auth_service import (
     verify_password,
+    hash_password,
     get_patient_by_email,
     get_clinician_by_email,
     get_secretary_by_email,
@@ -166,6 +167,63 @@ def logout():
     response = jsonify({"message": "Logged out"})
     unset_jwt_cookies(response)
     return response, 200
+
+
+# ---------------------------------------------------------------------------
+# PATCH /api/auth/change-password
+# ---------------------------------------------------------------------------
+
+@auth_bp.patch("/change-password")
+@jwt_required()
+def change_password():
+    """
+    Change the password for the currently authenticated clinician or secretary.
+
+    Expects JSON: { "current_password": "...", "new_password": "..." }
+    Returns 200 on success, 401 if current_password is wrong,
+    400 if required fields are missing.
+    """
+    from app import db
+
+    claims = get_jwt()
+    identity = claims["user"]
+    role = identity.get("role")
+
+    if role not in ("clinician", "secretary"):
+        return jsonify({"error": "Password change is only available for clinician and secretary accounts."}), 403
+
+    data = request.get_json(silent=True) or {}
+
+    err = require_fields(data, "current_password", "new_password")
+    if err:
+        return err
+
+    current_password = data["current_password"]
+    new_password     = data["new_password"]
+
+    if len(new_password) < 8:
+        return jsonify({"error": "New password must be at least 8 characters."}), 400
+
+    if role == "clinician":
+        from app.models.clinician import Clinician
+        user = Clinician.query.get(identity["id"])
+    else:
+        from app.models.secretary import Secretary
+        user = Secretary.query.get(identity["id"])
+
+    if user is None:
+        return jsonify({"error": "User not found."}), 404
+
+    if not verify_password(current_password, user.login_password_hash):
+        return jsonify({"error": "Current password is incorrect."}), 401
+
+    try:
+        user.login_password_hash = hash_password(new_password)
+        db.session.commit()
+        return jsonify({"message": "Password updated successfully."}), 200
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": "Failed to update password."}), 500
 
 
 # ---------------------------------------------------------------------------

@@ -12,6 +12,7 @@ import ClinicianDashboard from './pages/dashboard/ClinicianDashboard'
 import ClinicianProfileManager from './pages/dashboard/ClinicianProfileManager'
 import ScheduleManager from './pages/dashboard/ScheduleManager'
 import UpdateProfile from './pages/dashboard/UpdateProfile'
+import ChangePassword from './pages/dashboard/ChangePassword'
 import FindDoctor from './pages/public/FindDoctor'
 import GuidedSearch from './pages/public/GuidedSearch'
 import Doctors from './pages/public/Doctors'
@@ -50,8 +51,9 @@ export default function App() {
         {/* ── Staff shell — auth-guarded, own topbar, no patient navbar ── */}
         <Route element={<StaffLayout />}>
           <Route path="/clinician-dashboard"          element={<ClinicianDashboard />} />
-          <Route path="/clinician-dashboard/profile"  element={<ClinicianProfileManager />} />
-          <Route path="/clinician-dashboard/schedule" element={<ScheduleManager />} />
+          <Route path="/clinician-dashboard/profile"          element={<ClinicianProfileManager />} />
+          <Route path="/clinician-dashboard/schedule"         element={<ScheduleManager />} />
+          <Route path="/clinician-dashboard/change-password"  element={<ChangePassword />} />
         </Route>
 
         {/* ── Staff login — no layout at all ── */}

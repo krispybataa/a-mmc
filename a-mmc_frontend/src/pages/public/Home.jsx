@@ -36,7 +36,7 @@ export default function Home() {
       <header className="bg-[var(--color-primary)] text-white">
         <div className="max-w-5xl mx-auto px-6 py-16">
           <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-primary-light)] mb-3">
-            Makati Medical Center
+            A-MMC
           </p>
           <h1 className="text-4xl font-bold tracking-tight mb-3">
             Find Your Clinician
