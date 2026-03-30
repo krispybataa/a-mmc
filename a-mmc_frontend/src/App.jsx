@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import StaffLayout from './components/StaffLayout'
+import AdminLayout from './components/AdminLayout'
 import ClinicianProfile from './pages/public/ClinicianProfile'
 import Login from './pages/public/Login'
 import Register from './pages/public/Register'
@@ -15,6 +16,10 @@ import FindDoctor from './pages/public/FindDoctor'
 import GuidedSearch from './pages/public/GuidedSearch'
 import Doctors from './pages/public/Doctors'
 import StaffLogin from './pages/staff/StaffLogin'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminClinicians from './pages/admin/AdminClinicians'
+import AdminSecretaries from './pages/admin/AdminSecretaries'
+import AdminPatients from './pages/admin/AdminPatients'
 
 // Routes where the patient navbar should be hidden
 const NO_NAV = ['/login', '/register']
@@ -33,6 +38,14 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+
+        {/* ── Admin shell — auth-guarded (role: admin), sidebar layout ── */}
+        <Route element={<AdminLayout />}>
+          <Route path="/admin"              element={<AdminDashboard />} />
+          <Route path="/admin/clinicians"   element={<AdminClinicians />} />
+          <Route path="/admin/secretaries"  element={<AdminSecretaries />} />
+          <Route path="/admin/patients"     element={<AdminPatients />} />
+        </Route>
 
         {/* ── Staff shell — auth-guarded, own topbar, no patient navbar ── */}
         <Route element={<StaffLayout />}>

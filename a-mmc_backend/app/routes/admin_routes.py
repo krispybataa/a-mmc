@@ -80,6 +80,64 @@ def list_clinicians():
 
 
 # ---------------------------------------------------------------------------
+# POST /api/admin/clinicians
+# ---------------------------------------------------------------------------
+
+@admin_bp.post("/clinicians")
+@jwt_required()
+def create_clinician():
+    err = _require_admin()
+    if err:
+        return err
+    data = request.get_json(force=True) or {}
+    err = require_fields(data, "first_name", "last_name", "login_email", "password")
+    if err:
+        return err
+    clinician = Clinician(
+        title=data.get("title"),
+        first_name=data["first_name"],
+        middle_name=data.get("middle_name"),
+        last_name=data["last_name"],
+        suffix=data.get("suffix"),
+        department=data.get("department"),
+        specialty=data.get("specialty"),
+        local_number=data.get("local_number"),
+        room_number=data.get("room_number"),
+        contact_phone=data.get("contact_phone"),
+        contact_email=data.get("contact_email"),
+        login_email=data["login_email"],
+        login_password_hash=hash_password(data["password"]),
+    )
+    try:
+        db.session.add(clinician)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+    return jsonify({"clinician_id": clinician.clinician_id}), 201
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/admin/clinicians/<id>
+# ---------------------------------------------------------------------------
+
+@admin_bp.delete("/clinicians/<int:clinician_id>")
+@jwt_required()
+def delete_clinician(clinician_id: int):
+    err = _require_admin()
+    if err:
+        return err
+    c = db.get_or_404(Clinician, clinician_id)
+    try:
+        db.session.delete(c)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+    return jsonify({"message": "deleted"})
+
+
+# ---------------------------------------------------------------------------
 # GET /api/admin/secretaries
 # ---------------------------------------------------------------------------
 
@@ -101,6 +159,59 @@ def list_secretaries():
         }
         for s in secretaries
     ])
+
+
+# ---------------------------------------------------------------------------
+# POST /api/admin/secretaries
+# ---------------------------------------------------------------------------
+
+@admin_bp.post("/secretaries")
+@jwt_required()
+def create_secretary():
+    err = _require_admin()
+    if err:
+        return err
+    data = request.get_json(force=True) or {}
+    err = require_fields(data, "first_name", "last_name", "login_email", "password")
+    if err:
+        return err
+    secretary = Secretary(
+        title=data.get("title"),
+        first_name=data["first_name"],
+        last_name=data["last_name"],
+        suffix=data.get("suffix"),
+        contact_phone=data.get("contact_phone"),
+        contact_email=data.get("contact_email"),
+        login_email=data["login_email"],
+        login_password_hash=hash_password(data["password"]),
+    )
+    try:
+        db.session.add(secretary)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+    return jsonify({"secretary_id": secretary.secretary_id}), 201
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/admin/secretaries/<id>
+# ---------------------------------------------------------------------------
+
+@admin_bp.delete("/secretaries/<int:secretary_id>")
+@jwt_required()
+def delete_secretary(secretary_id: int):
+    err = _require_admin()
+    if err:
+        return err
+    s = db.get_or_404(Secretary, secretary_id)
+    try:
+        db.session.delete(s)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+    return jsonify({"message": "deleted"})
 
 
 # ---------------------------------------------------------------------------
