@@ -15,19 +15,19 @@ jobs:
       postgres:
         image: postgres:15-alpine
         env:
-          POSTGRES_USER: ${{ vars.POSTGRES_TEST_USER }} 
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_TEST_PASSWORD }}
-          POSTGRES_DB: ${{ secrets.POSTGRES_TEST_DB }}
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: test_db
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U ${{ vars.POSTGRES_TEST_USER }} -d ${{ secrets.POSTGRES_TEST_DB }}"
+          --health-cmd="pg_isready -U test_user -d test_db"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=5
 
     env:
-      DATABASE_URL: postgresql://${{ vars.POSTGRES_TEST_USER }}:${{ secrets.POSTGRES_TEST_PASSWORD }}@localhost:5432/${{ secrets.POSTGRES_TEST_DB }}
+      DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/test_db
       FLASK_APP: app:create_app
 
     defaults:
