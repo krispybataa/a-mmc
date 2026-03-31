@@ -15,6 +15,7 @@ import pytest
 from datetime import date, time
 from types import SimpleNamespace
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
 
