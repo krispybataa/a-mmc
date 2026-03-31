@@ -30,9 +30,9 @@ jobs:
       DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/test_db
       FLASK_APP: app:create_app
 
-    defaults:
-      run:
-        working-directory: a-mmc_backend
+    # defaults:
+    #   run:
+    #     working-directory: a-mmc_backend
 
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +55,7 @@ jobs:
 
       # migrations
       - name: Run migrations
-        run: flask db upgrade
+        run: cd a-mmc_backend && flask db upgrade
 
       # tests (via Makefile)
       - name: Run tests
