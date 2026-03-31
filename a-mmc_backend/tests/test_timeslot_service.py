@@ -28,6 +28,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+import random
 
 from app.services.timeslot_service import regenerate_slots_for_schedule_change
 
@@ -50,6 +51,7 @@ def _schedule_row(
     am_end=time(10, 0),
     pm_start=None,
     pm_end=None,
+    consultation_type=None,
 ):
     """Mock ClinicianSchedule row."""
     return SimpleNamespace(
@@ -58,10 +60,11 @@ def _schedule_row(
         am_end=am_end,
         pm_start=pm_start,
         pm_end=pm_end,
+        consultation_type=consultation_type
     )
 
 
-def _slot(slot_id, start: time, end: time, status="available"):
+def _slot(slot_id, start: time, end: time, status="available", consultation_type=None):
     """Mock ClinicianTimeslot row."""
     return SimpleNamespace(
         slot_id=slot_id,
@@ -70,6 +73,7 @@ def _slot(slot_id, start: time, end: time, status="available"):
         start_time=start,
         end_time=end,
         status=status,
+        consultation_type=consultation_type
     )
 
 
@@ -78,9 +82,9 @@ def _slot(slot_id, start: time, end: time, status="available"):
 #   slot_orphan_safe   → start=10:00, NOT in expected keys, status=available, count=0
 #   slot_orphan_stuck  → start=11:00, NOT in expected keys, count>0
 
-SLOT_IN_SCHEDULE = _slot(1, time(9, 0), time(10, 0), status="available")
-SLOT_ORPHAN_SAFE = _slot(2, time(10, 0), time(11, 0), status="available")
-SLOT_ORPHAN_STUCK = _slot(3, time(11, 0), time(12, 0), status="available")
+SLOT_IN_SCHEDULE = _slot(1, time(9, 0), time(10, 0), status="available", consultation_type=random.choice(["f2f", "teleconsult"]))
+SLOT_ORPHAN_SAFE = _slot(2, time(10, 0), time(11, 0), status="available", consultation_type=random.choice(["f2f", "teleconsult"]))
+SLOT_ORPHAN_STUCK = _slot(3, time(11, 0), time(12, 0), status="available", consultation_type=random.choice(["f2f", "teleconsult"]))
 
 
 # ---------------------------------------------------------------------------
