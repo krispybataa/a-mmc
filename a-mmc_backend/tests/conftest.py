@@ -14,7 +14,9 @@ make_appointment           — factory for SimpleNamespace Appointment-like obje
 import pytest
 from datetime import date, time
 from types import SimpleNamespace
+from dotenv import load_dotenv
 
+load_dotenv()
 
 # ---------------------------------------------------------------------------
 # Flask app + test client
@@ -34,8 +36,8 @@ def flask_app():
     _app = create_app("development")
     _app.config.update({
         "TESTING": True,
-        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        "JWT_SECRET_KEY": "test-secret-key",
+        "SQLALCHEMY_DATABASE_URI": os.environ.get("SQLALCHEMY_DATABASE_URI") or os.environ.get("DATABASE_URL"),
+        "JWT_SECRET_KEY": os.environ.get("JWT_SECRET_KEY"),
         # Disable cookie security flags so test responses don't require HTTPS
         "JWT_COOKIE_SECURE": False,
     })
@@ -74,6 +76,7 @@ def make_slot():
         end_time: time = time(10, 0),
         status: str = "available",
         max_patients=None,
+        consultation_type=None,
     ):
         return SimpleNamespace(
             slot_id=slot_id,
@@ -83,6 +86,7 @@ def make_slot():
             end_time=end_time,
             status=status,
             max_patients=max_patients,
+            consultation_type=consultation_type,
         )
     return _factory
 

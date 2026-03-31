@@ -36,11 +36,6 @@ def create_app(config_name: str = "development") -> Flask:
     migrate.init_app(app, db)
     CORS(app)
     jwt.init_app(app)
-    # DatabasePool.initialize(
-    #     dsn=os.environ.get("DB_DSN"),
-    #     min_conn=os.environ.get("DB_MIN_CONN", 1),
-    #     max_conn=os.environ.get("DB_MAX_CONN", 10)
-    # )
 
     app.register_blueprint(clinician_bp, url_prefix="/api/clinicians")
     app.register_blueprint(secretary_bp, url_prefix="/api/secretaries")

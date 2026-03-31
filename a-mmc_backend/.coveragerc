@@ -1,0 +1,3 @@
+[run]
+omit =
+    tests/test_email_service.py
