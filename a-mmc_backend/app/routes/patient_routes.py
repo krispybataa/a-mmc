@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from app import db
+from app import db, limiter
 from app.models.patient import Patient
 from app.utils.validators import require_fields
 from app.services.auth_service import hash_password
@@ -56,6 +56,7 @@ def get_patient(patient_id: int):
 
 
 @patient_bp.post("/")
+@limiter.limit("5 per hour")
 def create_patient():
     data = request.get_json(force=True) or {}
 

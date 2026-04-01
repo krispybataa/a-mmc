@@ -3,10 +3,17 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 db = SQLAlchemy()
 migrate = Migrate()
 jwt = JWTManager()
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per minute"],
+    storage_uri="memory://",
+)
 
 from app.routes.clinician_routes import clinician_bp
 from app.routes.secretary_routes import secretary_bp
@@ -36,6 +43,13 @@ def create_app(config_name: str = "development") -> Flask:
     migrate.init_app(app, db)
     CORS(app)
     jwt.init_app(app)
+    limiter.init_app(app)
+
+    # JWT blocklist — revoke tokens on logout immediately
+    @jwt.token_in_blocklist_loader
+    def check_if_token_revoked(jwt_header, jwt_payload):
+        from app.services.auth_service import is_token_blocked
+        return is_token_blocked(jwt_payload["jti"])
 
     app.register_blueprint(clinician_bp, url_prefix="/api/clinicians")
     app.register_blueprint(secretary_bp, url_prefix="/api/secretaries")
@@ -81,9 +95,12 @@ def create_app(config_name: str = "development") -> Flask:
     def unprocessable(e):
         return {"error": "Unprocessable entity", "detail": str(e)}, 422
 
+    @app.errorhandler(429)
+    def too_many_requests(e):
+        return {"error": "Too many requests. Please slow down and try again later."}, 429
+
     @app.errorhandler(500)
     def server_error(e):
         return {"error": "Internal server error"}, 500
 
     return app
-
