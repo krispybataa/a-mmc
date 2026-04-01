@@ -7,10 +7,11 @@ import api from '../services/api'
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const NAV_LINKS = [
-  { to: '/admin',             label: 'Dashboard',   end: true  },
-  { to: '/admin/clinicians',  label: 'Clinicians',  end: false },
-  { to: '/admin/secretaries', label: 'Secretaries', end: false },
-  { to: '/admin/patients',    label: 'Patients',    end: false },
+  { to: '/admin',                  label: 'Dashboard',      end: true  },
+  { to: '/admin/clinicians',       label: 'Clinicians',     end: false },
+  { to: '/admin/secretaries',      label: 'Secretaries',    end: false },
+  { to: '/admin/patients',         label: 'Patients',       end: false },
+  { to: '/admin/email-previews',   label: 'Email Previews', end: false },
 ]
 
 // ── Sidebar content (shared between desktop and mobile drawer) ─────────────────
@@ -22,7 +23,7 @@ function SidebarNav({ email, onLogout, onNavClick }) {
       {/* Wordmark + badge */}
       <div className="px-6 py-5 border-b border-white/10 shrink-0">
         <p className="text-white font-bold text-lg tracking-tight select-none">
-          Alagang MMC
+          Asclepius
         </p>
         <span className="mt-1.5 inline-block bg-white/20 text-white text-xs font-semibold px-2 py-0.5 rounded-full select-none">
           Admin
@@ -110,7 +111,7 @@ export default function AdminLayout() {
           <Menu size={22} />
         </button>
         <span className="text-white font-bold text-base tracking-tight select-none">
-          Alagang MMC
+          Asclepius
         </span>
         <span className="bg-white/20 text-white text-xs font-semibold px-2 py-0.5 rounded-full select-none">
           Admin

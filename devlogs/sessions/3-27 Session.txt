@@ -1,61 +1,254 @@
-TOMORROW: 
+# Alagang MMC — Handoff Prompt
 
-This is a continuation of an active project. Before anything else, read CLAUDE.md
-in full — it is the source of truth for the entire system.
-
-Project: Alagang MMC — patient care coordination app for Makati Medical Center.
-Undergraduate special project at UP Manila under the CeHRes Roadmap (HCD framework).
-
+## What this is
+A digital health intervention for Makati Medical Center (MMC) designed to address
+process hurdles in patient care coordination. Built as an undergraduate special
+project at UP Manila under the CeHRes Roadmap (Human-Centered Design framework).
 Stack: React + Vite frontend, Flask + SQLAlchemy backend, PostgreSQL 16.
-All three services Dockerized via compose.yaml in /misc.
+All services Dockerized via compose.yaml in /a-mmc_infra.
 
-Current state as of 2026-03-25:
-- Patient-facing frontend complete: missions 5a through 5g-patch
-- Full public flow: / → /find → /find/triage → /doctors → /clinician/:id → /book/:id
-- Full patient dashboard: /dashboard + /dashboard/appointments with AppointmentDrawer,
-  SlotPicker, reschedule modal, pagination, date filter
-- Auth flow: /login + /register with ?redirect= chain
-- Navbar persistent, excluded from /login + /register
-- triageLogic.js scaffolded, posted to domain expert for clinical review
-- Backend fully scaffolded, first migration NOT yet run, auth stubs return 501
-- No frontend-backend integration yet, all data is mock
+Read CLAUDE.md in the project files — it is the source of truth for the entire
+system. Everything below is operational context for this conversation.
 
-We write missions as plain text inside a single code block for Claude Code CLI.
-Desktop-first, degrades to mobile. 24hr time only. Brand tokens only.
-No AM/PM. All hooks before conditional returns. Touch targets min 44px.
+---
 
-Next up is Mission 6a — C/S (Clinician/Secretary) login page at /staff/login.
-Confirm you have read CLAUDE.md and are ready to receive Mission 6a.
+## My role in this workflow
+I do NOT edit code directly. I produce Claude Code CLI prompts that the developer
+pastes into Claude Code, which works in the live codebase. My job is to:
+- Maintain system-level awareness across conversations
+- Diagnose issues from logs, curl output, and browser errors
+- Write precise, self-contained Claude Code mission prompts
+- Track the agenda and flag dependencies between missions
 
+---
+
+## How Claude Code prompts are formatted
+Each prompt is a plain text block the developer copies into Claude Code. Format:
+  Mission <ID> — <short title>
+
+  Project: Alagang MMC — React + Vite frontend, Flask + SQLAlchemy backend.
+  Read CLAUDE.md before writing anything. It is the source of truth.
+
+  ## Context
+  <why this mission exists, what state the system is in>
+
+  ## What to do
+  <precise instructions>
+
+  ## Rules
+  <constraints, conventions, what NOT to touch>
+
+  ## After this mission
+  <rebuild instructions if needed, what to verify>
+
+Mission nomenclature:
+- Backend: B<number>-<letter> (B1-A, B2-A...)
+- Frontend: F<number>-<letter> (F7-A, F8-A...)
+- Integration: FB-<letter><number> (FB-A1, FB-D1...)
+- Patches: append -patch, -patch-2 etc.
+
+---
+
+## Operational rules — baked in from prior experience
+
+### Rebuild pipeline
+The developer's standard rebuild flow (run from a-mmc/ directory):
+  docker build .\a-mmc_backend\ -t krispybata/a-mmc-backend:latest
+  docker build .\a-mmc_frontend\ -t krispybata/a-mmc-frontend:latest
+  cd .\a-mmc_infra\ ; docker compose up -d
+
+Frontend-only changes only need the frontend build.
+Backend-only changes only need the backend build.
+Both needed when both layers are touched in the same mission.
+
+Full reset (wipes DB volumes — requires re-seeding afterward):
+  cd .\a-mmc_infra\ ; docker compose down -v
+  then rebuild flow above
+
+### When a rebuild is needed vs not
+| Change type | Action needed |
+|---|---|
+| src/ JSX/JS/CSS files | Frontend rebuild |
+| Backend Python files | Backend rebuild |
+| New Python package in requirements.txt | Backend rebuild |
+| New model added | Two-rebuild flow (see below) |
+| Migration to apply | flask db upgrade in backend Exec only |
+| compose.yaml changes | docker compose up -d |
+| Nothing — just verifying | No rebuild |
+
+### Two-rebuild flow for new models
+Any mission that adds a new SQLAlchemy model requires this exact sequence:
+1. Claude Code writes the model file locally
+2. Rebuild backend (bakes new model code into image)
+3. docker compose up -d
+4. Developer runs in backend container Exec:
+     flask db migrate -m "description"
+5. Developer copies migration file out to local codebase:
+     docker cp a-mmc-backend:/app/migrations/versions/<filename>.py \
+       .\a-mmc_backend\migrations\versions\
+   NOTE: Copy the specific file, not the directory, to avoid nesting issues
+6. Rebuild backend again (bakes migration file into image)
+7. docker compose up -d — flask db upgrade runs automatically on startup
+
+Claude Code must NOT run flask db migrate inside the container during a mission.
+Claude Code must NOT run docker exec commands to verify changes that require
+a rebuilt image. State "rebuild required" in the report and stop.
+
+### Curl testing rules
+All curl smoke tests run in the backend container via Docker Desktop Exec,
+hitting localhost:5000 directly — never through nginx. This bypasses proxy
+routing issues. The developer runs these manually. Claude Code does not issue
+curl commands during missions.
+
+If the developer needs curl commands, I provide them as a separate block
+outside the Claude Code mission prompt.
+
+### Container Exec rule
+If a command is best run via Docker Desktop Exec into a specific container,
+I say so explicitly and the developer takes executive control. I do not
+instruct Claude Code to run docker exec commands.
+
+### API base URL convention
+api.js baseURL is '/api'. All paths passed to api.get/post/patch/delete
+must NOT include the /api prefix — they start with '/'.
+Example: api.get('/clinicians/') not api.get('/api/clinicians/')
+nginx proxies /api/* to the backend preserving the /api prefix.
+Any new frontend code must follow this convention.
+
+### Migration file location
+Migration files live in:
+  a-mmc_backend/migrations/versions/
+Current migrations:
+  59b8bcbc3cae_initial.py — initial schema (all 8 original tables)
+  4da00536f0ca_add_admin_model.py — admin table
+  <hash>_add_consultation_type.py — consultation_type on 3 tables
+All three must be present in the image for flask db upgrade to work.
+
+---
+
+## Current system state
+
+### Docker
+All 5 containers running and healthy:
+- a-mmc-postgres (PostgreSQL 16)
+- a-mmc-backend (Flask + Gunicorn)
+- a-mmc-frontend (React + Vite, served via nginx)
+- a-mmc-nginx (reverse proxy, localhost:80)
+- a-mmc-minio (object storage, not yet integrated)
+
+### Backend — fully complete
+- All 9 tables migrated (8 original + admin)
+- Auth: all 4 roles (patient, clinician, secretary, admin) with JWT
+  access token (60min) + httpOnly refresh cookie (7 days)
+- Admin login: POST /api/auth/admin/login
+- Admin routes: GET /api/admin/dashboard, /clinicians, /secretaries,
+  /patients, POST /api/admin/admins, POST /api/admin/seed-first-admin
+- Route guards: clinician/secretary create+delete require admin JWT
+- consultation_type on CLINICIAN_SCHEDULE, CLINICIAN_TIMESLOT,
+  APPOINTMENT — valid values: 'f2f' | 'teleconsult'
+- Slot generation carries consultation_type from schedule through to slot
+- Full appointment lifecycle enforced
+- Email service scaffolded (Mailtrap)
+- Transaction boundaries on all multi-table write routes
+
+### Frontend — largely complete, minor issues remain
+- Full patient-facing frontend integrated to live API
+- Full C/S frontend integrated to live API
+- StaffLayout.jsx — separate shell for /clinician-dashboard/* routes,
+  completely separate from patient Navbar
+- Admin frontend (F8-A) — NOT YET BUILT
+- api.js baseURL fixed to '/api', all call sites stripped of /api prefix
+- AuthContext silent refresh and logout URL fixed
+
+### Known issues / active bugs
+- Schedule Manager (ScheduleManager.jsx) shows F2F and teleconsult
+  schedules in one merged grid — no visual distinction between types
+- Clinician profile patient view (ClinicianProfile.jsx) merges both
+  schedule types into one table — patient cannot distinguish F2F from
+  teleconsult
+- C/S navbar visible to C/S users browsing patient-facing routes
+  (cosmetic, not a security issue)
+- window.confirm() still present in Register flow
+- UpdateProfile.jsx is a stub
+- Profile picture upload not wired (TODO(integration))
+- send_noshow_confirmation_prompt() not wired (needs scheduler)
+- triageLogic.js specialty routing pending domain expert validation
+- TODO(security): blocklist, CSRF, rate limiting throughout auth
+
+---
+
+## Test accounts (current DB state)
+| Role | Email | Password |
+|---|---|---|
+| Patient | patient@test.com | testpassword123 |
+| Clinician | clinician@test.com | testpassword123 |
+| Secretary | secretary@test.com | testpassword123 |
+| Admin | admin@alagang-mmc.local | ChangeMe123! |
+
+Clinician schedule:
+- Monday 09:00–12:00 + 13:00–17:00 (F2F)
+- Wednesday 14:00–18:00 (Teleconsult)
+
+If DB is reset (docker compose down -v), re-seed using the full curl
+suite — ask me to provide it.
+
+---
+
+## Agenda (priority order)
+
+### Immediate
+1. F9-A-patch — Schedule display separation
+   ScheduleManager.jsx: two tabs (F2F / Teleconsult), each with its
+   own weekly grid, consultation_type sent on save.
+   ClinicianProfile.jsx: two separate labeled sections matching MMC
+   reference design — "Clinic Schedule" and "Teleconsultation Schedule",
+   hidden if no rows exist for that type, 12hr time format for patients.
+   Frontend rebuild only.
+
+2. Full browser smoke test after F9-A-patch rebuild:
+   register → find clinician → book (F2F) → book (teleconsult) →
+   C/S login → accept both → patient dashboard reflects accepted
+
+### Next
+3. F8-A — Admin frontend
+   AdminLayout.jsx (separate shell, /admin/* routes) + four pages:
+   dashboard counts, clinician management (list + create + delete),
+   secretary management (list + create + link), patient list
+   (non-sensitive fields only per proposal §7).
+   Admin login is backend-only currently — no browser UI exists.
+   Follows StaffLayout pattern exactly.
+
+4. UpdateProfile.jsx — patient profile editing (currently a stub)
+
+### Deferred (post-SRET)
+5. F10-A — Similar doctors on clinician profile
+   GET /api/clinicians/?specialty=<specialty> filtered to exclude
+   current clinician. Frontend addition to ClinicianProfile.jsx only.
+
+6. Profile picture upload — wire TODO(integration) in
+   ClinicianProfileManager, integrate with MinIO
+
+7. triageLogic.js — domain expert validation of specialty routing
+
+8. TODO(security) — blocklist, CSRF, rate limiting before production
+
+9. send_noshow_confirmation_prompt() — needs a scheduler
+
+---
+
+## Proposal constraints to keep in mind
+- System scope: pre-consultation only (finding clinician, booking,
+  managing appointment). No billing, diagnostics, post-consultation.
+- Admin access to patient data: non-sensitive fields only (name,
+  contact, email). No appointments, complaints, health data.
+- The system operates independently of MMC's iHIMS and EMR.
+- Primary demographic: 60+ users. Touch targets 44px min,
+  base font 16px min throughout.
+- Evaluation method: SRET (iterative) + UEQ (summative).
+  System must be stable enough for real stakeholder testing.
 
 
 CLI: 
 
 Resume this session with:
 claude --resume 8fa287c3-06fa-484e-b27a-8fb5ae66edba
-Before we start, read CLAUDE.md in full. Here is a summary of where we are:
-
-We are building Alagang MMC — a patient care coordination app for Makati Medical Center. React + Vite frontend, Flask backend, PostgreSQL 16, all Dockerized.
-
-Patient-facing frontend is complete through Mission 5g-patch:
-- / redirects to /find
-- /find → FindDoctor.jsx (aware vs unaware split)
-- /find/triage → GuidedSearch.jsx (3-step triage, triageLogic.js posted for domain expert review)
-- /doctors → Doctors.jsx (full filter panel, reads triage query params)
-- /clinician/:id → ClinicianProfile.jsx
-- /dashboard → PatientDashboard.jsx
-- /dashboard/appointments → PatientAppointments.jsx (with AppointmentDrawer, SlotPicker, reschedule modal)
-- Login, Register, Navbar all complete with ?redirect= chain
-
-Backend is fully scaffolded but first migration has not been run yet. Auth endpoints are stubs returning 501. No frontend-backend integration yet.
-
-Next up is the C/S (Clinician/Secretary) frontend, Mission 6 series:
-- 6a: /staff/login
-- 6b: C/S Appointment Inbox
-- 6c: Clinician Profile Manager
-- 6d: Schedule Manager
-
-We write missions as plain text inside a single code block so Claude Code CLI can copy them directly. Desktop-first, degrades to mobile. 24hr time only. Brand tokens only. All hooks before conditional returns.
-
-Confirm you have read CLAUDE.md and are ready for Mission 6a.
-

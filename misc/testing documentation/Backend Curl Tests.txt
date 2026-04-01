@@ -89,3 +89,10 @@ email":"clinician@test.com","password":"testpassword123"}'
   "message": "Appointment cancelled"
 }
 /app # 
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc3NDg1MjgwNCwianRpIjoiZmY4Y2E1YjktMTA3Ni00NWFjLTk2OTAtZDhiZjA3NmUzNjk3IiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjEiLCJuYmYiOjE3NzQ4NTI4MDQsImV4cCI6MTc3NDg1NjQwNCwidXNlciI6eyJpZCI6MSwicm9sZSI6ImFkbWluIiwiZmlyc3RfbmFtZSI6IkFkbWluIiwibGFzdF9uYW1lIjoiVXNlciIsImVtYWlsIjoiYWRtaW5AYWxhZ2FuZy1tbWMubG9jYWwifSwicm9sZSI6ImFkbWluIn0.KMGe7sRVvVTKk749VRH-yqinW3xZaA378rmDX9TOivs
+
+curl -s -X POST http://localhost:5000/api/admin/clinicians \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc3NDg1MjgwNCwianRpIjoiZmY4Y2E1YjktMTA3Ni00NWFjLTk2OTAtZDhiZjA3NmUzNjk3IiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjEiLCJuYmYiOjE3NzQ4NTI4MDQsImV4cCI6MTc3NDg1NjQwNCwidXNlciI6eyJpZCI6MSwicm9sZSI6ImFkbWluIiwiZmlyc3RfbmFtZSI6IkFkbWluIiwibGFzdF9uYW1lIjoiVXNlciIsImVtYWlsIjoiYWRtaW5AYWxhZ2FuZy1tbWMubG9jYWwifSwicm9sZSI6ImFkbWluIn0.KMGe7sRVvVTKk749VRH-yqinW3xZaA378rmDX9TOivs" \
+  -d '{"title":"Dr","first_name":"Test","last_name":"User","specialty":"General","department":"General","room_number":"100","contact_phone":"09000000000","contact_email":"t@t.com","login_email":"new@test.com","password":"testpassword123"}'

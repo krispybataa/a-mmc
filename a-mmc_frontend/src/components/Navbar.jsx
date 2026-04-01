@@ -37,7 +37,7 @@ export default function Navbar() {
           to="/"
           className="text-[var(--color-primary)] font-bold text-lg tracking-tight hover:opacity-80 transition-opacity"
         >
-          Alagang MMC
+          Asclepius
         </Link>
 
         {/* Right side */}

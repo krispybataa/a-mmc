@@ -26,7 +26,7 @@ export default function FindDoctor() {
         {/* Header */}
         <div className="text-center mb-10">
           <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-primary-light)] mb-2">
-            A-MMC
+            Asclepius
           </p>
           <h1 className="text-3xl font-bold text-[var(--color-dark)]">Find a Doctor</h1>
           <p className="text-lg text-slate-500 mt-2">How can we help you today?</p>
