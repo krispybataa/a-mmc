@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import SlotPicker from '../../components/shared/SlotPicker'
 import AppointmentDrawer from '../../components/shared/AppointmentDrawer'
+import { generatePatientAppointmentPDF } from '../../services/pdfService'
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -276,6 +277,12 @@ export default function PatientAppointments() {
                           className="min-h-[44px] px-5 rounded-lg bg-[var(--color-primary)] text-white text-sm font-medium hover:opacity-90 transition-opacity w-full sm:w-auto"
                         >
                           View Details
+                        </button>
+                        <button
+                          onClick={() => generatePatientAppointmentPDF(appt)}
+                          className="min-h-[44px] px-5 rounded-lg border border-slate-200 text-[var(--color-dark)] text-sm font-medium hover:bg-slate-50 transition-colors w-full sm:w-auto"
+                        >
+                          Download PDF
                         </button>
                         {eligible && (
                           <button

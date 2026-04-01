@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import SlotPicker from '../../components/shared/SlotPicker'
+import { generateStaffAppointmentPDF } from '../../services/pdfService'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -450,7 +451,7 @@ export default function ClinicianDashboard() {
                                 </div>
                               </div>
                             ) : (
-                              <div className="flex gap-2">
+                              <div className="flex gap-2 flex-wrap">
                                 {canAccept && (
                                   <button
                                     type="button"
@@ -469,6 +470,13 @@ export default function ClinicianDashboard() {
                                     Reschedule
                                   </button>
                                 )}
+                                <button
+                                  type="button"
+                                  onClick={() => generateStaffAppointmentPDF(appt)}
+                                  className={`${actionBtnBase} border border-slate-200 text-slate-600 hover:bg-slate-100`}
+                                >
+                                  PDF
+                                </button>
                               </div>
                             )}
                           </td>
@@ -531,8 +539,8 @@ export default function ClinicianDashboard() {
                             </button>
                           </div>
                         </div>
-                      ) : (canAccept || canReschedule) && (
-                        <div className="flex gap-2 pt-1">
+                      ) : (
+                        <div className="flex gap-2 pt-1 flex-wrap">
                           {canAccept && (
                             <button
                               type="button"
@@ -551,6 +559,13 @@ export default function ClinicianDashboard() {
                               Reschedule
                             </button>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => generateStaffAppointmentPDF(appt)}
+                            className={`${actionBtnBase} border border-slate-200 text-slate-600 hover:bg-slate-100`}
+                          >
+                            PDF
+                          </button>
                         </div>
                       )}
                     </div>
