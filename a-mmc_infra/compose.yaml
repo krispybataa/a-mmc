@@ -22,6 +22,8 @@ services:
       ####
       env_file:
         - ../a-mmc_backend/.env.example
+      environment:
+        SQLALCHEMY_DATABASE_URI: postgresql://postgres:postgres@a-mmc-postgres:5432/ammc_dev
       depends_on:
         a-mmc-postgres:
           condition: service_healthy
