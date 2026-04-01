@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
+import { generatePatientAppointmentPDF } from '../../services/pdfService'
 
 // ── Utilities ──────────────────────────────────────────────────────────────────
 
@@ -175,6 +176,12 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
 
         {/* ── Footer (sticky) ── */}
         <div className="shrink-0 px-6 py-5 border-t border-slate-100 space-y-3">
+          <button
+            onClick={() => generatePatientAppointmentPDF(appt)}
+            className="w-full min-h-[48px] rounded-lg border border-slate-200 text-[var(--color-dark)] font-semibold text-sm hover:bg-slate-50 transition-colors"
+          >
+            Download PDF
+          </button>
           {hasActions ? (
             <>
               {canCancel && (
