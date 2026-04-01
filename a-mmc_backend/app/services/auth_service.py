@@ -1,25 +1,39 @@
 """
 auth_service.py
 ---------------
-Password hashing, verification, and user-lookup helpers for all three roles.
+Password hashing, verification, user-lookup helpers, and token blocklist
+for all four roles.
 
 Pure functions only — no route handling. DB-accessing functions require an
 active Flask application context (i.e. they must be called from within a
 request or app.app_context()).
-
-TODO(security): The work factor (rounds) for bcrypt is currently at the bcrypt
-default (12). Benchmark on your target hardware and adjust via the `rounds`
-parameter if needed. A common recommendation is to target ~250ms per hash.
-
-TODO(security): Consider implementing an "upgrade on login" pattern: when a
-user logs in successfully, re-hash their password with the current work factor
-and persist the new hash. This transparently upgrades older hashes if you ever
-raise the work factor in the future.
 """
 
 import bcrypt
 from sqlalchemy import func
 
+
+# ---------------------------------------------------------------------------
+# JWT blocklist — in-memory set, clears on server restart.
+# Production should replace with a Redis-backed or DB-backed store.
+# ---------------------------------------------------------------------------
+
+_token_blocklist: set = set()
+
+
+def blocklist_token(jti: str) -> None:
+    """Add a token JTI to the blocklist, making it immediately invalid."""
+    _token_blocklist.add(jti)
+
+
+def is_token_blocked(jti: str) -> bool:
+    """Return True if the token JTI has been blocklisted (i.e. revoked)."""
+    return jti in _token_blocklist
+
+
+# ---------------------------------------------------------------------------
+# Password helpers
+# ---------------------------------------------------------------------------
 
 def hash_password(plain: str) -> str:
     """

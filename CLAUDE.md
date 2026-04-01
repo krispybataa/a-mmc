@@ -268,7 +268,7 @@ A patient books an appointment within a clinician's timeslot.
 ### Auth token strategy
 - Access token: 60 minutes, returned in response body as `{ "access_token": "...", "user": {...} }`
 - Refresh token: 7 days, set as `httpOnly` cookie named `refresh_token`
-- No blocklist — logout clears cookie client-side only. `# TODO(security)` marked for production hardening
+- JWT blocklist: logout calls `blocklist_token(jti)` — token is invalid immediately, no waiting for 60-min TTL
 - Cookie settings: `httpOnly=True`, `secure=True` (False in DevelopmentConfig), `samesite="Lax"`
 - Frontend stores access token in memory only (NOT localStorage — XSS risk)
 - Silent refresh on AuthContext mount via `POST /api/auth/refresh`
@@ -360,6 +360,12 @@ Returns nested objects for related entities:
 - `patient: { patient_id, first_name, last_name }` (nested object)
 - `patient_first_name`, `patient_last_name` (flat fields, preserved for compatibility)
 
+### Security implementation (B-SEC-1)
+- **Rate limiting:** Flask-Limiter with `memory://` storage (single-instance deployment, no Redis needed). Default: 200/min API-wide. Login endpoints: 10/min + 50/hr. Patient registration: 5/hr.
+- **Account lockout:** In-memory dict in `auth_routes.py`. 5 consecutive failures → 15-minute lock on that email. Resets on restart — acceptable for SRET scope; replace with DB-backed solution for production.
+- **JWT blocklist:** In-memory set in `auth_service.py`. Tokens added on logout are rejected immediately by `token_in_blocklist_loader`. Clears on restart — same tradeoff as lockout; production should use Redis.
+- **CSRF:** Double-submit cookie pattern on `/refresh` only. Login sets a non-httpOnly `csrf_token` cookie (JS-readable). Every `/refresh` request must include `X-CSRF-Token: <token>` header matching the cookie; a new cookie is issued on each successful refresh. Login endpoints are not cookie-reliant so full CSRF coverage is not required.
+
 ---
 
 ## Auth layer
@@ -368,7 +374,7 @@ Returns nested objects for related entities:
 - `app/routes/auth_routes.py` — `/patient/login`, `/clinician/login`, `/secretary/login`, `/admin/login`, `/refresh`, `/logout`, `/me`
 - JWT token strategy (B2-A fix): `sub` claim is the user's numeric ID as a string (flask_jwt_extended 4.7+ requirement);
   full user identity dict stored in `additional_claims["user"]`; `get_jwt()` used everywhere instead of `get_jwt_identity()`
-- All security hardening decisions marked `# TODO(security)`: blocklist, CSRF protection, rate limiting, brute-force protection
+- ✅ Security hardening (B-SEC-1): rate limiting (Flask-Limiter, 200/min API-wide, 10/min + 50/hr on login, 5/hr on registration), account lockout (5 failed attempts → 15min lock, in-memory), JWT blocklist (in-memory, clears on restart), CSRF double-submit cookie protection on `/api/auth/refresh`
 
 ---
 
@@ -427,7 +433,6 @@ Patients can browse clinicians without an account but must register to book.
 - Profile picture upload not wired in ClinicianProfileManager (`# TODO(integration)` — Railway bucket, same pattern as uploadService.js)
 - `uploadService.js` returns null until Railway bucket credentials are configured (`# TODO(upload)`)
 - `send_noshow_confirmation_prompt()` not wired (needs scheduler — `# TODO(scheduler)`)
-- `# TODO(security)` markers throughout auth: blocklist, CSRF, rate limiting, brute-force protection
 - `triageLogic.js` routing logic pending domain expert validation
 - `window.confirm()` still present in Register flow
 - Admin "Link Clinician" modal uses a dropdown — will need search/filter once clinician count grows
@@ -448,9 +453,8 @@ Patients can browse clinicians without an account but must register to book.
 4. Profile picture upload — wire uploadService.js in ClinicianProfileManager, integrate with Railway bucket
 5. B-EMAIL-1 — Email template framework: wire all 5 existing scaffolded functions, add initial credentials emails for C/S and Clinician on admin account creation, add reschedule confirmation to patient. All calls through configurable emailService; templates log to console when SMTP not set.
 6. F-EMAIL-1 — Admin email preview page at /admin/email-previews: renders each template with mock data for SRET presentation
-7. TODO(security) — blocklist, CSRF, rate limiting, brute-force protection before any real user testing
-8. `send_noshow_confirmation_prompt` — wire to Railway scheduler
-9. Appointment analytics — /admin/analytics: aggregate booking data by clinician, status, and time period
+7. `send_noshow_confirmation_prompt` — wire to Railway scheduler
+8. Appointment analytics — /admin/analytics: aggregate booking data by clinician, status, and time period
 
 **DEFERRED (post-SRET):**
 10. triageLogic.js — domain expert validation of specialty routing
