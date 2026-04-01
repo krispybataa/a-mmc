@@ -88,7 +88,7 @@ export default function StaffLogin() {
           {/* Header */}
           <div className="mb-8">
             <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-primary-light)] mb-2">
-              A-MMC
+              Asclepius
             </p>
             <h1 className="text-2xl font-bold text-[var(--color-dark)]">Staff Login</h1>
             <p className="text-sm text-slate-400 mt-1">Sign in to your staff account to continue.</p>

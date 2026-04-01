@@ -13,6 +13,7 @@ from app.services.email_service import (
     send_reschedule_request_to_patient,
     send_reschedule_request_to_clinician,
     send_cancellation_notice,
+    send_reschedule_confirmation_to_patient,
 )
 
 appointment_bp = Blueprint("appointments", __name__)
@@ -252,6 +253,8 @@ def update_appointment(appointment_id: int):
     if new_status and new_status != original_status:
         if new_status == "accepted" and original_status == "pending":
             send_appointment_confirmation(a)
+        elif new_status == "accepted" and original_status == "reschedule_requested":
+            send_reschedule_confirmation_to_patient(a)
         elif new_status == "reschedule_requested":
             # Determine who initiated: if caller is patient, notify clinician; else notify patient
             role = (data.get("role") or "").lower()
@@ -310,9 +313,9 @@ def cancel_appointment(appointment_id: int):
         db.session.rollback()
         raise
 
-    # Post-commit notifications
-    send_cancellation_notice(a, "patient")
-    send_cancellation_notice(a, "clinician")
+    # Post-commit notifications — pass role so the template can show who cancelled
+    send_cancellation_notice(a, "patient",   cancelled_by=role)
+    send_cancellation_notice(a, "clinician", cancelled_by=role)
 
     response = {"message": "Appointment cancelled"}
     if warning:

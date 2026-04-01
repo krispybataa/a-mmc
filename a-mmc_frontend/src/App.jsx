@@ -21,6 +21,7 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminClinicians from './pages/admin/AdminClinicians'
 import AdminSecretaries from './pages/admin/AdminSecretaries'
 import AdminPatients from './pages/admin/AdminPatients'
+import AdminEmailPreviews from './pages/admin/AdminEmailPreviews'
 
 // Routes where the patient navbar should be hidden
 const NO_NAV = ['/login', '/register']
@@ -45,7 +46,8 @@ export default function App() {
           <Route path="/admin"              element={<AdminDashboard />} />
           <Route path="/admin/clinicians"   element={<AdminClinicians />} />
           <Route path="/admin/secretaries"  element={<AdminSecretaries />} />
-          <Route path="/admin/patients"     element={<AdminPatients />} />
+          <Route path="/admin/patients"         element={<AdminPatients />} />
+          <Route path="/admin/email-previews"   element={<AdminEmailPreviews />} />
         </Route>
 
         {/* ── Staff shell — auth-guarded, own topbar, no patient navbar ── */}

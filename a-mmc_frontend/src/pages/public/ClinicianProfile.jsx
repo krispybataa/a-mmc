@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, MapPin, Mail, ShieldCheck, Building2, Video } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
+import ClinicianCard from '../../components/ClinicianCard'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -92,11 +93,19 @@ export default function ClinicianProfile() {
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  const [clinician, setClinician] = useState(null)
-  const [loading, setLoading]     = useState(true)
-  const [notFound, setNotFound]   = useState(false)
-  const [fetchError, setFetchError] = useState('')
+  const [clinician, setClinician]       = useState(null)
+  const [loading, setLoading]           = useState(true)
+  const [notFound, setNotFound]         = useState(false)
+  const [fetchError, setFetchError]     = useState('')
+  const [similar, setSimilar]           = useState([])
+  const [similarLoading, setSimilarLoading] = useState(false)
 
+  // Scroll to top whenever the profile changes
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [clinician_id])
+
+  // Main clinician fetch
   useEffect(() => {
     async function load() {
       try {
@@ -114,6 +123,23 @@ export default function ClinicianProfile() {
     }
     load()
   }, [clinician_id])
+
+  // Similar doctors fetch — runs once specialty is known, silently hides on error
+  useEffect(() => {
+    if (!clinician?.specialty) return
+    setSimilarLoading(true)
+    setSimilar([])
+    api.get('/clinicians/')
+      .then(res => {
+        const filtered = res.data.filter(
+          c => c.specialty === clinician.specialty &&
+               c.clinician_id !== Number(clinician_id)
+        )
+        setSimilar(filtered)
+      })
+      .catch(() => {})
+      .finally(() => setSimilarLoading(false))
+  }, [clinician?.specialty, clinician_id])
 
   function handleBook() {
     if (user) {
@@ -316,6 +342,32 @@ export default function ClinicianProfile() {
           )}
         </div>
       </div>
+
+      {/* ── Similar Doctors ── */}
+      {(similarLoading || similar.length > 0) && (
+        <div className="max-w-5xl mx-auto px-6 pb-12">
+          <div className="mb-4">
+            <h2 className="text-lg font-bold text-[var(--color-dark)]">Similar Doctors</h2>
+            <p className="text-sm text-slate-400 mt-0.5">Other clinicians in {specialty}</p>
+          </div>
+
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {similarLoading
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex-shrink-0 w-64 h-48 rounded-xl bg-gray-100 animate-pulse"
+                  />
+                ))
+              : similar.map(c => (
+                  <div key={c.clinician_id} className="flex-shrink-0 w-64">
+                    <ClinicianCard clinician={c} />
+                  </div>
+                ))
+            }
+          </div>
+        </div>
+      )}
     </div>
   )
 }

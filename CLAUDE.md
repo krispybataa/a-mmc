@@ -109,9 +109,11 @@ a-mmc/
 │   │   │       ├── ClinicianDashboard.jsx     ← /clinician-dashboard, live C/S inbox
 │   │   │       ├── ClinicianProfileManager.jsx ← /clinician-dashboard/profile, live profile edit
 │   │   │       ├── ScheduleManager.jsx        ← /clinician-dashboard/schedule, live schedule edit
-│   │   │       └── UpdateProfile.jsx          ← /dashboard/profile [STUB]
+│   │   │       ├── ChangePassword.jsx         ← /clinician-dashboard/change-password, C/S password change
+│   │   │       └── UpdateProfile.jsx          ← /dashboard/profile, patient profile edit
 │   │   ├── services/
-│   │   │   └── api.js                ← axios instance, configureApiAuth, request + 401 retry interceptors
+│   │   │   ├── api.js                ← axios instance, configureApiAuth, request + 401 retry interceptors
+│   │   │   └── uploadService.js      ← Railway bucket stub; uploadFile(file, context) → null until wired
 │   │   ├── App.jsx                   ← BrowserRouter, Layout, all routes
 │   │   ├── main.jsx                  ← wraps app in AuthProvider
 │   │   └── index.css                 ← Tailwind v4 + @theme brand tokens
@@ -137,10 +139,11 @@ a-mmc/
 | /staff/login | StaffLogin.jsx | No |
 | /dashboard | PatientDashboard.jsx | Yes → /login?redirect=/dashboard |
 | /dashboard/appointments | PatientAppointments.jsx | Yes |
-| /dashboard/profile | UpdateProfile.jsx | Yes [STUB] |
+| /dashboard/profile | UpdateProfile.jsx | Yes |
 | /clinician-dashboard | ClinicianDashboard.jsx | Yes → /staff/login?redirect=... |
 | /clinician-dashboard/profile | ClinicianProfileManager.jsx | Yes |
 | /clinician-dashboard/schedule | ScheduleManager.jsx | Yes |
+| /clinician-dashboard/change-password | ChangePassword.jsx | Yes (role: clinician \| secretary) |
 | /admin | AdminDashboard.jsx | Yes (role: admin) |
 | /admin/clinicians | AdminClinicians.jsx | Yes (role: admin) |
 | /admin/secretaries | AdminSecretaries.jsx | Yes (role: admin) |
@@ -341,6 +344,15 @@ Used in ClinicianDashboard, ClinicianProfileManager, and ScheduleManager:
 - `role === "clinician"` → use `user.id` directly
 - `role === "secretary"` → `GET /api/secretaries/<user.id>` → `clinician_ids[0]`
 
+### Upload service pattern
+`uploadService.js` is the single integration point for all file uploads.
+It exports `uploadFile(file, context) → Promise<string|null>`.
+Currently returns `null` (Railway bucket not configured).
+`# TODO(upload)` marks the only line that needs changing when Railway
+credentials are available. All consumers handle `null` gracefully.
+ClinicianProfileManager profile picture upload should follow the same
+pattern when wired.
+
 ### Appointment serializer (_serialize in appointment_routes.py)
 Returns nested objects for related entities:
 - `clinician: { clinician_id, title, first_name, last_name, specialty, room_number }`
@@ -402,31 +414,47 @@ Patients can browse clinicians without an account but must register to book.
 - ✅ SlotPicker supports optional availableSlots prop for real slot objects
 - ✅ Admin frontend (F8-A) — AdminLayout + 4 pages, wired to live API
 - ✅ Schedule Manager and ClinicianProfile show F2F and Teleconsult in separate labeled sections (F9-A-patch complete)
+- ✅ F-CS-A — Change Password page for C/S at /clinician-dashboard/change-password; PATCH /api/auth/change-password backend endpoint
+- ✅ F7-A — UpdateProfile.jsx fully implemented with all 5 sections (Personal, Contact, Next of Kin, Preferences, SC/PWD); uploadService.js stub for file uploads
+- ✅ uploadService.js — Railway bucket stub, returns null until wired, degrades gracefully in UpdateProfile form
 
 ### Docker
 - ✅ a-mmc-postgres: up and running, all 10 tables migrated
 - ✅ a-mmc-backend: up and running, smoke-tested
-- ⏳ a-mmc-frontend: not yet up (collaborator)
+- ✅ a-mmc-frontend: up and running
 
 ### Known debt
-- `UpdateProfile.jsx` is a stub
-- Profile picture upload not wired (`# TODO(integration)` in ClinicianProfileManager)
+- Profile picture upload not wired in ClinicianProfileManager (`# TODO(integration)` — Railway bucket, same pattern as uploadService.js)
+- `uploadService.js` returns null until Railway bucket credentials are configured (`# TODO(upload)`)
 - `send_noshow_confirmation_prompt()` not wired (needs scheduler — `# TODO(scheduler)`)
 - `# TODO(security)` markers throughout auth: blocklist, CSRF, rate limiting, brute-force protection
 - `triageLogic.js` routing logic pending domain expert validation
 - `window.confirm()` still present in Register flow
-- Admin "Link Clinician" modal fetches all clinicians — will need pagination or search once clinician count grows
+- Admin "Link Clinician" modal uses a dropdown — will need search/filter once clinician count grows
 - AdminSecretaries linked clinician display depends on API response shape — verify `clinician_ids` vs `linked_clinicians` field name against live backend response
+- StaffLayout.jsx mobile responsiveness pending verification (F-PATCH-UI-1)
+- "Makati Medical Center" redaction — verify no remaining instances in rendered UI after rebuild (F-PATCH-UI-1)
 
 ---
 
-## Next steps (priority order)
-1. Wire UpdateProfile.jsx (patient profile edit) — currently a stub
-2. Admin delete-clinician cascade — when a clinician is deleted via the admin UI, any linked SecretaryClinicianLink rows must be cleaned up. Verify backend `DELETE /api/admin/clinicians/<id>` handles this; if not, a B-patch is needed before real admin use.
-3. Full browser smoke test: register → find clinician → book → C/S login → accept
-4. Begin usability testing per CeHRes roadmap (SRET with stakeholder groups)
-5. Wire profile picture upload endpoint
-6. Address TODO(security) markers before any real user testing
+## Agenda
+
+**IMMEDIATE:**
+1. F-PATCH-UI-1 — Staff mobile responsiveness + role subtitle + A-MMC redaction (all frontend + backend string instances)
+
+**NEXT (pre-deploy, in order):**
+2. F10-A — Similar doctors on ClinicianProfile (`GET /api/clinicians/?specialty=<specialty>`, exclude current)
+3. F8-A-auto — Automate admin smoke test verification
+4. Profile picture upload — wire uploadService.js in ClinicianProfileManager, integrate with Railway bucket
+5. B-EMAIL-1 — Email template framework: wire all 5 existing scaffolded functions, add initial credentials emails for C/S and Clinician on admin account creation, add reschedule confirmation to patient. All calls through configurable emailService; templates log to console when SMTP not set.
+6. F-EMAIL-1 — Admin email preview page at /admin/email-previews: renders each template with mock data for SRET presentation
+7. TODO(security) — blocklist, CSRF, rate limiting, brute-force protection before any real user testing
+8. `send_noshow_confirmation_prompt` — wire to Railway scheduler
+9. Appointment analytics — /admin/analytics: aggregate booking data by clinician, status, and time period
+
+**DEFERRED (post-SRET):**
+10. triageLogic.js — domain expert validation of specialty routing
+11. Admin delete-clinician cascade verification
 
 ---
 
@@ -447,3 +475,4 @@ Patients can browse clinicians without an account but must register to book.
 - Registration endpoints accept `"password"` field — hashed internally before storage
 - Secretary-clinician link uses REST URL pattern, no request body
 - All routes use trailing slash consistently (Flask redirects without it)
+- All UI-visible and code references to "Makati Medical Center" use "A-MMC" instead — the repository is public. Devlogs and the thesis proposal (.tex) are exempt from this convention.
