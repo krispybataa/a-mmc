@@ -5,6 +5,12 @@ const api = axios.create({
   withCredentials: true, // required for httpOnly refresh cookie
 })
 
+// Read the CSRF double-submit cookie set by the login / refresh endpoints.
+function getCsrfToken() {
+  const match = document.cookie.split('; ').find(row => row.startsWith('csrf_token='))
+  return match ? match.split('=')[1] : ''
+}
+
 // ---------------------------------------------------------------------------
 // Auth state bridge
 // api.js is a plain module — it cannot use React hooks. AuthContext calls
@@ -64,7 +70,9 @@ api.interceptors.response.use(
       _isRefreshing = true
 
       try {
-        const { data } = await api.post('/auth/refresh')
+        const { data } = await api.post('/auth/refresh', null, {
+          headers: { 'X-CSRF-Token': getCsrfToken() },
+        })
         const newToken = data.access_token
 
         // Update module-level ref immediately so the retried request uses it

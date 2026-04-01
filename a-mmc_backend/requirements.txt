@@ -5,6 +5,7 @@ flask-cors==5.0.0
 psycopg2-binary==2.9.10
 python-dotenv==1.0.1
 flask-jwt-extended==4.7.1
+flask-limiter==3.9.0
 bcrypt==4.2.1
 gunicorn==25.2.0
 boto3==1.42.78

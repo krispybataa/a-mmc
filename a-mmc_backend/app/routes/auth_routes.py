@@ -1,20 +1,22 @@
 """
 auth_routes.py
 --------------
-Authentication endpoints for all three user roles.
+Authentication endpoints for all four user roles.
 
 Token strategy:
   - Access token  — 60 min, returned in response body as { "access_token": "..." }
   - Refresh token — 7 days, set as an httpOnly cookie named "refresh_token"
-  - Logout clears the cookie; the access token expires naturally (stateless)
+  - Logout blocklists the access token JTI for immediate revocation
 
-TODO(security) items deferred for production hardening:
-  - Rate-limiting on /login endpoints (e.g. flask-limiter)
-  - Brute-force protection / account lockout after N failed attempts
-  - Server-side token blocklist (see /logout) for true access-token revocation
+Security: rate limiting via Flask-Limiter, account lockout
+(in-memory), JWT blocklist (in-memory), CSRF double-submit
+on refresh endpoint. See CLAUDE.md for details.
 """
 
-from flask import Blueprint, jsonify, request
+import secrets
+from datetime import datetime, timedelta, timezone
+
+from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import (
     jwt_required,
     get_jwt,
@@ -24,6 +26,7 @@ from flask_jwt_extended import (
     unset_jwt_cookies,
 )
 
+from app import limiter
 from app.services.auth_service import (
     verify_password,
     hash_password,
@@ -32,6 +35,7 @@ from app.services.auth_service import (
     get_secretary_by_email,
     get_admin_by_email,
     build_identity,
+    blocklist_token,
 )
 from app.utils.validators import require_fields
 
@@ -39,17 +43,82 @@ auth_bp = Blueprint("auth", __name__)
 
 _INVALID_CREDENTIALS = {"error": "Invalid credentials"}
 
+# ---------------------------------------------------------------------------
+# Account lockout — in-memory, resets on server restart.
+# 5 consecutive failures locks the account for 15 minutes.
+# ---------------------------------------------------------------------------
+
+_failed_attempts: dict = {}
+# Key: lowercased email string
+# Value: {"count": int, "locked_until": datetime | None}
+
+_LOCKOUT_THRESHOLD = 5
+_LOCKOUT_DURATION  = timedelta(minutes=15)
+
+
+def _check_lockout(email: str):
+    """Return a 429 response tuple if this email is currently locked, else None."""
+    key   = email.strip().lower()
+    entry = _failed_attempts.get(key)
+    if not entry:
+        return None
+    locked_until = entry.get("locked_until")
+    if locked_until is None:
+        return None
+    now = datetime.now(timezone.utc)
+    if now < locked_until:
+        return jsonify({
+            "error": (
+                "Account temporarily locked due to too many failed attempts. "
+                "Please try again in 15 minutes."
+            )
+        }), 429
+    # Lock window has expired — auto-clear and allow the attempt
+    _failed_attempts.pop(key, None)
+    return None
+
+
+def _record_failure(email: str) -> None:
+    """Increment the failure count; apply lockout when threshold is reached."""
+    key   = email.strip().lower()
+    entry = _failed_attempts.setdefault(key, {"count": 0, "locked_until": None})
+    entry["count"] += 1
+    if entry["count"] >= _LOCKOUT_THRESHOLD:
+        entry["locked_until"] = datetime.now(timezone.utc) + _LOCKOUT_DURATION
+
+
+def _clear_attempt(email: str) -> None:
+    """Reset failure tracking on a successful login."""
+    _failed_attempts.pop(email.strip().lower(), None)
+
 
 # ---------------------------------------------------------------------------
-# Internal helper — shared login logic for all three roles
+# CSRF helper
+# ---------------------------------------------------------------------------
+
+def _set_csrf_cookie(response, token: str) -> None:
+    """Attach the CSRF double-submit cookie to a response."""
+    secure = current_app.config.get("JWT_COOKIE_SECURE", True)
+    response.set_cookie(
+        "csrf_token",
+        token,
+        secure=secure,
+        httponly=False,   # intentional — JS must read this value
+        samesite="Lax",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Internal helper — shared login logic for all four roles
 # ---------------------------------------------------------------------------
 
 def _login(get_by_email_fn, role: str):
     """
-    Shared login flow used by all three role-specific login endpoints.
+    Shared login flow used by all four role-specific login endpoints.
 
-    Validates required fields, looks up the user, verifies the password, and
-    returns an access token (body) + refresh token (httpOnly cookie).
+    Validates required fields, checks account lockout, looks up the user,
+    verifies the password, records failures / clears on success, and returns
+    an access token (body) + refresh token (httpOnly cookie) + CSRF cookie.
     """
     data = request.get_json(silent=True) or {}
 
@@ -57,11 +126,21 @@ def _login(get_by_email_fn, role: str):
     if err:
         return err
 
-    user = get_by_email_fn(data["email"])
+    email = data["email"]
+
+    # Check lockout before touching the DB or running bcrypt
+    lockout = _check_lockout(email)
+    if lockout:
+        return lockout
+
+    user = get_by_email_fn(email)
 
     # Same 401 for "not found" and "wrong password" — no user enumeration
     if user is None or not verify_password(data["password"], user.login_password_hash):
+        _record_failure(email)
         return jsonify(_INVALID_CREDENTIALS), 401
+
+    _clear_attempt(email)
 
     identity = build_identity(user, role)
     # flask_jwt_extended 4.7+ requires the JWT sub claim to be a string.
@@ -78,6 +157,7 @@ def _login(get_by_email_fn, role: str):
 
     response = jsonify({"access_token": access_token, "user": identity})
     set_refresh_cookies(response, refresh_token)
+    _set_csrf_cookie(response, secrets.token_hex(32))
     return response, 200
 
 
@@ -86,9 +166,9 @@ def _login(get_by_email_fn, role: str):
 # ---------------------------------------------------------------------------
 
 @auth_bp.post("/patient/login")
+@limiter.limit("50 per hour")
+@limiter.limit("10 per minute")
 def patient_login():
-    # TODO(security): Add rate-limiting to prevent brute-force attacks
-    # TODO(security): Add account lockout after N consecutive failed attempts
     return _login(get_patient_by_email, "patient")
 
 
@@ -97,9 +177,9 @@ def patient_login():
 # ---------------------------------------------------------------------------
 
 @auth_bp.post("/clinician/login")
+@limiter.limit("50 per hour")
+@limiter.limit("10 per minute")
 def clinician_login():
-    # TODO(security): Add rate-limiting to prevent brute-force attacks
-    # TODO(security): Add account lockout after N consecutive failed attempts
     return _login(get_clinician_by_email, "clinician")
 
 
@@ -108,9 +188,9 @@ def clinician_login():
 # ---------------------------------------------------------------------------
 
 @auth_bp.post("/secretary/login")
+@limiter.limit("50 per hour")
+@limiter.limit("10 per minute")
 def secretary_login():
-    # TODO(security): Add rate-limiting to prevent brute-force attacks
-    # TODO(security): Add account lockout after N consecutive failed attempts
     return _login(get_secretary_by_email, "secretary")
 
 
@@ -119,9 +199,9 @@ def secretary_login():
 # ---------------------------------------------------------------------------
 
 @auth_bp.post("/admin/login")
+@limiter.limit("50 per hour")
+@limiter.limit("10 per minute")
 def admin_login():
-    # TODO(security): Add rate-limiting to prevent brute-force attacks
-    # TODO(security): Add account lockout after N consecutive failed attempts
     return _login(get_admin_by_email, "admin")
 
 
@@ -136,15 +216,25 @@ def refresh():
     Issue a new access token using the refresh token stored in the httpOnly cookie.
 
     The refresh token is read automatically by flask-jwt-extended from the
-    "refresh_token" cookie (JWT_TOKEN_LOCATION includes "cookies").
+    "refresh_token" cookie. CSRF double-submit validation is performed first:
+    the X-CSRF-Token request header must match the csrf_token cookie.
     """
+    csrf_cookie = request.cookies.get("csrf_token", "")
+    csrf_header = request.headers.get("X-CSRF-Token", "")
+    if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
+        return jsonify({"error": "CSRF validation failed"}), 403
+
     claims = get_jwt()
     identity = claims["user"]
     access_token = create_access_token(
         identity=str(identity["id"]),
         additional_claims={"user": identity, "role": identity["role"]},
     )
-    return jsonify({"access_token": access_token, "user": identity}), 200
+
+    # Rotate the CSRF token on every successful refresh
+    response = jsonify({"access_token": access_token, "user": identity})
+    _set_csrf_cookie(response, secrets.token_hex(32))
+    return response, 200
 
 
 # ---------------------------------------------------------------------------
@@ -155,15 +245,14 @@ def refresh():
 @jwt_required()
 def logout():
     """
-    Clear the refresh token cookie.
+    Revoke the current access token and clear the refresh cookie.
 
-    The access token is NOT revoked — it remains valid until it expires (60 min).
-
-    TODO(security): Implement a server-side token blocklist for production
-    hardening. On logout, add get_jwt()["jti"] to a blocklist (DB or Redis)
-    and check it in a @jwt.token_in_blocklist_loader callback. This gives true
-    revocation without waiting for the access token TTL to expire.
+    The access token JTI is added to the in-memory blocklist so it is
+    rejected immediately by the token_in_blocklist_loader callback, without
+    waiting for the 60-minute TTL to expire.
     """
+    jti = get_jwt()["jti"]
+    blocklist_token(jti)
     response = jsonify({"message": "Logged out"})
     unset_jwt_cookies(response)
     return response, 200
