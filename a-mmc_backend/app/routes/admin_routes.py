@@ -21,6 +21,20 @@ from app.models.secretary import Secretary, SecretaryClinicianLink
 from app.models.patient import Patient
 from app.models.appointment import Appointment
 from app.services.auth_service import hash_password
+from app.services.email_service import (
+    send_initial_credentials_clinician,
+    send_initial_credentials_secretary,
+)
+from app.services.email_templates import (
+    appointment_confirmation,
+    reschedule_request_to_patient,
+    reschedule_request_to_clinician,
+    cancellation_notice,
+    noshow_confirmation_prompt,
+    initial_credentials_clinician,
+    initial_credentials_secretary,
+    reschedule_confirmation_to_patient,
+)
 from app.utils.validators import require_fields
 
 admin_bp = Blueprint("admin", __name__)
@@ -114,6 +128,18 @@ def create_clinician():
     except Exception:
         db.session.rollback()
         raise
+
+    # Post-commit: send credentials email. Never affects the HTTP response.
+    try:
+        send_initial_credentials_clinician(
+            clinician_name  = f"{data['first_name']} {data['last_name']}",
+            clinician_title = data.get("title", "") or "",
+            login_email     = data["login_email"],
+            temporary_password = data["password"],
+        )
+    except Exception:
+        pass  # Logged inside send_initial_credentials_clinician
+
     return jsonify({"clinician_id": clinician.clinician_id}), 201
 
 
@@ -191,6 +217,17 @@ def create_secretary():
     except Exception:
         db.session.rollback()
         raise
+
+    # Post-commit: send credentials email. Never affects the HTTP response.
+    try:
+        send_initial_credentials_secretary(
+            secretary_name     = f"{data['first_name']} {data['last_name']}",
+            login_email        = data["login_email"],
+            temporary_password = data["password"],
+        )
+    except Exception:
+        pass  # Logged inside send_initial_credentials_secretary
+
     return jsonify({"secretary_id": secretary.secretary_id}), 201
 
 
@@ -265,6 +302,140 @@ def create_admin():
         db.session.rollback()
         raise
     return jsonify({"admin_id": admin.admin_id}), 201
+
+
+# ---------------------------------------------------------------------------
+# GET /api/admin/email-previews
+# ---------------------------------------------------------------------------
+
+_MOCK = {
+    "patient_name":        "Maria Santos",
+    "clinician_name":      "Reyes",
+    "clinician_title":     "Dr.",
+    "date":                "July 4, 2026",
+    "time":                "10:00",
+    "new_date":            "July 11, 2026",
+    "new_time":            "14:00",
+    "room_number":         "Hall A Rm 230",
+    "chief_complaint":     "Joint pain and swelling",
+    "payment_type":        "Maxicare",
+    "consultation_type":   "f2f",
+    "reason":              "The clinician has a scheduling conflict on the original date.",
+    "cancelled_by":        "cs",
+    "login_email":         "m.santos@email.com",
+    "temporary_password":  "Temp@1234!",
+    "secretary_name":      "Ana Cruz",
+    "system_url":          "",
+}
+
+
+@admin_bp.get("/email-previews")
+@jwt_required()
+def email_previews():
+    err = _require_admin()
+    if err:
+        return err
+
+    m = _MOCK
+    templates = [
+        {
+            "id":    "appointment_confirmation",
+            "label": "Appointment Confirmation",
+            **appointment_confirmation(
+                patient_name      = m["patient_name"],
+                clinician_name    = m["clinician_name"],
+                clinician_title   = m["clinician_title"],
+                date              = m["date"],
+                time              = m["time"],
+                room_number       = m["room_number"],
+                chief_complaint   = m["chief_complaint"],
+                payment_type      = m["payment_type"],
+                consultation_type = m["consultation_type"],
+            ),
+        },
+        {
+            "id":    "reschedule_request_to_patient",
+            "label": "Reschedule Request (to Patient)",
+            **reschedule_request_to_patient(
+                patient_name    = m["patient_name"],
+                clinician_name  = m["clinician_name"],
+                clinician_title = m["clinician_title"],
+                original_date   = m["date"],
+                original_time   = m["time"],
+                reason          = m["reason"],
+            ),
+        },
+        {
+            "id":    "reschedule_request_to_clinician",
+            "label": "Reschedule Request (to Clinician)",
+            **reschedule_request_to_clinician(
+                clinician_name  = m["clinician_name"],
+                clinician_title = m["clinician_title"],
+                patient_name    = m["patient_name"],
+                original_date   = m["date"],
+                original_time   = m["time"],
+                reason          = m["reason"],
+            ),
+        },
+        {
+            "id":    "cancellation_notice",
+            "label": "Cancellation Notice",
+            **cancellation_notice(
+                recipient_name   = m["patient_name"],
+                other_party_name = f"{m['clinician_title']} {m['clinician_name']}",
+                date             = m["date"],
+                time             = m["time"],
+                reason           = m["reason"],
+                cancelled_by     = m["cancelled_by"],
+            ),
+        },
+        {
+            "id":    "noshow_confirmation_prompt",
+            "label": "Appointment Reminder",
+            **noshow_confirmation_prompt(
+                patient_name    = m["patient_name"],
+                clinician_name  = m["clinician_name"],
+                clinician_title = m["clinician_title"],
+                date            = m["date"],
+                time            = m["time"],
+                room_number     = m["room_number"],
+            ),
+        },
+        {
+            "id":    "initial_credentials_clinician",
+            "label": "Initial Credentials (Clinician)",
+            **initial_credentials_clinician(
+                clinician_name     = m["clinician_name"],
+                clinician_title    = m["clinician_title"],
+                login_email        = m["login_email"],
+                temporary_password = m["temporary_password"],
+                system_url         = m["system_url"],
+            ),
+        },
+        {
+            "id":    "initial_credentials_secretary",
+            "label": "Initial Credentials (Secretary)",
+            **initial_credentials_secretary(
+                secretary_name     = m["secretary_name"],
+                login_email        = m["login_email"],
+                temporary_password = m["temporary_password"],
+                system_url         = m["system_url"],
+            ),
+        },
+        {
+            "id":    "reschedule_confirmation_to_patient",
+            "label": "Reschedule Confirmation (to Patient)",
+            **reschedule_confirmation_to_patient(
+                patient_name    = m["patient_name"],
+                clinician_name  = m["clinician_name"],
+                clinician_title = m["clinician_title"],
+                new_date        = m["new_date"],
+                new_time        = m["new_time"],
+                room_number     = m["room_number"],
+            ),
+        },
+    ]
+    return jsonify(templates)
 
 
 # ---------------------------------------------------------------------------
