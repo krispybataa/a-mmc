@@ -5,31 +5,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def _db_uri() -> str:
-    """
-    Resolve the SQLAlchemy database URI.
-
-    Priority:
-      1. DATABASE_URL        — set by Railway / GitHub Actions CI
-      2. SQLALCHEMY_DATABASE_URI — legacy / direct override
-      3. Split DB_* vars     — local Docker Compose default
-    """
-    direct = os.environ.get("DATABASE_URL") or os.environ.get("SQLALCHEMY_DATABASE_URI")
-    if direct:
-        return direct
-    return (
-        f"postgresql://"
-        f"{os.environ.get('DB_USER', 'postgres')}:"
-        f"{os.environ.get('DB_PASSWORD', 'postgres')}@"
-        f"{os.environ.get('DB_HOST', 'localhost')}:"
-        f"{os.environ.get('DB_PORT', '5432')}/"
-        f"{os.environ.get('DB_NAME', 'ammc_dev')}"
-    )
-
-
 class BaseConfig:
     SECRET_KEY: str = os.environ.get("SECRET_KEY", "change-me-before-production")
-    SQLALCHEMY_DATABASE_URI: str = _db_uri()
+    SQLALCHEMY_DATABASE_URI: str = os.environ.get("SQLALCHEMY_DATABASE_URI") or os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
 
     # JWT — used by flask-jwt-extended
