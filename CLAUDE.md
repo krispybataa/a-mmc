@@ -45,12 +45,24 @@ a-mmc/
 ├── a-mmc_backend/
 │   ├── .venv/
 │   ├── .env              ← not committed, use .env.example as template
-│   ├── .env.example      ← safe-to-commit template (also used as env_file in compose)
+│   ├── .env.example      ← safe-to-commit template; local Docker + Railway sections
+│   ├── .coveragerc       ← excludes routes, seed, email_service, email_templates, __init__.py
 │   ├── requirements.txt
 │   ├── run.py            ← entry point
+│   ├── railway.toml      ← Railway build + deploy config; start cmd runs flask db upgrade first
+│   ├── DEPLOY.md         ← collaborator deployment reference (Railway setup, first-deploy sequence)
+│   ├── config/
+│   │   ├── BaseConfig.py
+│   │   ├── DevelopmentConfig.py
+│   │   └── ProductionConfig.py
+│   ├── tests/
+│   │   ├── conftest.py
+│   │   ├── test_appointment_service.py
+│   │   ├── test_timeslot_service.py  ← string-path patches, consultation_type="f2f" fixtures
+│   │   ├── test_auth_service.py      ← hash_password, verify_password, blocklist, build_identity
+│   │   └── test_validators.py
 │   └── app/
-│       ├── __init__.py   ← app factory (create_app), JWTManager registered
-│       ├── config.py     ← DevelopmentConfig / ProductionConfig / JWT config
+│       ├── __init__.py   ← app factory (create_app), JWTManager, Flask-Limiter, GET /api/health
 │       ├── models/
 │       │   ├── clinician.py   ← Clinician, Schedule, HMO, Info, Timeslot
 │       │   ├── secretary.py   ← Secretary + SecretaryClinicianLink
@@ -58,25 +70,32 @@ a-mmc/
 │       │   ├── appointment.py
 │       │   └── admin.py       ← Admin (admin_id, first_name, last_name, login_email, login_password_hash)
 │       ├── routes/
-│       │   ├── auth_routes.py        ← login/logout/me/refresh — all 4 roles; JWT sub fix (str id + user claim)
+│       │   ├── auth_routes.py        ← login/logout/me/refresh — all 4 roles; rate-limited; account lockout
 │       │   ├── clinician_routes.py   ← CRUD + schedules, hmos, infos, timeslots; POST+DELETE guarded by admin role
 │       │   ├── secretary_routes.py   ← CRUD + link/unlink clinician; POST/DELETE/link/unlink guarded by admin role
 │       │   ├── patient_routes.py
 │       │   ├── timeslot_routes.py
 │       │   ├── appointment_routes.py ← full lifecycle; _serialize includes nested clinician, slot, patient
-│       │   └── admin_routes.py       ← /api/admin — dashboard counts, clinician/secretary/patient lists, create admin, seed endpoint
+│       │   └── admin_routes.py       ← /api/admin — dashboard, analytics, clinician/secretary/patient lists,
+│       │                                create admin, email-previews, seed endpoint
 │       ├── services/
-│       │   ├── auth_service.py       ← hash_password / verify_password + get_*_by_email (all 4 roles) + build_identity
+│       │   ├── auth_service.py       ← hash_password / verify_password + get_*_by_email (all 4 roles) +
+│       │   │                            build_identity + JWT blocklist (blocklist_token, is_token_blocked)
 │       │   ├── appointment_service.py ← has_overlap()
-│       │   ├── email_service.py      ← Mailtrap scaffold, 5 notification functions
+│       │   ├── email_service.py      ← 8 notification functions; console preview mode when MAIL_USERNAME unset
+│       │   ├── email_templates.py    ← 8 HTML email templates (confirmation, reschedule, cancellation,
+│       │   │                            credentials, reminder, etc.)
 │       │   └── timeslot_service.py   ← generate_slots + regenerate_slots_for_schedule_change
 │       └── utils/
 │           ├── __init__.py
 │           └── validators.py         ← require_fields() helper
 ├── a-mmc_frontend/
+│   ├── railway.toml      ← Railway build + deploy config; start cmd: nginx -g 'daemon off;'
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── AdminLayout.jsx            ← sidebar + header shell for all /admin/* pages
+│   │   │   ├── AppointmentReminderBanner.jsx ← amber banner when accepted appt is tomorrow;
+│   │   │   │                                   F2F and teleconsult variants; non-dismissible
 │   │   │   ├── ClinicianCard.jsx          ← full-width image/avatar, card info below
 │   │   │   ├── Navbar.jsx                 ← persistent, excluded from /login, /register, /staff/login
 │   │   │   └── shared/
@@ -100,12 +119,14 @@ a-mmc/
 │   │   │   │   └── StaffLogin.jsx        ← /staff/login, role selector, real auth, ?redirect= chain
 │   │   │   ├── admin/
 │   │   │   │   ├── AdminDashboard.jsx    ← /admin — summary counts + recent activity
+│   │   │   │   ├── AdminAnalytics.jsx    ← /admin/analytics — period selector, 4 recharts cards
 │   │   │   │   ├── AdminClinicians.jsx   ← /admin/clinicians — clinician list, add/delete
 │   │   │   │   ├── AdminSecretaries.jsx  ← /admin/secretaries — secretary list, link/unlink clinician
-│   │   │   │   └── AdminPatients.jsx     ← /admin/patients — patient list, view details
+│   │   │   │   ├── AdminPatients.jsx     ← /admin/patients — patient list, view details
+│   │   │   │   └── AdminEmailPreviews.jsx ← /admin/email-previews — iframe render + Copy HTML
 │   │   │   └── dashboard/
-│   │   │       ├── PatientDashboard.jsx       ← /dashboard, live appointments
-│   │   │       ├── PatientAppointments.jsx    ← /dashboard/appointments, live appointments
+│   │   │       ├── PatientDashboard.jsx       ← /dashboard, live appointments + reminder banner
+│   │   │       ├── PatientAppointments.jsx    ← /dashboard/appointments, live appointments + reminder banner
 │   │   │       ├── ClinicianDashboard.jsx     ← /clinician-dashboard, live C/S inbox
 │   │   │       ├── ClinicianProfileManager.jsx ← /clinician-dashboard/profile, live profile edit
 │   │   │       ├── ScheduleManager.jsx        ← /clinician-dashboard/schedule, live schedule edit
@@ -113,6 +134,7 @@ a-mmc/
 │   │   │       └── UpdateProfile.jsx          ← /dashboard/profile, patient profile edit
 │   │   ├── services/
 │   │   │   ├── api.js                ← axios instance, configureApiAuth, request + 401 retry interceptors
+│   │   │   ├── pdfService.js         ← jsPDF A4 PDF generation; patient + staff variants; doc.text() only
 │   │   │   └── uploadService.js      ← Railway bucket stub; uploadFile(file, context) → null until wired
 │   │   ├── App.jsx                   ← BrowserRouter, Layout, all routes
 │   │   ├── main.jsx                  ← wraps app in AuthProvider
@@ -145,9 +167,11 @@ a-mmc/
 | /clinician-dashboard/schedule | ScheduleManager.jsx | Yes |
 | /clinician-dashboard/change-password | ChangePassword.jsx | Yes (role: clinician \| secretary) |
 | /admin | AdminDashboard.jsx | Yes (role: admin) |
+| /admin/analytics | AdminAnalytics.jsx | Yes (role: admin) |
 | /admin/clinicians | AdminClinicians.jsx | Yes (role: admin) |
 | /admin/secretaries | AdminSecretaries.jsx | Yes (role: admin) |
 | /admin/patients | AdminPatients.jsx | Yes (role: admin) |
+| /admin/email-previews | AdminEmailPreviews.jsx | Yes (role: admin) |
 
 **?redirect= chain (patient):** Unauthenticated patient hitting a gated page →
 `/login?redirect=X` → `/register?redirect=X` → back to X after auth.
@@ -167,7 +191,8 @@ a-mmc/
 }
 ```
 Use via Tailwind: `bg-[var(--color-primary)]`, `text-[var(--color-accent)]`, etc.
-No arbitrary hex colors anywhere in the frontend.
+No arbitrary hex colors anywhere in the frontend. Exception: recharts props do not
+support CSS variables — use the literal hex equivalents there only.
 
 ---
 
@@ -350,8 +375,8 @@ It exports `uploadFile(file, context) → Promise<string|null>`.
 Currently returns `null` (Railway bucket not configured).
 `# TODO(upload)` marks the only line that needs changing when Railway
 credentials are available. All consumers handle `null` gracefully.
-ClinicianProfileManager profile picture upload should follow the same
-pattern when wired.
+ClinicianProfileManager profile picture upload and UpdateProfile SC/PWD
+uploads both follow this pattern.
 
 ### Appointment serializer (_serialize in appointment_routes.py)
 Returns nested objects for related entities:
@@ -365,6 +390,44 @@ Returns nested objects for related entities:
 - **Account lockout:** In-memory dict in `auth_routes.py`. 5 consecutive failures → 15-minute lock on that email. Resets on restart — acceptable for SRET scope; replace with DB-backed solution for production.
 - **JWT blocklist:** In-memory set in `auth_service.py`. Tokens added on logout are rejected immediately by `token_in_blocklist_loader`. Clears on restart — same tradeoff as lockout; production should use Redis.
 - **CSRF:** Double-submit cookie pattern on `/refresh` only. Login sets a non-httpOnly `csrf_token` cookie (JS-readable). Every `/refresh` request must include `X-CSRF-Token: <token>` header matching the cookie; a new cookie is issued on each successful refresh. Login endpoints are not cookie-reliant so full CSRF coverage is not required.
+
+### PDF generation pattern
+`pdfService.js` exports `generatePatientAppointmentPDF` and `generateStaffAppointmentPDF`
+using the jsPDF `doc.text()` API only — no HTML rendering (`doc.html()` is never called).
+A4 portrait, right-aligned label column + left-aligned value column, primary color header bar.
+Filenames include appointment ID and slot date / patient last name for easy filing.
+Patient variant wired into PatientAppointments and AppointmentDrawer; staff variant into
+ClinicianDashboard desktop table and mobile cards.
+
+### Email preview mode
+When `MAIL_USERNAME` is empty in the environment, `email_service.py` prints the full HTML
+to stdout with a `[EMAIL PREVIEW - not sent]` prefix instead of attempting SMTP. This
+enables usability testing and SRET presentation without a live mail server. All 8 template
+functions follow this pattern. Switching to a live provider requires only `.env` changes.
+
+### Display name
+All UI-visible and email-visible text uses **"Asclepius"** as the system name. Internal
+code identifiers, variable names, file names, API routes, and CLAUDE.md use
+"Alagang MMC" / "a-mmc". Devlogs and the thesis proposal (.tex) are exempt.
+The repository is public — "Makati Medical Center" must never appear in committed
+code or UI text.
+
+### CI pipeline
+GitHub Actions runs on push to main:
+- **Backend:** installs deps, runs migrations against a test PG instance, runs
+  `pytest --cov=app --cov-fail-under=70`, builds and pushes Docker image to Docker Hub on pass
+- **Frontend:** `npm install`, runs `make test-frontend`, builds and pushes Docker image on pass
+
+`.coveragerc` excludes `app/routes/*`, `app/seed.py`, `app/services/email_service.py`,
+`app/services/email_templates.py`, and `app/__init__.py` from coverage measurement —
+these require integration tests which are out of scope for this project.
+
+### Testing pipeline (SRET data population)
+Real MMC clinician schedules will be transcribed to a CSV, names anonymized via a
+separate `name_map.csv` (never committed), and bulk-imported via the B-SEED-1 seed
+script on Railway. Rheumatology department is the initial test scope. Each clinician
+gets generated test credentials output to a `credentials_manifest.txt` (kept offline).
+B-SEED-1 is deferred to the Railway deployment phase.
 
 ---
 
@@ -402,7 +465,6 @@ Patients can browse clinicians without an account but must register to book.
 - ✅ 60-day rolling slot generation on schedule save
 - ✅ `regenerate_slots_for_schedule_change()` fully implemented and wired
 - ✅ Patient overlap check implemented and wired
-- ✅ Email service scaffolded (Mailtrap) — 5 notification functions wired post-commit
 - ✅ Transaction boundaries verified on all multi-table write routes
 - ✅ Password hashing on all four registration routes
 - ✅ Full route audit completed (B1-A-patch-2) — FK checks, status guards, boundaries
@@ -410,7 +472,16 @@ Patients can browse clinicians without an account but must register to book.
 - ✅ Admin role added (B2-A): Admin model + migration, admin login, route guards on account
   creation/deletion routes, admin blueprint with dashboard counts + user lists + create admin
 - ✅ Seed endpoint for first admin bootstrap (POST /api/admin/seed-first-admin — REMOVE BEFORE PRODUCTION)
-- ⏳ Unit tests not yet run against live DB (scaffolds in place)
+- ✅ B-EMAIL-1 — Email template framework: 8 HTML templates in `email_templates.py`, all 8
+  send functions wired post-commit, initial credentials emails on clinician/secretary creation,
+  console preview mode when MAIL_USERNAME not set
+- ✅ B-SEC-1 — Security hardening: Flask-Limiter, account lockout, JWT blocklist, CSRF cookie
+- ✅ B-TEST-1 + patches — All 55 unit tests passing; `.coveragerc` excludes non-unit-testable
+  files; coverage ≥ 70%; CI clean
+- ✅ F-ANALYTICS-1 backend — GET /api/admin/analytics with period filter (week/month/all);
+  returns status breakdown, consultation type split, bookings by day, top 5 clinicians
+- ✅ B-DEPLOY-1 — `railway.toml` (start cmd: `flask db upgrade && gunicorn ...`), `DEPLOY.md`
+  collaborator reference, `.env.example` restructured, GET /api/health verified existing
 
 ### Frontend
 - ✅ Full patient-facing frontend (F5 series)
@@ -422,7 +493,19 @@ Patients can browse clinicians without an account but must register to book.
 - ✅ Schedule Manager and ClinicianProfile show F2F and Teleconsult in separate labeled sections (F9-A-patch complete)
 - ✅ F-CS-A — Change Password page for C/S at /clinician-dashboard/change-password; PATCH /api/auth/change-password backend endpoint
 - ✅ F7-A — UpdateProfile.jsx fully implemented with all 5 sections (Personal, Contact, Next of Kin, Preferences, SC/PWD); uploadService.js stub for file uploads
-- ✅ uploadService.js — Railway bucket stub, returns null until wired, degrades gracefully in UpdateProfile form
+- ✅ uploadService.js — Railway bucket stub, returns null until wired, degrades gracefully
+- ✅ F-PATCH-UI-1 — Staff mobile responsiveness, role subtitle (Staff · Clinician / Staff · Secretary), A-MMC redaction
+- ✅ F-PATCH-UI-2 — Full rebrand to "Asclepius" across all UI-visible text and email templates
+- ✅ B-EMAIL-1 / F-EMAIL-1 — Email template framework + admin email preview page at
+  /admin/email-previews; iframe rendering with srcdoc, Copy HTML button
+- ✅ F-PDF-1 — pdfService.js with jsPDF; patient + staff PDF variants; wired into
+  PatientAppointments, AppointmentDrawer, ClinicianDashboard
+- ✅ FB-PIC-1 — Profile picture upload UI wired in ClinicianProfileManager via uploadService.js
+  stub; local preview on file select; graceful null handling
+- ✅ F-ANALYTICS-1 — Admin analytics page at /admin/analytics: period selector (week/month/all),
+  4 recharts cards (status breakdown, consultation type split, bookings over time, top 5 clinicians)
+- ✅ F-NOSHOW-BANNER-1 — AppointmentReminderBanner; amber banner on PatientDashboard and
+  PatientAppointments when accepted appointment is tomorrow; F2F and teleconsult variants
 
 ### Docker
 - ✅ a-mmc-postgres: up and running, all 10 tables migrated
@@ -430,35 +513,64 @@ Patients can browse clinicians without an account but must register to book.
 - ✅ a-mmc-frontend: up and running
 
 ### Known debt
-- Profile picture upload not wired in ClinicianProfileManager (`# TODO(integration)` — Railway bucket, same pattern as uploadService.js)
-- `uploadService.js` returns null until Railway bucket credentials are configured (`# TODO(upload)`)
-- `send_noshow_confirmation_prompt()` not wired (needs scheduler — `# TODO(scheduler)`)
-- `triageLogic.js` routing logic pending domain expert validation
+- `uploadService.js` returns `null` until Railway bucket credentials are configured (`# TODO(upload)`) — affects profile picture in ClinicianProfileManager and SC/PWD uploads in UpdateProfile
+- `send_noshow_confirmation_prompt()` scaffolded but not wired to a scheduler — frontend reminder banner (F-NOSHOW-BANNER-1) is the interim solution (`# TODO(scheduler)`)
+- jsPDF has a moderate XSS vulnerability in its bundled DOMPurify (only exploitable via `doc.html()` — not used; `doc.text()` only). Upgrading to jsPDF 4.x is a breaking change. Acceptable for current scope.
+- JWT blocklist and account lockout are in-memory — cleared on server restart. Acceptable for SRET scope; replace with Redis-backed solution for production.
+- `triageLogic.js` pending domain expert validation — kiosk triage mode deferred until validation complete
 - `window.confirm()` still present in Register flow
 - Admin "Link Clinician" modal uses a dropdown — will need search/filter once clinician count grows
 - AdminSecretaries linked clinician display depends on API response shape — verify `clinician_ids` vs `linked_clinicians` field name against live backend response
-- StaffLayout.jsx mobile responsiveness pending verification (F-PATCH-UI-1)
-- "Makati Medical Center" redaction — verify no remaining instances in rendered UI after rebuild (F-PATCH-UI-1)
+- Admin delete-clinician cascade — verify backend handles SecretaryClinicianLink cleanup on clinician delete
+- recharts added to `package.json` for analytics — `package-lock.json` must be committed and kept in sync (`npm install` locally before Docker build)
 
 ---
 
 ## Agenda
 
-**IMMEDIATE:**
-1. F-PATCH-UI-1 — Staff mobile responsiveness + role subtitle + A-MMC redaction (all frontend + backend string instances)
+**PRE-DEPLOY:**
+1. B-SEED-1 — Seed script for Railway first deploy: reads clinicians CSV, creates
+   `Clinician` + `ClinicianSchedule` rows, calls `generate_slots()`, outputs credentials
+   manifest for Rheumatology clinicians. Idempotent. Run once via Railway shell after
+   first deploy.
 
-**NEXT (pre-deploy, in order):**
-2. F10-A — Similar doctors on ClinicianProfile (`GET /api/clinicians/?specialty=<specialty>`, exclude current)
-3. F8-A-auto — Automate admin smoke test verification
-4. Profile picture upload — wire uploadService.js in ClinicianProfileManager, integrate with Railway bucket
-5. B-EMAIL-1 — Email template framework: wire all 5 existing scaffolded functions, add initial credentials emails for C/S and Clinician on admin account creation, add reschedule confirmation to patient. All calls through configurable emailService; templates log to console when SMTP not set.
-6. F-EMAIL-1 — Admin email preview page at /admin/email-previews: renders each template with mock data for SRET presentation
-7. `send_noshow_confirmation_prompt` — wire to Railway scheduler
-8. Appointment analytics — /admin/analytics: aggregate booking data by clinician, status, and time period
+**RAILWAY DEPLOYMENT PHASE (collaborator-led):**
+2. Railway setup per `DEPLOY.md`
+3. Profile picture upload — wire `uploadService.js` in ClinicianProfileManager and
+   UpdateProfile to Railway bucket when credentials available (`# TODO(upload)`)
+4. Redis blocklist + rate limit tuning for production
+
+**KIOSK (proof of concept, pre-panel presentation):**
+5. K-A — a-mmc_kiosk app scaffolding + Directory mode: separate React + Vite app in
+   `a-mmc/a-mmc_kiosk/`, reads from same backend API, large touch targets, clinician cards
+   with QR codes linking to `/clinician/:id` on main app, idle timeout 2 min
+6. K-B — Kiosk Triage mode: step-by-step triage using `triageLogic.js` (pending domain
+   expert validation), result screen shows matching clinicians with QR codes
 
 **DEFERRED (post-SRET):**
-10. triageLogic.js — domain expert validation of specialty routing
-11. Admin delete-clinician cascade verification
+7. triageLogic.js — domain expert validation finalized
+8. Admin delete-clinician cascade verification
+9. Email template editor (if SRET feedback warrants it)
+10. `send_noshow_confirmation_prompt` — wire to Railway scheduler when ready
+11. Appointment analytics — add more aggregate views as data accumulates post-SRET
+
+---
+
+## Test accounts
+
+| Role | Email | Password |
+|---|---|---|
+| Patient | patient@test.com | testpassword123 |
+| Clinician | clinician@test.com | testpassword123 |
+| Secretary | secretary@test.com | testpassword123 |
+| Admin | admin@alagang-mmc.local | ChangeMe123! |
+
+All accounts survive `docker compose restart` but are wiped on `docker compose down -v`.
+Re-seed using the curl suite if the DB is reset — ask Claude for the full sequence.
+
+**Account lockout:** 5 failed login attempts locks an account for 15 minutes (B-SEC-1,
+in-memory, resets on container restart). Do not use wrong passwords repeatedly during
+smoke testing.
 
 ---
 

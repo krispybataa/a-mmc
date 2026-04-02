@@ -22,3 +22,7 @@ docker build .\a-mmc_frontend\ -t krispybata/a-mmc-frontend:latest
 
 cd .\a-mmc_infra\ ; docker compose up -d 
 cd .\a-mmc_infra\ ; docker compose down -v
+
+docker build . -t krispybata/a-mmc-nginx:latest
+
+docker push krispybata/a-mmc-nginx:latest
