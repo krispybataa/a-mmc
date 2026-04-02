@@ -6,6 +6,7 @@ import api from '../../services/api'
 import SlotPicker from '../../components/shared/SlotPicker'
 import AppointmentDrawer from '../../components/shared/AppointmentDrawer'
 import { generatePatientAppointmentPDF } from '../../services/pdfService'
+import AppointmentReminderBanner from '../../components/AppointmentReminderBanner'
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -209,6 +210,8 @@ export default function PatientAppointments() {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-5xl mx-auto px-6 py-10">
+
+        <AppointmentReminderBanner appointments={appointments} />
 
         {/* ── Page title row ── */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
