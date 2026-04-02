@@ -11,6 +11,9 @@ Scope (per proposal §7):
 All routes require a valid JWT with role == "admin".
 """
 
+from collections import Counter
+from datetime import datetime, timedelta
+
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt
 
@@ -436,6 +439,85 @@ def email_previews():
         },
     ]
     return jsonify(templates)
+
+
+# ---------------------------------------------------------------------------
+# GET /api/admin/analytics
+# ---------------------------------------------------------------------------
+
+@admin_bp.get("/analytics")
+@jwt_required()
+def analytics():
+    err = _require_admin()
+    if err:
+        return err
+
+    try:
+        period = request.args.get("period", "month")
+        if period not in ("week", "month", "all"):
+            period = "month"
+
+        now = datetime.utcnow()
+        if period == "week":
+            since = now - timedelta(days=7)
+        elif period == "month":
+            since = now - timedelta(days=30)
+        else:
+            since = None
+
+        q = db.session.query(Appointment)
+        if since is not None:
+            q = q.filter(Appointment.created_at >= since)
+        appointments = q.all()
+
+        # Appointments by status
+        status_counts = {
+            "pending": 0, "accepted": 0, "cancelled": 0,
+            "completed": 0, "no_show": 0, "reschedule_requested": 0,
+        }
+        for a in appointments:
+            if a.status in status_counts:
+                status_counts[a.status] += 1
+
+        # Appointments by consultation type
+        type_counts = {"f2f": 0, "teleconsult": 0}
+        for a in appointments:
+            if a.consultation_type in type_counts:
+                type_counts[a.consultation_type] += 1
+
+        # Appointments by day (grouped on booking date from created_at)
+        day_counts: dict = {}
+        for a in appointments:
+            if a.created_at:
+                d = str(a.created_at.date())
+                day_counts[d] = day_counts.get(d, 0) + 1
+        appointments_by_day = [
+            {"date": d, "count": c}
+            for d, c in sorted(day_counts.items())
+        ]
+
+        # Top 5 clinicians by appointment count
+        clinician_counter = Counter(a.clinician_id for a in appointments)
+        top_clinicians = []
+        for cid, count in clinician_counter.most_common(5):
+            c = db.session.get(Clinician, cid)
+            if c:
+                top_clinicians.append({
+                    "clinician_id": cid,
+                    "name": f"{c.first_name} {c.last_name}",
+                    "count": count,
+                })
+
+        return jsonify({
+            "appointments_by_status":           status_counts,
+            "appointments_by_consultation_type": type_counts,
+            "appointments_by_day":              appointments_by_day,
+            "top_clinicians":                   top_clinicians,
+            "period":                           period,
+        })
+
+    except Exception:
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
 
 # ---------------------------------------------------------------------------
