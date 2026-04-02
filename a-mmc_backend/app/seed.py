@@ -1,3 +1,9 @@
+import csv
+import os
+import secrets
+import string
+import sys
+
 from app import create_app, db
 from app.models.clinician import (
     Clinician,
@@ -264,6 +270,141 @@ def run_seed_part2(app):
 
 
 # =====================================================
+# CSV BULK IMPORT
+# =====================================================
+
+_DAYS = [
+    ("Monday",    "mon"),
+    ("Tuesday",   "tue"),
+    ("Wednesday", "wed"),
+    ("Thursday",  "thu"),
+    ("Friday",    "fri"),
+]
+
+
+def _parse_time(value):
+    """Parse HH:MM string to datetime.time. Returns None if blank."""
+    v = value.strip()
+    if not v:
+        return None
+    parts = v.split(":")
+    return time(int(parts[0]), int(parts[1]))
+
+
+def run_seed_csv(csv_path):
+    """
+    Bulk import clinicians from a CSV file.
+    Idempotent — skips rows where login_email already exists.
+    Outputs credentials_manifest.txt for Rheumatology clinicians.
+    """
+    alphabet = string.ascii_letters + string.digits
+    created = 0
+    skipped = 0
+    rheum_entries = []
+
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            login_email = row.get("login_email", "").strip()
+            if not login_email:
+                print("ERROR on row (no login_email): missing required field")
+                skipped += 1
+                continue
+
+            try:
+                existing = Clinician.query.filter_by(login_email=login_email).first()
+                if existing:
+                    print(f"Skipping {login_email} (already exists)")
+                    skipped += 1
+                    continue
+
+                password = "".join(secrets.choice(alphabet) for _ in range(12))
+
+                clinician = Clinician(
+                    title=row.get("title", "").strip(),
+                    first_name=row.get("first_name", "").strip(),
+                    middle_name=row.get("middle_name", "").strip() or None,
+                    last_name=row.get("last_name", "").strip(),
+                    suffix=row.get("suffix", "").strip() or None,
+                    specialty=row.get("specialty", "").strip(),
+                    department=row.get("department", "").strip(),
+                    room_number=row.get("room_number", "").strip() or None,
+                    local_number=row.get("local_number", "").strip() or None,
+                    contact_phone=row.get("contact_phone", "").strip() or None,
+                    contact_email=row.get("contact_email", "").strip() or None,
+                    login_email=login_email,
+                    login_password_hash=hash_password(password),
+                )
+                db.session.add(clinician)
+                db.session.flush()
+
+                consultation_type = row.get("consultation_type", "f2f").strip() or "f2f"
+
+                for day_name, prefix in _DAYS:
+                    am_start = _parse_time(row.get(f"{prefix}_am_start", ""))
+                    am_end   = _parse_time(row.get(f"{prefix}_am_end",   ""))
+                    pm_start = _parse_time(row.get(f"{prefix}_pm_start", ""))
+                    pm_end   = _parse_time(row.get(f"{prefix}_pm_end",   ""))
+
+                    if am_start is None and am_end is None and pm_start is None and pm_end is None:
+                        continue
+
+                    schedule = ClinicianSchedule(
+                        clinician_id=clinician.clinician_id,
+                        day_of_week=day_name,
+                        am_start=am_start,
+                        am_end=am_end,
+                        pm_start=pm_start,
+                        pm_end=pm_end,
+                        consultation_type=consultation_type,
+                    )
+                    db.session.add(schedule)
+
+                for hmo_key in ("hmo_1", "hmo_2", "hmo_3"):
+                    hmo_name = row.get(hmo_key, "").strip()
+                    if hmo_name:
+                        db.session.add(ClinicianHMO(
+                            clinician_id=clinician.clinician_id,
+                            hmo_name=hmo_name,
+                        ))
+
+                db.session.commit()
+
+                generate_slots(
+                    clinician_id=clinician.clinician_id,
+                    from_date=date.today(),
+                    to_date=date.today() + timedelta(days=90),
+                    commit=True,
+                )
+
+                if row.get("department", "").strip().lower() == "rheumatology":
+                    rheum_entries.append(
+                        f"Name: {clinician.title} {clinician.first_name} {clinician.last_name}\n"
+                        f"Login Email: {login_email}\n"
+                        f"Password: {password}\n"
+                        f"Department: {clinician.department}\n"
+                        f"Specialty: {clinician.specialty}\n"
+                        f"---"
+                    )
+
+                print(f"Created: {login_email}")
+                created += 1
+
+            except Exception as e:
+                db.session.rollback()
+                print(f"ERROR on row {login_email}: {e}")
+                skipped += 1
+
+    if rheum_entries:
+        manifest_path = os.path.join(os.path.dirname(os.path.abspath(csv_path)), "credentials_manifest.txt")
+        with open(manifest_path, "w", encoding="utf-8") as mf:
+            mf.write("\n".join(rheum_entries) + "\n")
+        print(f"Credentials manifest written to {manifest_path}")
+
+    print(f"CSV import complete. {created} created, {skipped} skipped.")
+
+
+# =====================================================
 # MAIN
 # =====================================================
 
@@ -271,5 +412,13 @@ if __name__ == "__main__":
     app = create_app()
 
     with app.app_context():
-        run_seed_part1()
-        run_seed_part2(app)
+        if len(sys.argv) == 1:
+            run_seed_part1()
+            run_seed_part2(app)
+        elif len(sys.argv) == 2 and sys.argv[1].endswith(".csv"):
+            run_seed_csv(sys.argv[1])
+        else:
+            print("Usage:")
+            print("  python seed.py              — dev seed")
+            print("  python seed.py data.csv     — bulk import")
+            sys.exit(1)
