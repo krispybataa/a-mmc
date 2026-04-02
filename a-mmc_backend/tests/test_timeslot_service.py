@@ -12,14 +12,18 @@ separately and its behavior is assumed correct here.
 
 Mock targets:
   app.services.timeslot_service.generate_slots     — no-op
-  app.services.timeslot_service.ClinicianSchedule  — schedule query
-  app.services.timeslot_service.ClinicianTimeslot  — slot query
+  ClinicianSchedule.query                           — schedule query (patch.object)
+  ClinicianTimeslot.query                           — slot query (patch.object)
   app.models.appointment.Appointment               — active-count query
   app.services.timeslot_service.db                 — session (delete/commit/rollback)
 
+patch.object is used for model .query attributes so that ClinicianTimeslot.slot_date
+remains a real SQLAlchemy instrumented column attribute. This prevents TypeError when
+the filter() call evaluates column >= date comparisons.
+
 Test date fixture: date(2026, 3, 30) is a Monday.
 Mock schedule:     Monday am_start=09:00, am_end=10:00 (one 60-min slot expected)
-Expected keys:     {(date(2026, 3, 30), "09:00:00")}
+Expected keys:     {(date(2026, 3, 30), "09:00:00", "f2f")}
 """
 
 from contextlib import contextmanager
@@ -28,8 +32,8 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
 import pytest
-import random
 
+from app.models.clinician import ClinicianSchedule, ClinicianTimeslot
 from app.services.timeslot_service import regenerate_slots_for_schedule_change
 
 # ---------------------------------------------------------------------------
@@ -51,7 +55,7 @@ def _schedule_row(
     am_end=time(10, 0),
     pm_start=None,
     pm_end=None,
-    consultation_type=None,
+    consultation_type="f2f",
 ):
     """Mock ClinicianSchedule row."""
     return SimpleNamespace(
@@ -82,9 +86,9 @@ def _slot(slot_id, start: time, end: time, status="available", consultation_type
 #   slot_orphan_safe   → start=10:00, NOT in expected keys, status=available, count=0
 #   slot_orphan_stuck  → start=11:00, NOT in expected keys, count>0
 
-SLOT_IN_SCHEDULE = _slot(1, time(9, 0), time(10, 0), status="available", consultation_type=random.choice(["f2f", "teleconsult"]))
-SLOT_ORPHAN_SAFE = _slot(2, time(10, 0), time(11, 0), status="available", consultation_type=random.choice(["f2f", "teleconsult"]))
-SLOT_ORPHAN_STUCK = _slot(3, time(11, 0), time(12, 0), status="available", consultation_type=random.choice(["f2f", "teleconsult"]))
+SLOT_IN_SCHEDULE = _slot(1, time(9, 0), time(10, 0), status="available", consultation_type="f2f")
+SLOT_ORPHAN_SAFE = _slot(2, time(10, 0), time(11, 0), status="available", consultation_type="f2f")
+SLOT_ORPHAN_STUCK = _slot(3, time(11, 0), time(12, 0), status="available", consultation_type="f2f")
 
 
 # ---------------------------------------------------------------------------
@@ -106,13 +110,17 @@ def _mocked(db_slots, active_counts_by_slot_id=None):
     if active_counts_by_slot_id is None:
         active_counts_by_slot_id = {}
 
-    # --- Mock ClinicianSchedule ---
-    MockSched = MagicMock()
-    MockSched.query.filter_by.return_value.all.return_value = [_schedule_row()]
+    # --- Mock ClinicianSchedule.query (patch.object preserves the class itself) ---
+    mock_sched_query = MagicMock()
+    mock_sched_query.filter_by.return_value.all.return_value = [_schedule_row()]
 
-    # --- Mock ClinicianTimeslot ---
-    MockSlot = MagicMock()
-    MockSlot.query.filter.return_value.all.return_value = db_slots
+    # --- Mock ClinicianTimeslot.query (patch.object preserves column descriptors) ---
+    # Using patch.object instead of patching the whole class keeps
+    # ClinicianTimeslot.slot_date as a real SQLAlchemy column so that
+    # slot_date >= from_date produces a column expression rather than a
+    # Python comparison that would raise TypeError.
+    mock_slot_query = MagicMock()
+    mock_slot_query.filter.return_value.all.return_value = db_slots
 
     # --- Mock Appointment (active count per slot) ---
     MockAppt = MagicMock()
@@ -120,10 +128,6 @@ def _mocked(db_slots, active_counts_by_slot_id=None):
     # encountered. Build the side_effect list in orphan-encounter order.
     # (We can't predict call order precisely, but tests control which slots
     # are orphans, so we can set up the right sequence.)
-
-    def _count_side_effect(*_args, **_kwargs):
-        # Called as .filter(...).count() — return a MagicMock with a count method
-        return mock_count_chain
 
     mock_count_chain = MagicMock()
 
@@ -144,8 +148,8 @@ def _mocked(db_slots, active_counts_by_slot_id=None):
 
     with (
         patch("app.services.timeslot_service.generate_slots"),
-        patch("app.services.timeslot_service.ClinicianSchedule", MockSched),
-        patch("app.services.timeslot_service.ClinicianTimeslot", MockSlot),
+        patch.object(ClinicianSchedule, "query", mock_sched_query),
+        patch.object(ClinicianTimeslot, "query", mock_slot_query),
         patch("app.models.appointment.Appointment", MockAppt),
         patch("app.services.timeslot_service.db", mock_db),
     ):
