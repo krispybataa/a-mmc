@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { CheckCircle, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
+import AppointmentReminderBanner from '../../components/AppointmentReminderBanner'
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -78,6 +79,8 @@ export default function PatientDashboard() {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-5xl mx-auto px-6 py-10">
+
+          <AppointmentReminderBanner appointments={appointments} />
 
         {/* ── Booking success banner ── */}
         {showBanner && (
