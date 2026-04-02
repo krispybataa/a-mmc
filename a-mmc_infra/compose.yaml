@@ -21,9 +21,7 @@ services:
         - ../a-mmc_backend/migrations:/app/migrations
       ####
       env_file:
-        - ../a-mmc_backend/.env.example
-      environment:
-        SQLALCHEMY_DATABASE_URI: postgresql://postgres:postgres@a-mmc-postgres:5432/ammc_dev
+        - ../a-mmc_backend/.env
       depends_on:
         a-mmc-postgres:
           condition: service_healthy
@@ -58,7 +56,9 @@ services:
     networks:
       - a-mmc-network
     env_file:
-      - ../a-mmc_backend/.env.example
+      - ../a-mmc_backend/.env
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_DB: ${POSTGRES_DB}
