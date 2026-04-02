@@ -8,6 +8,7 @@ import api from '../services/api'
 
 const NAV_LINKS = [
   { to: '/admin',                  label: 'Dashboard',      end: true  },
+  { to: '/admin/analytics',        label: 'Analytics',      end: false },
   { to: '/admin/clinicians',       label: 'Clinicians',     end: false },
   { to: '/admin/secretaries',      label: 'Secretaries',    end: false },
   { to: '/admin/patients',         label: 'Patients',       end: false },
