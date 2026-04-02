@@ -1,1 +1,12 @@
+[run]
+source = app
+omit =
+    app/routes/*
+    app/seed.py
+    app/services/email_service.py
+    app/services/email_templates.py
+    app/__init__.py
 
+[report]
+fail_under = 70
+show_missing = True

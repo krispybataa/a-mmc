@@ -11,15 +11,17 @@ exercised directly. generate_slots() is patched to a no-op — it is tested
 separately and its behavior is assumed correct here.
 
 Mock targets:
-  app.services.timeslot_service.generate_slots     — no-op
-  ClinicianSchedule.query                           — schedule query (patch.object)
-  ClinicianTimeslot.query                           — slot query (patch.object)
-  app.models.appointment.Appointment               — active-count query
-  app.services.timeslot_service.db                 — session (delete/commit/rollback)
+  app.services.timeslot_service.generate_slots       — no-op
+  app.services.timeslot_service.ClinicianSchedule    — schedule query (string-path patch)
+  app.services.timeslot_service.ClinicianTimeslot    — slot query (string-path patch)
+  app.models.appointment.Appointment                 — active-count query
+  app.services.timeslot_service.db                   — session (delete/commit/rollback)
 
-patch.object is used for model .query attributes so that ClinicianTimeslot.slot_date
-remains a real SQLAlchemy instrumented column attribute. This prevents TypeError when
-the filter() call evaluates column >= date comparisons.
+String-path patches replace the imported name in the service module without ever
+touching the real model class or its Flask-SQLAlchemy QueryProperty descriptor.
+This avoids "Working outside of application context" errors that occur when
+patch.object(Model, 'query') accesses the descriptor during patch setup.
+MagicMock natively implements __ge__, __le__ etc. so filter() comparisons work.
 
 Test date fixture: date(2026, 3, 30) is a Monday.
 Mock schedule:     Monday am_start=09:00, am_end=10:00 (one 60-min slot expected)
@@ -33,7 +35,6 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from app.models.clinician import ClinicianSchedule, ClinicianTimeslot
 from app.services.timeslot_service import regenerate_slots_for_schedule_change
 
 # ---------------------------------------------------------------------------
@@ -110,17 +111,24 @@ def _mocked(db_slots, active_counts_by_slot_id=None):
     if active_counts_by_slot_id is None:
         active_counts_by_slot_id = {}
 
-    # --- Mock ClinicianSchedule.query (patch.object preserves the class itself) ---
-    mock_sched_query = MagicMock()
-    mock_sched_query.filter_by.return_value.all.return_value = [_schedule_row()]
+    # --- Mock ClinicianSchedule (string-path patch — no app context required) ---
+    mock_sched_cls = MagicMock()
+    mock_sched_cls.query.filter_by.return_value.all.return_value = [_schedule_row()]
 
-    # --- Mock ClinicianTimeslot.query (patch.object preserves column descriptors) ---
-    # Using patch.object instead of patching the whole class keeps
-    # ClinicianTimeslot.slot_date as a real SQLAlchemy column so that
-    # slot_date >= from_date produces a column expression rather than a
-    # Python comparison that would raise TypeError.
-    mock_slot_query = MagicMock()
-    mock_slot_query.filter.return_value.all.return_value = db_slots
+    # --- Mock ClinicianTimeslot (string-path patch — no app context required) ---
+    # Patching the name as imported into the service module avoids touching
+    # the real model class and its Flask-SQLAlchemy QueryProperty descriptor.
+    # MagicMock natively implements __ge__, __le__, __eq__ etc., so column
+    # comparisons like slot_date >= from_date return a MagicMock expression
+    # instead of raising TypeError or requiring an app context.
+    mock_slot_cls = MagicMock()
+    # __ge__ and __le__ return NotImplemented by default in MagicMock, which causes
+    # Python to fall back to datetime.date's reflected operation (also NotImplemented)
+    # and raise TypeError. Override them so slot_date >= date and slot_date <= date
+    # produce a MagicMock expression that can be passed to the mocked .filter().
+    mock_slot_cls.slot_date.__ge__ = MagicMock(return_value=MagicMock())
+    mock_slot_cls.slot_date.__le__ = MagicMock(return_value=MagicMock())
+    mock_slot_cls.query.filter.return_value.all.return_value = db_slots
 
     # --- Mock Appointment (active count per slot) ---
     MockAppt = MagicMock()
@@ -148,8 +156,8 @@ def _mocked(db_slots, active_counts_by_slot_id=None):
 
     with (
         patch("app.services.timeslot_service.generate_slots"),
-        patch.object(ClinicianSchedule, "query", mock_sched_query),
-        patch.object(ClinicianTimeslot, "query", mock_slot_query),
+        patch("app.services.timeslot_service.ClinicianSchedule", mock_sched_cls),
+        patch("app.services.timeslot_service.ClinicianTimeslot", mock_slot_cls),
         patch("app.models.appointment.Appointment", MockAppt),
         patch("app.services.timeslot_service.db", mock_db),
     ):
