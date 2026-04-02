@@ -21,7 +21,7 @@ services:
         - ../a-mmc_backend/migrations:/app/migrations
       ####
       env_file:
-        - ../a-mmc_backend/.env
+        - ../a-mmc_backend/.env.example
       depends_on:
         a-mmc-postgres:
           condition: service_healthy
