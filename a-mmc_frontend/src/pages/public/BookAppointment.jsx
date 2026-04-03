@@ -9,7 +9,7 @@ import SlotPicker from '../../components/shared/SlotPicker'
 
 const STEPS        = ['Consult Type', 'Date & Time', 'Details', 'Review']
 const BOOKING_TYPES = ['New Consultation', 'Follow-up', 'Referral']
-const PAYMENT_BASE  = ['HMO', 'Out of Pocket', 'Senior Citizen Discount', 'PWD Discount']
+const PAYMENT_BASE  = ['HMO', 'Private', 'Senior Citizen Discount', 'PWD Discount']
 
 const MONTHS = [
   'January','February','March','April','May','June',
