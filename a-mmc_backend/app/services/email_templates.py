@@ -156,6 +156,7 @@ def appointment_confirmation(
     chief_complaint: str,
     payment_type: str,
     consultation_type: str,
+    secretary_email: str = '',
 ) -> dict:
     """
     Sent to the patient when C/S accepts a pending appointment.
@@ -163,7 +164,7 @@ def appointment_confirmation(
     subject = f"Appointment Confirmed \u2014 {date}"
     title_str = clinician_title or ""
 
-    details = _detail_table([
+    detail_rows = [
         ("Clinician",          f"{title_str} {clinician_name}".strip()),
         ("Date",               date),
         ("Time",               time),
@@ -171,12 +172,18 @@ def appointment_confirmation(
         ("Chief Complaint",    chief_complaint or "\u2014"),
         ("Payment Type",       payment_type or "\u2014"),
         ("Consultation Type",  (consultation_type or "").upper() or "\u2014"),
-    ])
+    ]
+    if secretary_email:
+        detail_rows.append((
+            "Contact",
+            f'For inquiries, please contact the clinic secretary at '
+            f'<a href="mailto:{secretary_email}">{secretary_email}</a>',
+        ))
 
     body = (
         f'<p>Dear <strong>{patient_name}</strong>,</p>'
         f'<p>Your appointment has been confirmed. Please review the details below.</p>'
-        f'{details}'
+        f'{_detail_table(detail_rows)}'
         f'{_info_box(_ARRIVAL_REMINDER)}'
         f'<p>If you need to cancel or reschedule, please log in to your account '
         f'at least 24 hours in advance.</p>'
@@ -404,6 +411,7 @@ def reschedule_confirmation_to_patient(
     new_date: str,
     new_time: str,
     room_number: str,
+    secretary_email: str = '',
 ) -> dict:
     """
     Sent to the patient when C/S confirms their rescheduled appointment.
@@ -411,18 +419,24 @@ def reschedule_confirmation_to_patient(
     subject = f"Your Appointment Has Been Confirmed for {new_date}"
     title_str = clinician_title or ""
 
-    details = _detail_table([
+    detail_rows = [
         ("Clinician",       f"{title_str} {clinician_name}".strip()),
         ("New Date",        new_date),
         ("New Time",        new_time),
         ("Room / Location", room_number or "To be confirmed"),
-    ])
+    ]
+    if secretary_email:
+        detail_rows.append((
+            "Contact",
+            f'For inquiries, please contact the clinic secretary at '
+            f'<a href="mailto:{secretary_email}">{secretary_email}</a>',
+        ))
 
     body = (
         f'<p>Dear <strong>{patient_name}</strong>,</p>'
         f'<p>Great news \u2014 your rescheduled appointment has been confirmed. '
         f'Please review your new appointment details below.</p>'
-        f'{details}'
+        f'{_detail_table(detail_rows)}'
         f'{_info_box(_ARRIVAL_REMINDER)}'
         f'<p>We look forward to seeing you. If you need to make changes, please log in '
         f'to your account at least 24 hours in advance.</p>'

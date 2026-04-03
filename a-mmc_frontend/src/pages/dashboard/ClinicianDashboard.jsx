@@ -70,7 +70,7 @@ function RescheduleModal({ target, onSubmit, onClose }) {
   const [success, setSuccess] = useState(false)
   const [schedule, setSchedule] = useState([])
 
-  const clinicianName = `${target.clinician.title} ${target.clinician.last_name}`
+  const clinicianName = `${target.clinician.first_name} ${target.clinician.last_name}`
 
   // Fetch clinician schedule for SlotPicker
   useEffect(() => {

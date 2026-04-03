@@ -282,9 +282,9 @@ export default function ClinicianProfileManager() {
         {/* ── Page header ── */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[var(--color-dark)]">Clinician Profile</h1>
-          {(basicInfo.title || basicInfo.last_name) && (
+          {basicInfo.last_name && (
             <p className="text-base italic text-slate-500 mt-1">
-              Managing profile for {basicInfo.title} {basicInfo.last_name}
+              Managing profile for {basicInfo.first_name} {basicInfo.last_name}
             </p>
           )}
         </div>
@@ -340,19 +340,6 @@ export default function ClinicianProfileManager() {
           <h2 className="text-lg font-semibold text-[var(--color-dark)] mb-6">Basic Information</h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-
-            {/* Title */}
-            <div>
-              <FieldLabel htmlFor="title" optional>Title</FieldLabel>
-              <input
-                id="title"
-                type="text"
-                value={basicInfo.title}
-                onChange={e => handleBasicChange('title', e.target.value)}
-                placeholder="e.g. Dr."
-                className={inputCls}
-              />
-            </div>
 
             {/* Suffix */}
             <div>
