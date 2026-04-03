@@ -143,8 +143,7 @@ export default function GuidedSearch() {
                     <img
                       src={`/assets/hmo-logos/${hmo.id}.png`}
                       alt=""
-                      width={28}
-                      height={28}
+                      className="w-14 h-14 object-contain mx-auto mb-2"
                       onError={(e) => { e.target.style.display = 'none' }}
                     />
                     <span>{hmo.label}</span>

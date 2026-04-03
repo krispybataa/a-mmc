@@ -91,6 +91,24 @@ def _system_url() -> str:
 # Public notification functions
 # ---------------------------------------------------------------------------
 
+def _secretary_email_for(clinician_id: int) -> str:
+    """
+    Return the contact_email of the first secretary linked to this clinician,
+    or empty string if none is linked or no contact_email is set.
+    Uses deferred imports to avoid circular references.
+    """
+    try:
+        from app.models.secretary import SecretaryClinicianLink, Secretary
+        link = SecretaryClinicianLink.query.filter_by(clinician_id=clinician_id).first()
+        if link:
+            secretary = Secretary.query.get(link.secretary_id)
+            if secretary and secretary.contact_email:
+                return secretary.contact_email
+    except Exception:
+        pass
+    return ""
+
+
 def send_appointment_confirmation(appointment) -> None:
     """
     Notify the patient that their appointment has been accepted by C/S.
@@ -112,6 +130,7 @@ def send_appointment_confirmation(appointment) -> None:
             chief_complaint   = appointment.chief_complaint or "",
             payment_type      = appointment.payment_type or "",
             consultation_type = appointment.consultation_type or "",
+            secretary_email   = _secretary_email_for(clinician.clinician_id),
         )
         _send(patient.login_email, tpl["subject"], tpl["html"])
     except Exception:
@@ -328,6 +347,7 @@ def send_reschedule_confirmation_to_patient(appointment) -> None:
             new_date        = str(slot.slot_date),
             new_time        = str(slot.start_time)[:5],
             room_number     = clinician.room_number or "",
+            secretary_email = _secretary_email_for(clinician.clinician_id),
         )
         _send(patient.login_email, tpl["subject"], tpl["html"])
     except Exception:

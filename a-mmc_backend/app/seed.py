@@ -1,5 +1,6 @@
 import csv
 import os
+import re
 import secrets
 import string
 import sys
@@ -274,11 +275,12 @@ def run_seed_part2(app):
 # =====================================================
 
 _DAYS = [
-    ("Monday",    "mon"),
-    ("Tuesday",   "tue"),
-    ("Wednesday", "wed"),
-    ("Thursday",  "thu"),
-    ("Friday",    "fri"),
+    ("mon", "Monday"),
+    ("tue", "Tuesday"),
+    ("wed", "Wednesday"),
+    ("thu", "Thursday"),
+    ("fri", "Friday"),
+    ("sat", "Saturday"),
 ]
 
 
@@ -309,8 +311,8 @@ def run_seed_csv(csv_path):
     rheum_entries = []
 
     # Build short-day → full-day-name lookup from the module-level _DAYS constant
-    _DAY_FULL = {short: full for full, short in _DAYS}
-    _DAY_KEYS = [short for _, short in _DAYS]   # ['mon', 'tue', 'wed', 'thu', 'fri']
+    _DAY_FULL = {short: full for short, full in _DAYS}
+    _DAY_KEYS = [short for short, _ in _DAYS]   # ['mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
     _CONSULT_TYPES = [("f2f_", "f2f"), ("tele_", "teleconsult")]
 
@@ -330,7 +332,9 @@ def run_seed_csv(csv_path):
                     skipped += 1
                     continue
 
-                password = "".join(secrets.choice(alphabet) for _ in range(12))
+                password = row.get("password", "").strip()
+                if not password:
+                    password = "".join(secrets.choice(alphabet) for _ in range(12))
 
                 # Auto-generate contact fields when not provided in the CSV
                 contact_phone = row.get("contact_phone", "").strip()
@@ -346,8 +350,13 @@ def run_seed_csv(csv_path):
                         else "clinic@asclepius.test"
                     )
 
+                local_number = row.get("local_number", "").strip()
+                if not local_number:
+                    room = row.get("room_number", "").strip()
+                    nums = re.findall(r'\d+', room)
+                    local_number = nums[-1] if nums else None
+
                 clinician = Clinician(
-                    title=row.get("title", "").strip(),
                     first_name=row.get("first_name", "").strip(),
                     middle_name=row.get("middle_name", "").strip() or None,
                     last_name=row.get("last_name", "").strip(),
@@ -355,7 +364,7 @@ def run_seed_csv(csv_path):
                     specialty=row.get("specialty", "").strip(),
                     department=row.get("department", "").strip(),
                     room_number=row.get("room_number", "").strip() or None,
-                    local_number=row.get("local_number", "").strip() or None,
+                    local_number=local_number or None,
                     contact_phone=contact_phone,
                     contact_email=contact_email,
                     login_email=login_email,
@@ -406,7 +415,7 @@ def run_seed_csv(csv_path):
 
                 if row.get("department", "").strip().lower() == "rheumatology":
                     rheum_entries.append(
-                        f"Name: {clinician.title} {clinician.first_name} {clinician.last_name}\n"
+                        f"Name: {clinician.first_name} {clinician.last_name}\n"
                         f"Login Email: {login_email}\n"
                         f"Password: {password}\n"
                         f"Department: {clinician.department}\n"

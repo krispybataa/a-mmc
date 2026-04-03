@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
 import { MapPin, Building2 } from 'lucide-react'
 
-function formatName({ title, first_name, middle_name, last_name, suffix }) {
+function formatName({ first_name, middle_name, last_name, suffix }) {
   const mid = middle_name ? `${middle_name[0]}.` : ''
-  const base = [title, first_name, mid, last_name].filter(Boolean).join(' ')
+  const base = [first_name, mid, last_name].filter(Boolean).join(' ')
   return suffix ? `${base}, ${suffix}` : base
 }
 

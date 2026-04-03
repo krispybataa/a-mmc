@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, MapPin, Mail, ShieldCheck, Building2, Video } from 'lucide-react'
+import { ArrowLeft, MapPin, ShieldCheck, Building2, Video } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import ClinicianCard from '../../components/ClinicianCard'
@@ -40,15 +40,12 @@ function buildScheduleRows(schedule) {
   })
 }
 
-function formatName({ title, first_name, middle_name, last_name, suffix }) {
+function formatName({ first_name, middle_name, last_name, suffix }) {
   const mid = middle_name ? `${middle_name[0]}.` : ''
-  const base = [title, first_name, mid, last_name].filter(Boolean).join(' ')
+  const base = [first_name, mid, last_name].filter(Boolean).join(' ')
   return suffix ? `${base}, ${suffix}` : base
 }
 
-function getInitials(first_name, last_name) {
-  return `${first_name[0]}${last_name[0]}`.toUpperCase()
-}
 
 function ScheduleTable({ rows }) {
   return (
@@ -191,15 +188,13 @@ export default function ClinicianProfile() {
     department,
     specialty,
     room_number,
-    contact_email,
     profile_picture,
     schedules,
     hmos,
     infos = [],
   } = clinician
 
-  const fullName    = formatName(clinician)
-  const initials    = getInitials(clinician.first_name, clinician.last_name)
+  const fullName = formatName(clinician)
 
   const f2fSchedules         = schedules.filter((s) => s.consultation_type === 'f2f' || !s.consultation_type)
   const teleconsultSchedules = schedules.filter((s) => s.consultation_type === 'teleconsult')
@@ -229,12 +224,14 @@ export default function ClinicianProfile() {
               <img
                 src={profile_picture}
                 alt={fullName}
-                className="w-24 h-24 rounded-full object-cover mb-4"
+                className="w-40 h-40 rounded-full object-cover mb-4"
               />
             ) : (
-              <div className="w-24 h-24 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-white font-bold text-2xl mb-4 select-none">
-                {initials}
-              </div>
+              <img
+                src={`https://api.dicebear.com/7.x/personas/svg?seed=${clinician.clinician_id}`}
+                alt={fullName}
+                className="w-40 h-40 rounded-full mb-4"
+              />
             )}
 
             <h1 className="text-base font-bold text-[var(--color-dark)] leading-snug">
@@ -249,10 +246,6 @@ export default function ClinicianProfile() {
               <div className="flex items-start gap-2.5">
                 <MapPin size={13} className="mt-0.5 shrink-0 text-slate-400" />
                 <span>{room_number}</span>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <Mail size={13} className="mt-0.5 shrink-0 text-slate-400" />
-                <span className="break-all">{contact_email}</span>
               </div>
             </div>
           </div>
@@ -309,7 +302,7 @@ export default function ClinicianProfile() {
           <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
             <h2 className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">
               <ShieldCheck size={13} />
-              Accepted HMOs
+              HMO Accreditations
             </h2>
             {hmos.length > 0 ? (
               <div className="flex flex-wrap gap-2">
