@@ -88,10 +88,11 @@ def _maybe_auto_block_slot(slot: ClinicianTimeslot) -> None:
 # ---------------------------------------------------------------------------
 
 VALID_TRANSITIONS = {
-    "pending":               {"accepted", "rejected", "cancelled"},
+    "pending":               {"accepted", "rejected", "declined", "cancelled"},
     "accepted":              {"reschedule_requested", "cancelled"},
     "reschedule_requested":  {"accepted", "cancelled"},
     "rejected":              set(),
+    "declined":              set(),
     "cancelled":             set(),
 }
 
@@ -198,9 +199,18 @@ def update_appointment(appointment_id: int):
                 }), 409
 
             # ----------------------------------------------------------------
+            # Decline — C/S declines a pending appointment
+            # ----------------------------------------------------------------
+            if new_status == "declined":
+                decline_reason = (data.get("decline_reason") or "").strip()
+                if not decline_reason:
+                    return jsonify({"error": "decline_reason is required when declining an appointment"}), 422
+                a.cancellation_reason = decline_reason
+
+            # ----------------------------------------------------------------
             # Reschedule request — either party initiates
             # ----------------------------------------------------------------
-            if new_status == "reschedule_requested":
+            elif new_status == "reschedule_requested":
                 reschedule_reason = (data.get("reschedule_reason") or "").strip()
                 if not reschedule_reason:
                     return jsonify({"error": "reschedule_reason is required when requesting a reschedule"}), 422
@@ -262,6 +272,8 @@ def update_appointment(appointment_id: int):
                 send_reschedule_request_to_clinician(a)
             else:
                 send_reschedule_request_to_patient(a)
+        elif new_status == "declined":
+            send_cancellation_notice(a, "patient", cancelled_by="clinician")
         elif new_status == "cancelled":
             send_cancellation_notice(a, "patient")
             send_cancellation_notice(a, "clinician")
@@ -362,6 +374,7 @@ def _serialize(a: Appointment) -> dict:
         "consultation_type": a.consultation_type,
         "status": a.status,
         "reschedule_reason": a.reschedule_reason,
+        "cancellation_reason": a.cancellation_reason,
         "created_at": a.created_at.isoformat() if a.created_at else None,
         "updated_at": a.updated_at.isoformat() if a.updated_at else None,
     }

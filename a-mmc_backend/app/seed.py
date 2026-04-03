@@ -296,11 +296,23 @@ def run_seed_csv(csv_path):
     Bulk import clinicians from a CSV file.
     Idempotent — skips rows where login_email already exists.
     Outputs credentials_manifest.txt for Rheumatology clinicians.
+
+    One row per clinician. F2F and teleconsult schedules are expressed as
+    separate column sets (f2f_* and tele_*) on the same row. A schedule row
+    is only created for a consultation type when at least one time column for
+    that type is non-blank. contact_phone and contact_email are auto-generated
+    if not provided in the CSV.
     """
     alphabet = string.ascii_letters + string.digits
     created = 0
     skipped = 0
     rheum_entries = []
+
+    # Build short-day → full-day-name lookup from the module-level _DAYS constant
+    _DAY_FULL = {short: full for full, short in _DAYS}
+    _DAY_KEYS = [short for _, short in _DAYS]   # ['mon', 'tue', 'wed', 'thu', 'fri']
+
+    _CONSULT_TYPES = [("f2f_", "f2f"), ("tele_", "teleconsult")]
 
     with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -320,6 +332,20 @@ def run_seed_csv(csv_path):
 
                 password = "".join(secrets.choice(alphabet) for _ in range(12))
 
+                # Auto-generate contact fields when not provided in the CSV
+                contact_phone = row.get("contact_phone", "").strip()
+                if not contact_phone:
+                    contact_phone = "09000000000"
+
+                contact_email = row.get("contact_email", "").strip()
+                if not contact_email:
+                    login = login_email
+                    contact_email = (
+                        login.replace("@", ".clinic@")
+                        if "@" in login
+                        else "clinic@asclepius.test"
+                    )
+
                 clinician = Clinician(
                     title=row.get("title", "").strip(),
                     first_name=row.get("first_name", "").strip(),
@@ -330,38 +356,17 @@ def run_seed_csv(csv_path):
                     department=row.get("department", "").strip(),
                     room_number=row.get("room_number", "").strip() or None,
                     local_number=row.get("local_number", "").strip() or None,
-                    contact_phone=row.get("contact_phone", "").strip() or None,
-                    contact_email=row.get("contact_email", "").strip() or None,
+                    contact_phone=contact_phone,
+                    contact_email=contact_email,
                     login_email=login_email,
                     login_password_hash=hash_password(password),
                 )
                 db.session.add(clinician)
                 db.session.flush()
 
-                consultation_type = row.get("consultation_type", "f2f").strip() or "f2f"
-
-                for day_name, prefix in _DAYS:
-                    am_start = _parse_time(row.get(f"{prefix}_am_start", ""))
-                    am_end   = _parse_time(row.get(f"{prefix}_am_end",   ""))
-                    pm_start = _parse_time(row.get(f"{prefix}_pm_start", ""))
-                    pm_end   = _parse_time(row.get(f"{prefix}_pm_end",   ""))
-
-                    if am_start is None and am_end is None and pm_start is None and pm_end is None:
-                        continue
-
-                    schedule = ClinicianSchedule(
-                        clinician_id=clinician.clinician_id,
-                        day_of_week=day_name,
-                        am_start=am_start,
-                        am_end=am_end,
-                        pm_start=pm_start,
-                        pm_end=pm_end,
-                        consultation_type=consultation_type,
-                    )
-                    db.session.add(schedule)
-
-                for hmo_key in ("hmo_1", "hmo_2", "hmo_3"):
-                    hmo_name = row.get(hmo_key, "").strip()
+                # HMO accreditations (hmo_1 through hmo_10)
+                for i in range(1, 11):
+                    hmo_name = row.get(f"hmo_{i}", "").strip()
                     if hmo_name:
                         db.session.add(ClinicianHMO(
                             clinician_id=clinician.clinician_id,
@@ -370,12 +375,34 @@ def run_seed_csv(csv_path):
 
                 db.session.commit()
 
-                generate_slots(
-                    clinician_id=clinician.clinician_id,
-                    from_date=date.today(),
-                    to_date=date.today() + timedelta(days=90),
-                    commit=True,
-                )
+                # Schedules — one pass per consultation type
+                for col_prefix, ctype in _CONSULT_TYPES:
+                    has_any = False
+                    for day in _DAY_KEYS:
+                        am_s = _parse_time(row.get(f"{col_prefix}{day}_am_start", ""))
+                        am_e = _parse_time(row.get(f"{col_prefix}{day}_am_end",   ""))
+                        pm_s = _parse_time(row.get(f"{col_prefix}{day}_pm_start", ""))
+                        pm_e = _parse_time(row.get(f"{col_prefix}{day}_pm_end",   ""))
+                        if not any([am_s, am_e, pm_s, pm_e]):
+                            continue
+                        has_any = True
+                        db.session.add(ClinicianSchedule(
+                            clinician_id=clinician.clinician_id,
+                            day_of_week=_DAY_FULL[day],
+                            am_start=am_s,
+                            am_end=am_e,
+                            pm_start=pm_s,
+                            pm_end=pm_e,
+                            consultation_type=ctype,
+                        ))
+                    if has_any:
+                        db.session.commit()
+                        generate_slots(
+                            clinician_id=clinician.clinician_id,
+                            from_date=date.today(),
+                            to_date=date.today() + timedelta(days=90),
+                            commit=True,
+                        )
 
                 if row.get("department", "").strip().lower() == "rheumatology":
                     rheum_entries.append(
