@@ -1,4 +1,5 @@
 const PRIMARY = '#1D409C'
+const BORDER  = '#E2E0F0'
 
 function ModeButton({ icon, label, subtext, onClick, disabled, badge }) {
   return (
@@ -6,11 +7,11 @@ function ModeButton({ icon, label, subtext, onClick, disabled, badge }) {
       <button
         onClick={onClick}
         disabled={disabled}
-        className="flex flex-col items-center justify-center gap-4 rounded-2xl bg-white border-4 transition-colors duration-150 p-10 w-64"
+        className="flex flex-col items-center justify-center gap-4 rounded-2xl bg-white transition-all duration-150 p-10 w-64 shadow-md"
         style={{
           minWidth: '200px',
           minHeight: '200px',
-          borderColor: PRIMARY,
+          border: `2px solid ${BORDER}`,
           cursor: disabled ? 'default' : 'pointer',
           opacity: disabled ? 0.6 : 1,
         }}
@@ -18,12 +19,16 @@ function ModeButton({ icon, label, subtext, onClick, disabled, badge }) {
           if (!disabled) {
             e.currentTarget.style.backgroundColor = PRIMARY
             e.currentTarget.style.color = '#fff'
+            e.currentTarget.style.boxShadow = '0 8px 24px rgba(29,64,156,0.25)'
+            e.currentTarget.style.transform = 'translateY(-2px)'
           }
         }}
         onMouseLeave={e => {
           if (!disabled) {
             e.currentTarget.style.backgroundColor = '#fff'
             e.currentTarget.style.color = ''
+            e.currentTarget.style.boxShadow = ''
+            e.currentTarget.style.transform = ''
           }
         }}
       >
@@ -31,7 +36,7 @@ function ModeButton({ icon, label, subtext, onClick, disabled, badge }) {
         <span className="font-bold text-center" style={{ fontSize: '24px' }}>
           {label}
         </span>
-        <span className="text-center text-gray-500" style={{ fontSize: '16px' }}>
+        <span className="text-center" style={{ fontSize: '16px', color: '#6B7280' }}>
           {subtext}
         </span>
       </button>
@@ -54,14 +59,14 @@ function ModeButton({ icon, label, subtext, onClick, disabled, badge }) {
 
 export default function HomeScreen({ onNavigate }) {
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen" style={{ backgroundColor: '#F8F7FF' }}>
       {/* Header */}
       <div
         className="flex items-center justify-center py-6 px-8"
         style={{ backgroundColor: PRIMARY }}
       >
         <h1 className="text-white font-bold tracking-wide" style={{ fontSize: '36px' }}>
-          Asclepius
+          Unicorn
         </h1>
       </div>
 
@@ -85,10 +90,10 @@ export default function HomeScreen({ onNavigate }) {
 
       {/* Footer */}
       <div className="flex flex-col items-center pb-8 gap-1">
-        <p className="text-gray-400 font-medium" style={{ fontSize: '18px' }}>
+        <p style={{ fontSize: '18px', color: '#6B7280', fontWeight: '500' }}>
           Touch the screen to get started
         </p>
-        <p className="text-gray-400" style={{ fontSize: '16px' }}>
+        <p style={{ fontSize: '16px', color: '#9CA3AF' }}>
           This station will reset after 2 minutes of inactivity
         </p>
       </div>

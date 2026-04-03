@@ -32,23 +32,23 @@ const EDUC_OPTS   = ['Elementary', 'High School', 'Vocational / Technical', 'Col
 
 function inputCls(hasError) {
   return [
-    'w-full px-4 py-3 rounded-lg border text-sm',
-    'text-[var(--color-dark)] placeholder:text-slate-400',
-    'focus:outline-none focus:ring-2 focus:border-transparent',
+    'w-full px-4 py-3 rounded-xl border text-base min-h-[48px]',
+    'text-[var(--color-text)] placeholder:text-gray-400 bg-white',
+    'focus:outline-none focus:ring-2 focus:border-[var(--color-primary)]',
     hasError
-      ? 'border-[var(--color-accent)] focus:ring-[var(--color-accent)]'
-      : 'border-slate-200 focus:ring-[var(--color-primary)]',
+      ? 'border-[var(--color-accent)] focus:ring-[var(--color-accent)]/30'
+      : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]/30',
   ].join(' ')
 }
 
 function selectCls(hasError) {
   return [
-    'w-full px-4 py-3 rounded-lg border text-sm',
-    'text-[var(--color-dark)] bg-white',
-    'focus:outline-none focus:ring-2 focus:border-transparent',
+    'w-full px-4 py-3 rounded-xl border text-base min-h-[48px]',
+    'text-[var(--color-text)] bg-white',
+    'focus:outline-none focus:ring-2 focus:border-[var(--color-primary)]',
     hasError
-      ? 'border-[var(--color-accent)] focus:ring-[var(--color-accent)]'
-      : 'border-slate-200 focus:ring-[var(--color-primary)]',
+      ? 'border-[var(--color-accent)] focus:ring-[var(--color-accent)]/30'
+      : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]/30',
   ].join(' ')
 }
 
@@ -200,14 +200,14 @@ export default function Register() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-start justify-center px-4 py-14">
+    <div className="min-h-screen bg-[var(--color-bg)] flex items-start justify-center px-4 py-14">
       <div className="w-full max-w-xl">
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-8 py-10">
 
           {/* Header */}
           <div className="mb-7">
             <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-primary-light)] mb-2">
-              Asclepius
+              Unicorn
             </p>
             <h1 className="text-2xl font-bold text-[var(--color-dark)]">Create your account</h1>
             <p className="text-sm text-slate-400 mt-1">
@@ -632,7 +632,7 @@ export default function Register() {
               <button
                 type="button"
                 onClick={handleBack}
-                className="px-5 py-3 rounded-lg text-sm font-medium text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
+                className="px-6 py-3 rounded-xl text-base font-semibold text-[var(--color-primary)] border-2 border-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white min-h-[48px]"
               >
                 ← Back
               </button>
@@ -641,7 +641,7 @@ export default function Register() {
               type="button"
               onClick={step < 3 ? handleNext : handleSubmit}
               disabled={loading}
-              className="flex-1 py-3 px-6 rounded-lg text-sm font-semibold text-white bg-[var(--color-primary)] hover:opacity-90 transition-opacity duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex-1 py-3 px-6 rounded-xl text-base font-semibold text-white bg-[var(--color-primary)] hover:brightness-110 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed min-h-[48px]"
             >
               {step < 3
                 ? 'Continue →'

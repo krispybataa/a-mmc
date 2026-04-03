@@ -5,6 +5,32 @@
   --color-primary-light: #8EA0CE;
   --color-accent: #CE1117;
   --color-white: #FFFFFF;
-  --color-dark: #303030;
+  --color-dark: #1E1B4B;
+  --color-bg: #F8F7FF;
+  --color-text: #1E1B4B;
+  --color-surface: #FFFFFF;
+  --color-border: #E2E0F0;
+  --color-muted: #6B7280;
   --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--color-bg);
+  font-size: 16px;
+}
+
+*, *::before, *::after {
+  transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+  transition-duration: 150ms;
+  transition-timing-function: ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out both;
 }

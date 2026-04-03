@@ -72,23 +72,23 @@ export default function StaffLogin() {
 
   const inputCls = (hasError) =>
     [
-      'w-full px-4 py-3 rounded-lg border text-sm',
-      'text-[var(--color-dark)] placeholder:text-slate-400',
-      'focus:outline-none focus:ring-2 focus:border-transparent',
+      'w-full px-4 py-3 rounded-xl border text-base min-h-[48px]',
+      'text-[var(--color-text)] placeholder:text-gray-400 bg-white',
+      'focus:outline-none focus:ring-2 focus:border-[var(--color-primary)]',
       hasError
-        ? 'border-[var(--color-accent)] focus:ring-[var(--color-accent)]'
-        : 'border-slate-200 focus:ring-[var(--color-primary)]',
+        ? 'border-[var(--color-accent)] focus:ring-[var(--color-accent)]/30'
+        : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]/30',
     ].join(' ')
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-14">
+    <div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center px-4 py-14">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-8 py-10">
 
           {/* Header */}
           <div className="mb-8">
             <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-primary-light)] mb-2">
-              Asclepius
+              Unicorn
             </p>
             <h1 className="text-2xl font-bold text-[var(--color-dark)]">Staff Login</h1>
             <p className="text-sm text-slate-400 mt-1">Sign in to your staff account to continue.</p>
@@ -107,8 +107,8 @@ export default function StaffLogin() {
                   <label
                     key={value}
                     className={[
-                      'flex items-center justify-center gap-2 px-4 py-3 rounded-lg border cursor-pointer',
-                      'text-sm font-medium transition-colors duration-150 min-h-[44px]',
+                      'flex items-center justify-center gap-2 px-4 py-3 rounded-xl border cursor-pointer',
+                      'text-base font-medium min-h-[48px]',
                       role === value
                         ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white'
                         : 'border-slate-200 text-[var(--color-dark)] hover:border-[var(--color-primary-light)]',
@@ -194,7 +194,7 @@ export default function StaffLogin() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-6 rounded-lg text-sm font-semibold text-white bg-[var(--color-primary)] hover:opacity-90 transition-opacity duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full py-3 px-6 rounded-xl text-base font-semibold text-white bg-[var(--color-primary)] hover:brightness-110 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed min-h-[48px]"
               >
                 {loading ? 'Signing in…' : 'Sign In'}
               </button>
