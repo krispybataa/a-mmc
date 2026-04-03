@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { CheckCircle, X } from 'lucide-react'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { CheckCircle, X, CalendarPlus, Calendar, User } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import AppointmentReminderBanner from '../../components/AppointmentReminderBanner'
@@ -76,11 +76,15 @@ export default function PatientDashboard() {
   const fullName     = `${user.first_name} ${user.last_name}`
   const pendingAppts = appointments.filter(a => NON_TERMINAL.has(a.status))
 
+  const today = new Date()
+  const dateLabel = today.toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+  const recentAppts = [...appointments].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 3)
+
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[var(--color-bg)]">
       <div className="max-w-5xl mx-auto px-6 py-10">
 
-          <AppointmentReminderBanner appointments={appointments} />
+        <AppointmentReminderBanner appointments={appointments} />
 
         {/* ── Booking success banner ── */}
         {showBanner && (
@@ -93,7 +97,7 @@ export default function PatientDashboard() {
             <button
               onClick={() => setShowBanner(false)}
               aria-label="Dismiss"
-              className="text-green-600 hover:text-green-800 transition-colors p-1 -mt-0.5 -mr-1"
+              className="text-green-600 hover:text-green-800 p-1 -mt-0.5 -mr-1"
             >
               <X size={15} />
             </button>
@@ -102,97 +106,82 @@ export default function PatientDashboard() {
 
         {/* ── Page header ── */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[var(--color-dark)]">DASHBOARD</h1>
-          <p className="text-lg italic text-slate-500 mt-1">Welcome, {fullName}!</p>
+          <p className="text-sm text-[var(--color-muted)]">{dateLabel}</p>
+          <h1 className="text-2xl font-bold text-[var(--color-text)] mt-1">Welcome back, {user.first_name}!</h1>
+          <p className="text-[var(--color-muted)] mt-1">Here's an overview of your health appointments.</p>
         </div>
 
-        {/* ── CTA buttons ── */}
-        <div className="flex flex-col min-[380px]:flex-row gap-4 mb-10">
-          <button
-            onClick={() => navigate('/dashboard/appointments')}
-            className="flex-1 min-h-[52px] rounded-lg bg-[var(--color-primary)] text-white font-semibold text-base px-6 hover:opacity-90 transition-opacity"
+        {/* ── Quick action cards ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+          <Link
+            to="/doctors"
+            className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-[var(--color-primary)] text-white p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 min-h-[120px]"
           >
-            Manage Appointments
-          </button>
-          <button
-            onClick={() => navigate('/find')}
-            className="flex-1 min-h-[52px] rounded-lg border-2 border-[var(--color-primary)] text-[var(--color-primary)] font-semibold text-base px-6 hover:bg-blue-50 transition-colors"
+            <CalendarPlus size={28} />
+            <span className="font-semibold text-base">Book Appointment</span>
+          </Link>
+          <Link
+            to="/dashboard/appointments"
+            className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-white border-2 border-[var(--color-primary)] text-[var(--color-primary)] p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 min-h-[120px]"
           >
-            Find a Doctor
-          </button>
+            <Calendar size={28} />
+            <span className="font-semibold text-base">My Appointments</span>
+          </Link>
+          <Link
+            to="/dashboard/profile"
+            className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-white border-2 border-[var(--color-primary)] text-[var(--color-primary)] p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 min-h-[120px]"
+          >
+            <User size={28} />
+            <span className="font-semibold text-base">Edit Profile</span>
+          </Link>
         </div>
 
-        {/* ── Pending Appointments ── */}
+        {/* ── Recent Appointments ── */}
         <div>
-          <h2 className="text-xl font-semibold text-[var(--color-dark)] mb-4">
-            Pending Appointments
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-[var(--color-text)]">
+              Recent Appointments
+            </h2>
+            <Link to="/dashboard/appointments" className="text-sm text-[var(--color-primary)] font-medium hover:underline">
+              View all →
+            </Link>
+          </div>
 
           {apptLoading ? (
-            <p className="text-center text-slate-400 py-12 text-sm">Loading…</p>
+            <p className="text-center text-[var(--color-muted)] py-12 text-sm">Loading…</p>
           ) : apptError ? (
             <p className="text-center text-[var(--color-accent)] py-12 text-sm font-medium">{apptError}</p>
-          ) : pendingAppts.length === 0 ? (
-            <p className="text-center text-slate-400 py-12">No pending appointments.</p>
+          ) : recentAppts.length === 0 ? (
+            <p className="text-center text-[var(--color-muted)] py-12">No appointments yet.</p>
           ) : (
-            <>
-              {/* Desktop table (sm+) */}
-              <div className="hidden sm:block overflow-x-auto rounded-xl border border-slate-100 shadow-sm bg-white">
-                <table className="w-full text-sm text-left">
-                  <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50">
-                      {['Date', 'Time', 'Doctor', 'Chief Complaint', 'Notes'].map(col => (
-                        <th key={col} className="px-5 py-3.5 font-semibold text-slate-600 whitespace-nowrap">
-                          {col}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingAppts.map(appt => (
-                      <tr
-                        key={appt.appointment_id}
-                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors"
-                      >
-                        <td className="px-5 py-4 text-[var(--color-dark)] whitespace-nowrap">
-                          {formatDate(appt.slot.slot_date)}
-                        </td>
-                        <td className="px-5 py-4 text-[var(--color-dark)]">
-                          {formatTime(appt.slot.start_time)}
-                        </td>
-                        <td className="px-5 py-4 text-[var(--color-dark)] font-medium whitespace-nowrap">
-                          {appt.clinician.title} {appt.clinician.last_name}
-                        </td>
-                        <td className="px-5 py-4 text-[var(--color-dark)]">
-                          {appt.chief_complaint}
-                        </td>
-                        <td className="px-5 py-4 text-slate-500">
-                          {appt.status === 'accepted' ? 'Come 30 minutes before schedule.' : ''}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Mobile cards (below sm) */}
-              <div className="sm:hidden space-y-4">
-                {pendingAppts.map(appt => (
-                  <div
-                    key={appt.appointment_id}
-                    className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 space-y-3"
-                  >
-                    <CardRow label="Date"            value={formatDate(appt.slot.slot_date)} />
-                    <CardRow label="Time"            value={formatTime(appt.slot.start_time)} />
-                    <CardRow label="Doctor"          value={`${appt.clinician.title} ${appt.clinician.last_name}`} />
-                    <CardRow label="Chief Complaint" value={appt.chief_complaint} />
-                    {appt.status === 'accepted' && (
-                      <CardRow label="Notes" value="Come 30 minutes before schedule." />
-                    )}
+            <div className="space-y-3">
+              {recentAppts.map(appt => (
+                <div
+                  key={appt.appointment_id}
+                  className="bg-white rounded-2xl border border-[var(--color-border)] shadow-sm p-5 flex flex-col sm:flex-row sm:items-center gap-3"
+                >
+                  <div className="flex-1 space-y-1">
+                    <p className="font-semibold text-[var(--color-text)]">
+                      {appt.clinician.title} {appt.clinician.last_name}
+                    </p>
+                    <p className="text-sm text-[var(--color-muted)]">
+                      {formatDate(appt.slot.slot_date)} · {formatTime(appt.slot.start_time)}
+                    </p>
+                    <p className="text-sm text-[var(--color-muted)]">{appt.chief_complaint}</p>
                   </div>
-                ))}
-              </div>
-            </>
+                  <span className={[
+                    'text-xs font-semibold px-3 py-1.5 rounded-full self-start sm:self-center',
+                    appt.status === 'accepted'             ? 'bg-green-100 text-green-700' :
+                    appt.status === 'pending'              ? 'bg-amber-100 text-amber-700' :
+                    appt.status === 'reschedule_requested' ? 'bg-blue-100 text-blue-700'  :
+                    appt.status === 'rejected'             ? 'bg-red-100 text-red-700'    :
+                    'bg-gray-100 text-gray-600',
+                  ].join(' ')}>
+                    {appt.status.replace('_', ' ')}
+                  </span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
