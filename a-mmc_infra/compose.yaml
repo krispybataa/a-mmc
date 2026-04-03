@@ -56,7 +56,7 @@ services:
     networks:
       - a-mmc-network
     env_file:
-      - ../a-mmc_backend/.env
+      - ../a-mmc_backend/.env.example
     ports:
       - "5432:5432"
     environment:
