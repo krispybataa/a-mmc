@@ -10,6 +10,15 @@ services:
       a-mmc-backend:
         condition: service_healthy
 
+  a-mmc-kiosk:
+    image: "${KIOSK_IMAGE}"
+    container_name: "${KIOSK_CONTAINER}"
+    networks:
+      - a-mmc-network
+    depends_on:
+      a-mmc-backend:
+        condition: service_healthy
+
   a-mmc-backend:
     image: "${BACKEND_IMAGE}"
     container_name: "${BACKEND_CONTAINER}"
@@ -37,17 +46,16 @@ services:
     container_name: "${NGINX_CONTAINER}"
     ports:
       - "${NGINX_HTTP_PORT}:${NGINX_HTTP_PORT}"
-      - "${NGINX_HTTPS_PORT}:${NGINX_HTTPS_PORT}"
+      - "${NGINX_KIOSK_PORT}:${NGINX_KIOSK_PORT}"
     networks:
       - a-mmc-network
     volumes:
       # nginx.conf
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      a-mmc-frontend:
-        condition: service_healthy
-      a-mmc-backend:
-        condition: service_healthy
+      - ${FRONTEND_CONTAINER}
+      - ${BACKEND_CONTAINER}
+      - ${KIOSK_CONTAINER}
 
   a-mmc-postgres:
     image: "${POSTGRES_IMAGE}"

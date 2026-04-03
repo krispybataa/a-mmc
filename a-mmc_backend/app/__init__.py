@@ -1,3 +1,5 @@
+from dotenv import load_dotenv, find_dotenv
+
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -6,6 +8,7 @@ from flask_jwt_extended import JWTManager
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
+load_dotenv(find_dotenv())
 db = SQLAlchemy()
 migrate = Migrate()
 jwt = JWTManager()
