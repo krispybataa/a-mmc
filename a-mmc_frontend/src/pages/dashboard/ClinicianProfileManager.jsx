@@ -19,6 +19,13 @@ const EMPTY_BASIC = {
   contact_email: '',
 }
 
+const EMPTY_SEC = {
+  first_name:    '',
+  last_name:     '',
+  contact_phone: '',
+  contact_email: '',
+}
+
 function profileToBasic(data) {
   return {
     title:         data.title         ?? '',
@@ -95,6 +102,12 @@ export default function ClinicianProfileManager() {
   const [previewUrl, setPreviewUrl] = useState(null)
   const fileInputRef = useRef(null)
 
+  // ── Secretary profile state (role=secretary only) ─────────────────────────────
+  const [secInfo,       setSecInfo]    = useState(EMPTY_SEC)
+  const [secSaving,     setSecSaving]  = useState(false)
+  const [secSaveSuccess, setSecSuccess] = useState(false)
+  const [secSaveError,  setSecError]   = useState('')
+
   // Auth guard
   useEffect(() => {
     if (!authLoading && !user) {
@@ -139,6 +152,19 @@ export default function ClinicianProfileManager() {
     }
   }, [previewUrl])
 
+  // Fetch secretary's own contact details (role=secretary only)
+  useEffect(() => {
+    if (!user || user.role !== 'secretary') return
+    api.get(`/secretaries/${user.id}`)
+      .then(({ data }) => setSecInfo({
+        first_name:    data.first_name    ?? '',
+        last_name:     data.last_name     ?? '',
+        contact_phone: data.contact_phone ?? '',
+        contact_email: data.contact_email ?? '',
+      }))
+      .catch(() => {})
+  }, [user])
+
   // ── All hooks above this line ────────────────────────────────────────────────
 
   if (authLoading || !user) return null
@@ -149,6 +175,27 @@ export default function ClinicianProfileManager() {
     setBasicInfo(prev => ({ ...prev, [field]: value }))
     if (basicSaveSuccess) setBasicSuccess(false)
     if (basicSaveError) setBasicError('')
+  }
+
+  function handleSecChange(field, value) {
+    setSecInfo(prev => ({ ...prev, [field]: value }))
+    if (secSaveSuccess) setSecSuccess(false)
+    if (secSaveError)   setSecError('')
+  }
+
+  async function handleSecSave() {
+    setSecSaving(true)
+    setSecError('')
+    setSecSuccess(false)
+    try {
+      await api.patch(`/secretaries/${user.id}/profile`, secInfo)
+      setSecSuccess(true)
+      setTimeout(() => setSecSuccess(false), 5000)
+    } catch (err) {
+      setSecError(err?.response?.data?.error ?? 'Failed to save changes.')
+    } finally {
+      setSecSaving(false)
+    }
   }
 
   async function handleBasicSave() {
@@ -542,7 +589,7 @@ export default function ClinicianProfileManager() {
         </div>
 
         {/* ══ Section 3 — Additional Info Entries ══════════════════════════════ */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-8 py-7">
+        <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm px-8 py-7${user.role === 'secretary' ? ' mb-6' : ''}`}>
           <h2 className="text-lg font-semibold text-[var(--color-dark)] mb-2">Additional Info</h2>
           <p className="text-xs text-slate-400 mb-6">
             Background, awards, clinical interests — anything visible on the public profile.
@@ -612,6 +659,80 @@ export default function ClinicianProfileManager() {
             )}
           </div>
         </div>
+
+        {/* ══ Section 4 — Secretary Information (role=secretary only) ═════════ */}
+        {user.role === 'secretary' && (
+          <div className="bg-white rounded-2xl border border-[var(--color-border)] shadow-sm p-6 mt-6">
+            <h2 className="section-heading mb-4">Secretary Information</h2>
+            <p className="text-sm text-[var(--color-muted)] mb-6">
+              This contact information is shared with patients in appointment confirmation emails.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <FieldLabel htmlFor="sec_first_name">First Name</FieldLabel>
+                <input
+                  id="sec_first_name"
+                  type="text"
+                  value={secInfo.first_name}
+                  onChange={e => handleSecChange('first_name', e.target.value)}
+                  placeholder="First name"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <FieldLabel htmlFor="sec_last_name">Last Name</FieldLabel>
+                <input
+                  id="sec_last_name"
+                  type="text"
+                  value={secInfo.last_name}
+                  onChange={e => handleSecChange('last_name', e.target.value)}
+                  placeholder="Last name"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <FieldLabel htmlFor="sec_contact_phone" optional>Contact Phone</FieldLabel>
+                <input
+                  id="sec_contact_phone"
+                  type="tel"
+                  value={secInfo.contact_phone}
+                  onChange={e => handleSecChange('contact_phone', e.target.value)}
+                  placeholder="09XXXXXXXXX"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <FieldLabel htmlFor="sec_contact_email" optional>Contact Email</FieldLabel>
+                <input
+                  id="sec_contact_email"
+                  type="email"
+                  value={secInfo.contact_email}
+                  onChange={e => handleSecChange('contact_email', e.target.value)}
+                  placeholder="secretary@example.com"
+                  className={inputCls}
+                />
+              </div>
+            </div>
+
+            <div className="mt-7 flex items-center gap-4">
+              <button
+                type="button"
+                onClick={handleSecSave}
+                disabled={secSaving}
+                className="px-6 py-3 rounded-lg bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px]"
+              >
+                {secSaving ? 'Saving…' : 'Save Secretary Info'}
+              </button>
+              {secSaveSuccess && (
+                <p className="text-sm font-medium text-green-700">Secretary information updated.</p>
+              )}
+              {secSaveError && (
+                <p className="text-sm font-medium text-[var(--color-accent)]">{secSaveError}</p>
+              )}
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

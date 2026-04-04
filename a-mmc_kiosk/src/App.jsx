@@ -3,10 +3,11 @@ import IdleTimer from './components/IdleTimer'
 import HomeScreen from './pages/HomeScreen'
 import DirectoryScreen from './pages/DirectoryScreen'
 import ClinicianDetailScreen from './pages/ClinicianDetailScreen'
+import KioskTriageScreen from './pages/KioskTriageScreen'
 
 export default function App() {
-  const [screen, setScreen] = useState('home')
-  const [selectedClinician, setSelectedClinician] = useState(null)
+  const [screen,             setScreen]             = useState('home')
+  const [selectedClinician,  setSelectedClinician]  = useState(null)
 
   const handleNavigate = useCallback((target) => {
     setScreen(target)
@@ -42,6 +43,10 @@ export default function App() {
           clinician={selectedClinician}
           onBack={() => setScreen('directory')}
         />
+      )}
+
+      {screen === 'triage' && (
+        <KioskTriageScreen onNavigate={handleNavigate} />
       )}
     </>
   )

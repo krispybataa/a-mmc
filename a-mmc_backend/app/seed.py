@@ -197,6 +197,7 @@ def run_seed_part2(app):
     secretary = Secretary(
         first_name="Test",
         last_name="Secretary",
+        contact_phone="09000000000",
         contact_email="secretary@test.com",
         login_email="secretary@test.com",
         login_password_hash=hash_password("testpassword123")
