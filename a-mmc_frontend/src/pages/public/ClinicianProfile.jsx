@@ -49,9 +49,8 @@ function buildScheduleRows(schedule) {
   })
 }
 
-function formatName({ first_name, middle_name, last_name, suffix }) {
-  const mid = middle_name ? `${middle_name[0]}.` : ''
-  const base = [first_name, mid, last_name].filter(Boolean).join(' ')
+function formatName({ first_name, last_name, suffix }) {
+  const base = [first_name, last_name].filter(Boolean).join(' ')
   return suffix ? `${base}, ${suffix}` : base
 }
 
@@ -270,7 +269,7 @@ export default function ClinicianProfile() {
           <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
             <button
               onClick={handleBook}
-              className="w-full py-3 px-6 rounded-lg text-sm font-semibold text-white bg-[var(--color-primary)] hover:opacity-90 transition-opacity duration-150"
+              className="w-full py-3 px-6 rounded-lg text-sm font-semibold text-white bg-[var(--color-accent)] hover:opacity-90 transition-opacity duration-150"
             >
               Book an Appointment
             </button>
@@ -288,7 +287,7 @@ export default function ClinicianProfile() {
           {/* Clinic Schedule (F2F) */}
           {f2fSchedules.length > 0 && (
             <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-primary)] mb-5">
+              <h2 className="section-heading flex items-center gap-2 text-sm mb-5">
                 <Building2 size={15} className="shrink-0" />
                 Clinic Schedule
               </h2>
@@ -299,7 +298,7 @@ export default function ClinicianProfile() {
           {/* Teleconsultation Schedule */}
           {teleconsultSchedules.length > 0 && (
             <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-primary)] mb-5">
+              <h2 className="section-heading flex items-center gap-2 text-sm mb-5">
                 <Video size={15} className="shrink-0" />
                 Teleconsultation Schedule
               </h2>
@@ -316,7 +315,7 @@ export default function ClinicianProfile() {
 
           {/* HMOs */}
           <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-            <h2 className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">
+            <h2 className="section-heading flex items-center gap-2 text-xs mb-4">
               <ShieldCheck size={13} />
               HMO Accreditations
             </h2>

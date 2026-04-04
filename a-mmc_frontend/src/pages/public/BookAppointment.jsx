@@ -25,9 +25,8 @@ function formatFullDate(dateStr) {
   return `${dow}, ${MONTHS[mo - 1]} ${d}, ${y}`
 }
 
-function formatName({ title, first_name, middle_name, last_name, suffix }) {
-  const mid  = middle_name ? `${middle_name[0]}.` : ''
-  const base = [title, first_name, mid, last_name].filter(Boolean).join(' ')
+function formatName({ title, first_name, last_name, suffix }) {
+  const base = [title, first_name, last_name].filter(Boolean).join(' ')
   return suffix ? `${base}, ${suffix}` : base
 }
 
@@ -221,6 +220,9 @@ export default function BookAppointment() {
   }
 
   // ── Derived values (clinician is guaranteed non-null here) ───────────────────
+  const hasF2F  = clinician.schedules.some(s => !s.consultation_type || s.consultation_type === 'f2f')
+  const hasTele = clinician.schedules.some(s => s.consultation_type === 'teleconsult')
+
   const today          = new Date()
   const minDate        = toDateStr(today)
   const maxDate        = toDateStr(new Date(today.getTime() + 60 * 24 * 60 * 60 * 1000))
@@ -354,11 +356,13 @@ export default function BookAppointment() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                 {/* Face-to-Face card */}
+                <div className={!hasF2F ? 'opacity-40 cursor-not-allowed pointer-events-none' : ''}>
                 <button
                   type="button"
                   onClick={() => handleSelectConsultationType('f2f')}
+                  disabled={!hasF2F}
                   className={[
-                    'flex flex-col items-start gap-3 p-5 rounded-xl border-2 text-left transition-colors',
+                    'w-full flex flex-col items-start gap-3 p-5 rounded-xl border-2 text-left transition-colors',
                     consultationType === 'f2f'
                       ? 'border-[var(--color-primary)] bg-blue-50'
                       : 'border-slate-200 hover:border-slate-300 bg-white',
@@ -390,13 +394,19 @@ export default function BookAppointment() {
                     </span>
                   )}
                 </button>
+                {!hasF2F && (
+                  <p className="text-xs text-gray-400 text-center mt-1">Not available for this clinician</p>
+                )}
+                </div>
 
                 {/* Teleconsult card */}
+                <div className={!hasTele ? 'opacity-40 cursor-not-allowed pointer-events-none' : ''}>
                 <button
                   type="button"
                   onClick={() => handleSelectConsultationType('teleconsult')}
+                  disabled={!hasTele}
                   className={[
-                    'flex flex-col items-start gap-3 p-5 rounded-xl border-2 text-left transition-colors',
+                    'w-full flex flex-col items-start gap-3 p-5 rounded-xl border-2 text-left transition-colors',
                     consultationType === 'teleconsult'
                       ? 'border-teal-500 bg-teal-50'
                       : 'border-slate-200 hover:border-slate-300 bg-white',
@@ -428,6 +438,10 @@ export default function BookAppointment() {
                     </span>
                   )}
                 </button>
+                {!hasTele && (
+                  <p className="text-xs text-gray-400 text-center mt-1">Not available for this clinician</p>
+                )}
+                </div>
 
               </div>
             </div>

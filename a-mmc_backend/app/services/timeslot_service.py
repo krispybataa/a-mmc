@@ -55,12 +55,15 @@ def generate_slots(
     clinician_id: int,
     from_date: date,
     to_date: date,
-    slot_duration_minutes: int = 60,
     commit: bool = True,
 ) -> int:
     """
     Generate ClinicianTimeslot rows for `clinician_id` between `from_date`
     and `to_date` (inclusive) based on their ClinicianSchedule.
+
+    One slot is created per AM window and one per PM window. Each slot spans
+    the full period (start_time = am_start, end_time = am_end). Multiple
+    patients book into the same slot; the slot is not 1:1 with a patient.
 
     Slots that already exist for a given (clinician, date, start_time) are
     skipped to prevent duplicates.
@@ -103,7 +106,7 @@ def generate_slots(
         sched_list = schedule_by_day.get(weekday, [])
 
         for sched in sched_list:
-            # Generate slots for AM window and PM window independently
+            # One slot per AM window, one slot per PM window
             for window_start_raw, window_end_raw in [
                 (sched.am_start, sched.am_end),
                 (sched.pm_start, sched.pm_end),
@@ -116,26 +119,22 @@ def generate_slots(
                 if start_min >= end_min:
                     continue  # Degenerate window — skip
 
-                cursor = start_min
-                while cursor + slot_duration_minutes <= end_min:
-                    start_str = _minutes_to_time_str(cursor)
-                    end_str = _minutes_to_time_str(cursor + slot_duration_minutes)
+                start_str = _minutes_to_time_str(start_min)
+                end_str   = _minutes_to_time_str(end_min)
 
-                    key = (current, start_str, sched.consultation_type)
-                    if key not in existing_keys:
-                        new_slots.append(
-                            ClinicianTimeslot(
-                                clinician_id=clinician_id,
-                                slot_date=current,
-                                start_time=start_str,
-                                end_time=end_str,
-                                status="available",
-                                consultation_type=sched.consultation_type,
-                            )
+                key = (current, start_str, sched.consultation_type)
+                if key not in existing_keys:
+                    new_slots.append(
+                        ClinicianTimeslot(
+                            clinician_id=clinician_id,
+                            slot_date=current,
+                            start_time=start_str,
+                            end_time=end_str,
+                            status="available",
+                            consultation_type=sched.consultation_type,
                         )
-                        existing_keys.add(key)
-
-                    cursor += slot_duration_minutes
+                    )
+                    existing_keys.add(key)
 
         current += timedelta(days=1)
 
@@ -151,15 +150,14 @@ def _compute_expected_keys(
     clinician_id: int,
     from_date: date,
     to_date: date,
-    slot_duration_minutes: int,
 ) -> set:
     """
-    Derive the set of (slot_date, start_time_str) keys that SHOULD exist for a
-    clinician given their current ClinicianSchedule, for dates in [from_date, to_date].
+    Derive the set of (slot_date, start_time_str, consultation_type) keys that
+    SHOULD exist for a clinician given their current ClinicianSchedule, for
+    dates in [from_date, to_date].
 
-    This mirrors the key-derivation logic inside generate_slots() without
-    creating any DB rows. Used by regenerate_slots_for_schedule_change() to
-    identify orphaned slots after a schedule edit.
+    One key per AM window and one per PM window — mirrors generate_slots().
+    Used by regenerate_slots_for_schedule_change() to identify orphaned slots.
     """
     schedule_rows = ClinicianSchedule.query.filter_by(clinician_id=clinician_id).all()
     schedule_by_day: dict[int, list] = {}
@@ -183,10 +181,7 @@ def _compute_expected_keys(
                     continue
                 if start_min >= end_min:
                     continue
-                cursor = start_min
-                while cursor + slot_duration_minutes <= end_min:
-                    expected.add((current, _minutes_to_time_str(cursor), sched.consultation_type))
-                    cursor += slot_duration_minutes
+                expected.add((current, _minutes_to_time_str(start_min), sched.consultation_type))
         current += timedelta(days=1)
 
     return expected
@@ -196,7 +191,6 @@ def regenerate_slots_for_schedule_change(
     clinician_id: int,
     from_date: date,
     to_date: date,
-    slot_duration_minutes: int = 60,
 ) -> dict:
     """
     Handle schedule changes by inserting new slots and removing orphaned ones.
@@ -254,12 +248,10 @@ def regenerate_slots_for_schedule_change(
 
     try:
         # Step 1: Insert new slots matching the updated schedule (no commit yet)
-        generate_slots(clinician_id, from_date, to_date, slot_duration_minutes, commit=False)
+        generate_slots(clinician_id, from_date, to_date, commit=False)
 
         # Step 2: Derive expected keys from the current (post-edit) schedule
-        expected_keys = _compute_expected_keys(
-            clinician_id, from_date, to_date, slot_duration_minutes
-        )
+        expected_keys = _compute_expected_keys(clinician_id, from_date, to_date)
 
         # Step 3: Query all timeslots in range.
         # SQLAlchemy autoflushes before this query, so generate_slots inserts are visible.

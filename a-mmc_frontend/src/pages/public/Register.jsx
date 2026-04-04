@@ -641,7 +641,7 @@ export default function Register() {
               type="button"
               onClick={step < 3 ? handleNext : handleSubmit}
               disabled={loading}
-              className="flex-1 py-3 px-6 rounded-xl text-base font-semibold text-white bg-[var(--color-primary)] hover:brightness-110 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed min-h-[48px]"
+              className="flex-1 py-3 px-6 rounded-xl text-base font-semibold text-white bg-[var(--color-accent)] hover:brightness-110 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed min-h-[48px]"
             >
               {step < 3
                 ? 'Continue →'

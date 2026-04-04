@@ -157,6 +157,8 @@ def appointment_confirmation(
     payment_type: str,
     consultation_type: str,
     secretary_email: str = '',
+    secretary_name: str = '',
+    secretary_contact_phone: str = '',
 ) -> dict:
     """
     Sent to the patient when C/S accepts a pending appointment.
@@ -173,11 +175,19 @@ def appointment_confirmation(
         ("Payment Type",       payment_type or "\u2014"),
         ("Consultation Type",  (consultation_type or "").upper() or "\u2014"),
     ]
-    if secretary_email:
+    if secretary_name and secretary_email and secretary_contact_phone:
         detail_rows.append((
             "Contact",
-            f'For inquiries, please contact the clinic secretary at '
-            f'<a href="mailto:{secretary_email}">{secretary_email}</a>',
+            f'For more information about your appointment, contact '
+            f'<strong>{secretary_name}</strong> at '
+            f'<a href="mailto:{secretary_email}">{secretary_email}</a>'
+            f' or {secretary_contact_phone}.',
+        ))
+    elif secretary_email:
+        detail_rows.append((
+            "Contact",
+            f'For more information, contact the clinic at '
+            f'<a href="mailto:{secretary_email}">{secretary_email}</a>.',
         ))
 
     body = (
@@ -412,6 +422,8 @@ def reschedule_confirmation_to_patient(
     new_time: str,
     room_number: str,
     secretary_email: str = '',
+    secretary_name: str = '',
+    secretary_contact_phone: str = '',
 ) -> dict:
     """
     Sent to the patient when C/S confirms their rescheduled appointment.
@@ -425,11 +437,19 @@ def reschedule_confirmation_to_patient(
         ("New Time",        new_time),
         ("Room / Location", room_number or "To be confirmed"),
     ]
-    if secretary_email:
+    if secretary_name and secretary_email and secretary_contact_phone:
         detail_rows.append((
             "Contact",
-            f'For inquiries, please contact the clinic secretary at '
-            f'<a href="mailto:{secretary_email}">{secretary_email}</a>',
+            f'For more information about your appointment, contact '
+            f'<strong>{secretary_name}</strong> at '
+            f'<a href="mailto:{secretary_email}">{secretary_email}</a>'
+            f' or {secretary_contact_phone}.',
+        ))
+    elif secretary_email:
+        detail_rows.append((
+            "Contact",
+            f'For more information, contact the clinic at '
+            f'<a href="mailto:{secretary_email}">{secretary_email}</a>.',
         ))
 
     body = (
