@@ -115,7 +115,7 @@ export default function PatientDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
           <Link
             to="/doctors"
-            className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-[var(--color-primary)] text-white p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 min-h-[120px]"
+            className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-[var(--color-accent)] text-white p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 min-h-[120px]"
           >
             <CalendarPlus size={28} />
             <span className="font-semibold text-base">Book Appointment</span>
@@ -139,7 +139,7 @@ export default function PatientDashboard() {
         {/* ── Recent Appointments ── */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-[var(--color-text)]">
+            <h2 className="section-heading text-xl">
               Recent Appointments
             </h2>
             <Link to="/dashboard/appointments" className="text-sm text-[var(--color-primary)] font-medium hover:underline">
@@ -162,7 +162,7 @@ export default function PatientDashboard() {
                 >
                   <div className="flex-1 space-y-1">
                     <p className="font-semibold text-[var(--color-text)]">
-                      {appt.clinician.title} {appt.clinician.last_name}
+                      {appt.clinician.last_name}, {appt.clinician.first_name} · {appt.clinician.specialty}
                     </p>
                     <p className="text-sm text-[var(--color-muted)]">
                       {formatDate(appt.slot.slot_date)} · {formatTime(appt.slot.start_time)}

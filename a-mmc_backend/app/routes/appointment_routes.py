@@ -205,7 +205,7 @@ def update_appointment(appointment_id: int):
                 decline_reason = (data.get("decline_reason") or "").strip()
                 if not decline_reason:
                     return jsonify({"error": "decline_reason is required when declining an appointment"}), 422
-                a.cancellation_reason = decline_reason
+                a.decline_reason = decline_reason
 
             # ----------------------------------------------------------------
             # Reschedule request — either party initiates
@@ -355,7 +355,7 @@ def _serialize(a: Appointment) -> dict:
         "clinician_id": a.clinician_id,
         "clinician": {
             "clinician_id": c.clinician_id,
-            "title": c.title,
+            "title": c.title or "",
             "first_name": c.first_name,
             "last_name": c.last_name,
             "specialty": c.specialty,
@@ -366,6 +366,7 @@ def _serialize(a: Appointment) -> dict:
             "slot_id": s.slot_id,
             "slot_date": str(s.slot_date),
             "start_time": str(s.start_time)[:5],   # HH:MM
+            "end_time": str(s.end_time)[:5],        # HH:MM
         },
         "consultation_date": str(a.consultation_date),
         "chief_complaint": a.chief_complaint,
@@ -374,7 +375,7 @@ def _serialize(a: Appointment) -> dict:
         "consultation_type": a.consultation_type,
         "status": a.status,
         "reschedule_reason": a.reschedule_reason,
-        "cancellation_reason": a.cancellation_reason,
+        "decline_reason": a.decline_reason,
         "created_at": a.created_at.isoformat() if a.created_at else None,
         "updated_at": a.updated_at.isoformat() if a.updated_at else None,
     }

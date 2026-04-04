@@ -19,12 +19,12 @@ const STATUS_LABELS = {
 }
 
 const STATUS_COLORS = {
-  pending:               'bg-yellow-100 text-yellow-800',
+  pending:               'bg-[var(--color-primary)]/10 text-[var(--color-primary)]',
   accepted:              'bg-green-100 text-green-700',
-  reschedule_requested:  'bg-amber-100 text-amber-800',
-  rejected:              'bg-red-100 text-red-700',
-  declined:              'bg-red-100 text-red-700',
-  cancelled:             'bg-slate-100 text-slate-600',
+  reschedule_requested:  'bg-[var(--color-accent)]/10 text-[var(--color-accent)]',
+  rejected:              'bg-slate-100 text-slate-500',
+  declined:              'bg-slate-100 text-slate-500',
+  cancelled:             'bg-slate-100 text-slate-500',
 }
 
 const STATUS_FILTER_OPTIONS = [

@@ -40,10 +40,10 @@ function SidebarNav({ email, onLogout, onNavClick }) {
             end={end}
             onClick={onNavClick}
             className={({ isActive }) => [
-              'flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors min-h-[48px]',
+              'flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors min-h-[48px] border-l-4',
               isActive
-                ? 'bg-white/20 text-white'
-                : 'text-white/70 hover:text-white hover:bg-white/10',
+                ? 'bg-white/20 text-white border-[var(--color-accent)]'
+                : 'text-white/70 hover:text-white hover:bg-white/10 border-transparent',
             ].join(' ')}
           >
             {label}

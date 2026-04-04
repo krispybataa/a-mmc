@@ -26,7 +26,7 @@ def list_clinicians():
     return jsonify([
         {
             "clinician_id": c.clinician_id,
-            "title": c.title,
+            "title": c.title or "",
             "first_name": c.first_name,
             "middle_name": c.middle_name,
             "last_name": c.last_name,
@@ -382,9 +382,8 @@ def generate_clinician_slots(clinician_id: int):
     Generate available timeslots for a clinician from their schedule.
 
     Body (JSON):
-        from_date             (str, YYYY-MM-DD, required)
-        to_date               (str, YYYY-MM-DD, required)
-        slot_duration_minutes (int, optional, default 30)
+        from_date  (str, YYYY-MM-DD, required)
+        to_date    (str, YYYY-MM-DD, required)
 
     Returns:
         { "slots_created": N }
@@ -406,16 +405,11 @@ def generate_clinician_slots(clinician_id: int):
     if from_date > to_date:
         return jsonify({"error": "from_date must be on or before to_date"}), 422
 
-    duration = data.get("slot_duration_minutes", 30)
-    if not isinstance(duration, int) or duration <= 0:
-        return jsonify({"error": "slot_duration_minutes must be a positive integer"}), 422
-
     try:
         count = generate_slots(
             clinician_id=clinician_id,
             from_date=from_date,
             to_date=to_date,
-            slot_duration_minutes=duration,
         )
     except ValueError as e:
         return jsonify({"error": str(e)}), 422

@@ -82,7 +82,7 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-3 mt-8">
               <Link
                 to="/doctors"
-                className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold text-base bg-white text-[var(--color-primary)] hover:bg-gray-100 min-h-[48px]"
+                className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold text-base bg-[var(--color-accent)] text-white hover:brightness-110 min-h-[48px]"
               >
                 Book an Appointment
               </Link>

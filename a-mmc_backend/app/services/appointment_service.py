@@ -43,16 +43,21 @@ def has_overlap(patient_id: int, candidate_slot, exclude_appointment_id=None) ->
 
     Notes
     -----
-    Time comparison only (start_time / end_time) — date is not included in the
-    overlap test as documented. Slots on different dates that share a time range
-    are treated as conflicting; this is intentional per the current design and
-    can be revisited if the booking model evolves.
+    The query is scoped to the same slot_date as the candidate slot via a JOIN
+    on ClinicianTimeslot. Appointments on different calendar dates can never
+    conflict regardless of time overlap.
     """
     from app.models.appointment import Appointment
+    from app.models.clinician import ClinicianTimeslot
 
-    query = Appointment.query.filter(
-        Appointment.patient_id == patient_id,
-        Appointment.status.in_(_ACTIVE_STATUSES),
+    query = (
+        Appointment.query
+        .join(ClinicianTimeslot, Appointment.slot_id == ClinicianTimeslot.slot_id)
+        .filter(
+            Appointment.patient_id == patient_id,
+            Appointment.status.in_(_ACTIVE_STATUSES),
+            ClinicianTimeslot.slot_date == candidate_slot.slot_date,
+        )
     )
     if exclude_appointment_id is not None:
         query = query.filter(Appointment.appointment_id != exclude_appointment_id)
