@@ -290,6 +290,12 @@ A patient books an appointment within a clinician's timeslot.
 - **No billing, diagnostics, or post-consultation data** — strictly pre-consultation coordination
 - **Gender filter removed** from Doctors.jsx — field not present in Clinician schema
 
+### Kiosk triage — shared source
+The kiosk imports `TRIAGE_STEPS`, `SYMPTOM_SPECIALTY_MAP`, and `HMO_LABEL_MAP` directly
+from `a-mmc_frontend/src/data/triageLogic.js` via a Vite alias (`@triage`). Any update
+to `triageLogic.js` in the main frontend automatically applies to the kiosk on next build.
+Do NOT maintain a separate copy of triage data in the kiosk.
+
 ### Auth token strategy
 - Access token: 60 minutes, returned in response body as `{ "access_token": "...", "user": {...} }`
 - Refresh token: 7 days, set as `httpOnly` cookie named `refresh_token`

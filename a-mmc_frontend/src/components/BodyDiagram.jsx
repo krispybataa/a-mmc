@@ -31,8 +31,9 @@ const SUBSTEPS = {
   limbs: {
     question: 'What concerns you about your muscles or joints?',
     options: [
-      { label: 'Bones, Joints & Muscles', subtext: 'Joint pain, swelling, back pain', specialty: 'Orthopedic Surgery' },
-      { label: 'Skin',                    subtext: 'Rashes, itching, skin changes',    specialty: 'Dermatology' },
+      { label: 'Joints, Muscles & Arthritis', subtext: 'Joint pain, swelling, stiffness, or arthritis',    specialty: 'Rheumatology' },
+      { label: 'Bone or Injury Concerns',     subtext: 'Fractures, injuries, or structural bone issues',   specialty: 'Orthopedic Surgery' },
+      { label: 'Skin',                        subtext: 'Rashes, itching, or skin changes',                 specialty: 'Dermatology' },
     ],
   },
 }
@@ -66,7 +67,7 @@ const TAPPABLE_MUSCLES = Object.keys(MUSCLE_REGION)
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function BodyDiagram({ onSelect, onFallback }) {
+export default function BodyDiagram({ onSelect }) {
   const [highlighted, setHighlighted] = useState(null)
   const [substep,     setSubstep]     = useState(null)  // null or substep definition object
 
@@ -151,14 +152,6 @@ export default function BodyDiagram({ onSelect, onFallback }) {
           </button>
         </div>
       )}
-
-      {/* Fallback link */}
-      <button
-        onClick={onFallback}
-        className="text-sm font-medium text-[var(--color-primary)] underline"
-      >
-        Browse Typical Symptoms
-      </button>
 
     </div>
   )

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ListFilter, X } from 'lucide-react'
 import { TRIAGE_STEPS, SYMPTOM_SPECIALTY_MAP, HMO_LABEL_MAP } from '../../data/triageLogic'
 import BodyDiagram from '../../components/BodyDiagram'
 
@@ -186,33 +186,57 @@ export default function GuidedSearch() {
               Tap the area of your body that concerns you.
             </p>
 
-            <BodyDiagram
-              onSelect={handleBodyDiagramSelect}
-              onFallback={() => setShowFallback(true)}
-            />
+            <BodyDiagram onSelect={handleBodyDiagramSelect} />
 
+            <button
+              onClick={() => setShowFallback(true)}
+              className="mt-6 w-full flex items-center justify-center gap-2 border-2 border-[var(--color-primary)] text-[var(--color-primary)] font-semibold rounded-xl py-3 px-6 hover:bg-[var(--color-primary)] hover:text-white transition-all duration-150"
+            >
+              <ListFilter className="w-5 h-5" />
+              Browse Typical Symptoms
+            </button>
+
+            {/* Symptom drawer */}
             {showFallback && (
-              <div className="mt-8">
-                <p className="text-sm text-[var(--color-muted)] mb-3">
-                  Select the option that best matches your concern:
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {SYMPTOM_STEP.options.map(opt => (
+              <>
+                {/* Overlay */}
+                <div
+                  aria-hidden="true"
+                  className="fixed inset-0 bg-black/50 z-50"
+                  onClick={() => setShowFallback(false)}
+                />
+                {/* Drawer panel */}
+                <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[80vh] overflow-y-auto p-6 z-50">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="font-semibold text-base text-[var(--color-text)]">
+                      Typical Symptoms
+                    </p>
                     <button
-                      key={opt.id}
-                      onClick={() => handleSymptomSelect(opt.id)}
-                      className={`${baseCard} min-h-[72px] px-5 py-4 flex-col items-start`}
+                      onClick={() => setShowFallback(false)}
+                      aria-label="Close"
+                      className="text-slate-400 hover:text-slate-600 transition-colors p-1 min-h-[44px] min-w-[44px] flex items-center justify-center"
                     >
-                      <span className="font-semibold text-sm text-[var(--color-text)] leading-snug">
-                        {opt.label}
-                      </span>
-                      <span className="text-xs text-[var(--color-muted)] mt-1 leading-snug text-left">
-                        {opt.subtext}
-                      </span>
+                      <X size={20} />
                     </button>
-                  ))}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {SYMPTOM_STEP.options.map(opt => (
+                      <button
+                        key={opt.id}
+                        onClick={() => { setShowFallback(false); handleSymptomSelect(opt.id) }}
+                        className={`${baseCard} min-h-[72px] px-5 py-4 flex-col items-start`}
+                      >
+                        <span className="font-semibold text-sm text-[var(--color-text)] leading-snug">
+                          {opt.label}
+                        </span>
+                        <span className="text-xs text-[var(--color-muted)] mt-1 leading-snug text-left">
+                          {opt.subtext}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
         )}

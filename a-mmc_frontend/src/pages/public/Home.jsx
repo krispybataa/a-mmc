@@ -4,7 +4,7 @@ import { Search, SlidersHorizontal, ShieldCheck, CalendarCheck, Clock } from 'lu
 import api from '../../services/api'
 import ClinicianCard from '../../components/ClinicianCard'
 
-const HERO_IMAGE = 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1600&q=80'
+const HERO_IMAGE = '/assets/images/hero.jpg'
 
 // ── Trust bar ──────────────────────────────────────────────────────────────────
 
