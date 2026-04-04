@@ -1,5 +1,6 @@
 import csv
 import os
+import random as _random
 import re
 import secrets
 import string
@@ -137,6 +138,15 @@ def run_seed_part1():
 # =====================================================
 
 def run_seed_part2(app):
+    existing_patient = Patient.query.filter_by(login_email='patient@test.com').first()
+    if existing_patient:
+        test_clinician = Clinician.query.filter_by(login_email='clinician@test.com').first()
+        if test_clinician and test_clinician.profile_picture is None:
+            test_clinician.profile_picture = '/assets/clin-avatars/doc-01.png'
+            db.session.commit()
+        print("DB already seeded.")
+        return
+
     print("Running DB seed...")
 
     # -------------------------
@@ -174,7 +184,8 @@ def run_seed_part2(app):
         room_number="Hall A Rm 230",
         contact_email="clinician@test.com",
         login_email="clinician@test.com",
-        login_password_hash=hash_password("testpassword123")
+        login_password_hash=hash_password("testpassword123"),
+        profile_picture='/assets/clin-avatars/doc-01.png',
     )
     db.session.add(clinician)
     db.session.commit()
@@ -274,6 +285,8 @@ def run_seed_part2(app):
 # CSV BULK IMPORT
 # =====================================================
 
+_AVATAR_POOL = [f'/assets/clin-avatars/doc-{i:02d}.png' for i in range(1, 9)]
+
 _DAYS = [
     ("mon", "Monday"),
     ("tue", "Tuesday"),
@@ -328,7 +341,10 @@ def run_seed_csv(csv_path):
             try:
                 existing = Clinician.query.filter_by(login_email=login_email).first()
                 if existing:
-                    print(f"Skipping {login_email} (already exists)")
+                    print(f"Skipping {login_email} — already exists")
+                    if existing.profile_picture is None:
+                        existing.profile_picture = _random.choice(_AVATAR_POOL)
+                        db.session.commit()
                     skipped += 1
                     continue
 
@@ -372,6 +388,8 @@ def run_seed_csv(csv_path):
                 )
                 db.session.add(clinician)
                 db.session.flush()
+
+                clinician.profile_picture = _random.choice(_AVATAR_POOL)
 
                 # HMO accreditations (hmo_1 through hmo_10)
                 for i in range(1, 11):

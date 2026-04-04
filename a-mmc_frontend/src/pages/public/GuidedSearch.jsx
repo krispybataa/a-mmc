@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { TRIAGE_STEPS, SYMPTOM_SPECIALTY_MAP, HMO_LABEL_MAP } from '../../data/triageLogic'
+import BodyDiagram from '../../components/BodyDiagram'
 
 const HMO_STEP     = TRIAGE_STEPS[0]   // { id: 'hmo', question, options }
 const SYMPTOM_STEP = TRIAGE_STEPS[1]   // { id: 'symptoms', question, options }
@@ -21,9 +22,10 @@ const baseCard = [
 export default function GuidedSearch() {
   const navigate = useNavigate()
 
-  const [step,        setStep]        = useState(1)
-  const [firstVisit,  setFirstVisit]  = useState(null)
-  const [selectedHMO, setSelectedHMO] = useState(null)   // HMO option id e.g. 'maxicare'
+  const [step,         setStep]         = useState(1)
+  const [firstVisit,   setFirstVisit]   = useState(null)
+  const [selectedHMO,  setSelectedHMO]  = useState(null)   // HMO option id e.g. 'maxicare'
+  const [showFallback, setShowFallback] = useState(false)
 
   function handleFirstVisit(value) {
     setFirstVisit(value)
@@ -35,20 +37,38 @@ export default function GuidedSearch() {
     setStep(3)
   }
 
-  function handleSymptomSelect(optionId) {
-    const specialty = SYMPTOM_SPECIALTY_MAP[optionId]
-    const hmoLabel  = selectedHMO && selectedHMO !== 'no_hmo'
+  function _buildParams(specialty) {
+    const hmoLabel = selectedHMO && selectedHMO !== 'no_hmo'
       ? HMO_LABEL_MAP[selectedHMO]
       : null
-
     const params = new URLSearchParams()
     if (specialty) params.set('specialty', specialty)
     if (hmoLabel)  params.set('hmo', hmoLabel)
-    navigate('/doctors?' + params.toString())
+    return params
+  }
+
+  function handleSymptomSelect(optionId) {
+    navigate('/doctors?' + _buildParams(SYMPTOM_SPECIALTY_MAP[optionId]).toString())
+  }
+
+  function handleDirectSpecialty(specialty) {
+    navigate('/doctors?' + _buildParams(specialty).toString())
+  }
+
+  function handleBodyDiagramSelect(specialty) {
+    const matchingOption = SYMPTOM_STEP.options.find(
+      o => SYMPTOM_SPECIALTY_MAP[o.id] === specialty
+    )
+    if (matchingOption) {
+      handleSymptomSelect(matchingOption.id)
+    } else {
+      handleDirectSpecialty(specialty)
+    }
   }
 
   function goBack() {
     setStep(s => s - 1)
+    setShowFallback(false)
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -155,7 +175,7 @@ export default function GuidedSearch() {
         )}
 
         {/* ════════════════════════════
-            STEP 3 — Symptom selection
+            STEP 3 — Body diagram
         ════════════════════════════ */}
         {step === 3 && (
           <div>
@@ -163,24 +183,37 @@ export default function GuidedSearch() {
               {SYMPTOM_STEP.question}
             </h2>
             <p className="text-[var(--color-muted)] mb-6">
-              Select the option that best matches your concern.
+              Tap the area of your body that concerns you.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {SYMPTOM_STEP.options.map(opt => (
-                <button
-                  key={opt.id}
-                  onClick={() => handleSymptomSelect(opt.id)}
-                  className={`${baseCard} min-h-[72px] px-5 py-4 flex-col items-start`}
-                >
-                  <span className="font-semibold text-sm text-[var(--color-text)] leading-snug">
-                    {opt.label}
-                  </span>
-                  <span className="text-xs text-[var(--color-muted)] mt-1 leading-snug text-left">
-                    {opt.subtext}
-                  </span>
-                </button>
-              ))}
-            </div>
+
+            <BodyDiagram
+              onSelect={handleBodyDiagramSelect}
+              onFallback={() => setShowFallback(true)}
+            />
+
+            {showFallback && (
+              <div className="mt-8">
+                <p className="text-sm text-[var(--color-muted)] mb-3">
+                  Select the option that best matches your concern:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {SYMPTOM_STEP.options.map(opt => (
+                    <button
+                      key={opt.id}
+                      onClick={() => handleSymptomSelect(opt.id)}
+                      className={`${baseCard} min-h-[72px] px-5 py-4 flex-col items-start`}
+                    >
+                      <span className="font-semibold text-sm text-[var(--color-text)] leading-snug">
+                        {opt.label}
+                      </span>
+                      <span className="text-xs text-[var(--color-muted)] mt-1 leading-snug text-left">
+                        {opt.subtext}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

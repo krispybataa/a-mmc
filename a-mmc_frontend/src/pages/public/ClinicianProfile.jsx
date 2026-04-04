@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, MapPin, ShieldCheck, Building2, Video } from 'lucide-react'
+import { ArrowLeft, MapPin, DoorOpen, ShieldCheck, Building2, Video } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import ClinicianCard from '../../components/ClinicianCard'
@@ -13,28 +13,37 @@ const DAY_ABBREV = {
   Thursday: 'Thu', Friday: 'Fri', Saturday: 'Sat',
 }
 
-function formatTime(t) {
-  if (!t) return null
-  const [h, m] = t.split(':').map(Number)
-  const period = h >= 12 ? 'PM' : 'AM'
-  const h12 = h % 12 || 12
-  return `${h12}:${String(m).padStart(2, '0')} ${period}`
+function formatTime(timeStr) {
+  if (!timeStr) return null
+  const [hourStr, minStr] = timeStr.split(':')
+  let hour = parseInt(hourStr, 10)
+  const min = minStr || '00'
+  const period = hour >= 12 ? 'PM' : 'AM'
+  if (hour === 0) hour = 12
+  else if (hour > 12) hour = hour - 12
+  return `${hour}:${min} ${period}`
 }
 
-function formatRange(start, end) {
-  if (!start || !end) return null
-  return `${formatTime(start)} – ${formatTime(end)}`
+function isValidSlot(start, end) {
+  if (!start || !end) return false
+  const toMins = t => {
+    const [h, m] = t.split(':').map(Number)
+    return h * 60 + m
+  }
+  return toMins(end) > toMins(start)
 }
 
 function buildScheduleRows(schedule) {
   const byDay = Object.fromEntries(schedule.map((s) => [s.day_of_week, s]))
   return WEEK_DAYS.map((day) => {
     const s = byDay[day]
+    const showAM = s && isValidSlot(s.am_start, s.am_end)
+    const showPM = s && isValidSlot(s.pm_start, s.pm_end)
     return {
       day,
       abbrev: DAY_ABBREV[day],
-      am: s ? (formatRange(s.am_start, s.am_end) ?? '—') : '—',
-      pm: s ? (formatRange(s.pm_start, s.pm_end) ?? '—') : '—',
+      am: showAM ? `${formatTime(s.am_start)} – ${formatTime(s.am_end)}` : '—',
+      pm: showPM ? `${formatTime(s.pm_start)} – ${formatTime(s.pm_end)}` : '—',
       active: !!s,
     }
   })
@@ -188,6 +197,7 @@ export default function ClinicianProfile() {
     department,
     specialty,
     room_number,
+    local_number,
     profile_picture,
     schedules,
     hmos,
@@ -224,13 +234,13 @@ export default function ClinicianProfile() {
               <img
                 src={profile_picture}
                 alt={fullName}
-                className="w-40 h-40 rounded-full object-cover mb-4"
+                className="w-48 h-48 rounded-2xl object-cover mb-4"
               />
             ) : (
               <img
                 src={`https://api.dicebear.com/7.x/personas/svg?seed=${clinician.clinician_id}`}
                 alt={fullName}
-                className="w-40 h-40 rounded-full mb-4"
+                className="w-48 h-48 rounded-2xl mb-4"
               />
             )}
 
@@ -247,6 +257,12 @@ export default function ClinicianProfile() {
                 <MapPin size={13} className="mt-0.5 shrink-0 text-slate-400" />
                 <span>{room_number}</span>
               </div>
+              {local_number && (
+                <div className="flex items-center gap-2 text-sm text-[var(--color-muted)]">
+                  <DoorOpen className="w-4 h-4 flex-shrink-0" />
+                  <span>Local {local_number}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -344,18 +360,13 @@ export default function ClinicianProfile() {
             <p className="text-sm text-slate-400 mt-0.5">Other clinicians in {specialty}</p>
           </div>
 
-          <div className="flex gap-4 overflow-x-auto pb-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
             {similarLoading
-              ? Array.from({ length: 3 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex-shrink-0 w-64 h-48 rounded-xl bg-gray-100 animate-pulse"
-                  />
+              ? [1, 2, 3].map(i => (
+                  <div key={i} className="w-full h-48 rounded-2xl animate-pulse bg-gray-100" />
                 ))
               : similar.map(c => (
-                  <div key={c.clinician_id} className="flex-shrink-0 w-64">
-                    <ClinicianCard clinician={c} />
-                  </div>
+                  <ClinicianCard key={c.clinician_id} clinician={c} />
                 ))
             }
           </div>

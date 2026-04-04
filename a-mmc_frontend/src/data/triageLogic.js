@@ -129,19 +129,33 @@ export const TRIAGE_STEPS = [
 // Specialty strings must exactly match the specialty values in the live DB.
 // null = no specialty filter — show full clinician directory.
 export const SYMPTOM_SPECIALTY_MAP = {
+  // ── Text symptom step options ────────────────────────────────────────────
   heart:    'Cardiology',
   joints:   'Rheumatology',
   stomach:  'Gastroenterology',
-  womens:   'OB-GYN',
+  womens:   'Obstetrics & Gynecology',
   skin:     'Dermatology',
   eyes:     'Ophthalmology',
-  ent:      'ENT',
+  ent:      'Otorhinolaryngology',
   mental:   'Psychiatry',
   child:    'Pediatrics',
   hormones: 'Endocrinology',
-  kidneys:  'Urology',
+  kidneys:  'Nephrology',
   brain:    'Neurology',
   others:   null,
+  // ── Body diagram muscle / overlay aliases ────────────────────────────────
+  cardiology:    'Cardiology',
+  gastro:        'Gastroenterology',
+  neurology:     'Neurology',
+  orthopedic:    'Orthopedic Surgery',
+  obgyn:         'Obstetrics & Gynecology',
+  pulmonary:     'Pulmonary Medicine',
+  dental:        'Dental Medicine',
+  dermatology:   'Dermatology',
+  allergy:       'Allergology & Immunology',
+  pediatrics:    'Pediatrics',
+  endocrinology: 'Endocrinology',
+  ophthalmology: 'Ophthalmology',
 }
 
 // Maps HMO option IDs to the exact hmo_name strings stored in the DB.

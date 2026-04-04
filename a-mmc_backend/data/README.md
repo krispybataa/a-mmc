@@ -52,7 +52,7 @@ python seed.py data/clinicians_full.csv
 python data/generate_clinicians.py \
   data/clinicians_anon.csv \
   data/clinicians_synthetic.csv \
-  --count 50
+  --count 52
 ```
 
 The script reads `clinicians_anon.csv` to learn realistic schedule time
