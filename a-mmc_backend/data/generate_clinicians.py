@@ -11,7 +11,7 @@ Usage:
   python data/generate_clinicians.py \\
     data/clinicians_anon.csv \\
     data/clinicians_synthetic.csv \\
-    --count 50
+    --count 52
 """
 
 import argparse
@@ -84,6 +84,7 @@ SPECIALTY_ROOMS = {
     'Pulmonary Medicine':       ('Hall C', 3),
     'Radiology':                ('Hall A', 2),
     'Surgery':                  ('Hall B', 6),
+    'Neurology':                ('Hall B', 3),
 }
 
 # ---------------------------------------------------------------------------
@@ -249,7 +250,7 @@ def _distribute_specialties(count):
     n = len(specialties)
 
     allocation = {s: 2 for s in specialties}
-    extras = count - (n * 2)   # e.g. 50 - 42 = 8
+    extras = count - (n * 2)   # e.g. 52 - 44 = 8
     if extras > 0:
         for spec in random.sample(specialties, min(extras, n)):
             allocation[spec] += 1
@@ -258,7 +259,7 @@ def _distribute_specialties(count):
     for spec, cnt in allocation.items():
         result.extend([spec] * cnt)
 
-    # If count > n*3, pad with random picks (shouldn't happen at count=50)
+    # If count > n*3, pad with random picks (shouldn't happen at count=52)
     while len(result) < count:
         result.append(random.choice(specialties))
 
@@ -276,7 +277,7 @@ def main():
     )
     parser.add_argument('input',  help='Path to clinicians_anon.csv (header source + pattern learning)')
     parser.add_argument('output', help='Path to write clinicians_synthetic.csv')
-    parser.add_argument('--count', type=int, default=50, help='Number of rows to generate (default: 50)')
+    parser.add_argument('--count', type=int, default=52, help='Number of rows to generate (default: 52)')
     args = parser.parse_args()
 
     if not os.path.isfile(args.input):

@@ -7,7 +7,7 @@ function formatName({ first_name, middle_name, last_name, suffix }) {
   return suffix ? `${base}, ${suffix}` : base
 }
 
-export default function ClinicianCard({ clinician }) {
+export default function ClinicianCard({ clinician, displayName }) {
   const {
     clinician_id,
     department,
@@ -17,7 +17,7 @@ export default function ClinicianCard({ clinician }) {
     schedules = [],
   } = clinician
 
-  const fullName    = formatName(clinician)
+  const fullName    = displayName ?? formatName(clinician)
   const consultTypes = [...new Set(schedules.map(s => s.consultation_type).filter(Boolean))]
   const dicebearUrl = `https://api.dicebear.com/7.x/personas/svg?seed=${clinician_id}`
 
@@ -40,14 +40,17 @@ export default function ClinicianCard({ clinician }) {
           />
         )}
 
-        {/* Specialty badge — bottom-left overlay */}
-        <span className="absolute bottom-3 left-3 bg-white/20 text-white text-sm font-medium px-3 py-1 rounded-full">
+      </div>
+
+      {/* ── Specialty badge ── */}
+      <div className="px-5 pt-4 pb-1">
+        <span className="inline-block bg-[var(--color-primary)] text-white text-xs font-semibold px-3 py-1 rounded-full">
           {specialty}
         </span>
       </div>
 
       {/* ── Name ── */}
-      <div className="px-5 pt-4 pb-2">
+      <div className="px-5 pb-2">
         <p className="font-semibold text-base text-[var(--color-text)] leading-snug">
           {fullName}
         </p>
