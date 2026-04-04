@@ -27,7 +27,7 @@ jobs:
           --health-retries=5
 
     env:
-      DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/test_db
+      ACTIONS_TEST_DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/test_db
       FLASK_APP: app:create_app
 
     # defaults:
