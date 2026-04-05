@@ -5,4 +5,4 @@ COPY . .
 RUN npm ci && npm run build
 RUN apk add --no-cache curl
 
-CMD ["npm", "start"]    
+CMD ["npm", "preview"]    
