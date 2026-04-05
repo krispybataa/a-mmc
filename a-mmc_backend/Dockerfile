@@ -10,7 +10,8 @@ RUN apk add --no-cache \
     gcc \
     musl-dev \
     libffi-dev \
-    postgresql-dev
+    postgresql-dev \
+    postgresql-client
 
 WORKDIR /app
 
@@ -20,6 +21,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # install gunicorn
 RUN pip install gunicorn
 
+# copies everything in current directory to /app in the container
 COPY . .
 
-CMD ["sh", "-c", "flask db upgrade && gunicorn -b 0.0.0.0:5000 --workers 2 --threads 1 'run:create_app()'"]
+# copy shell scripts to the container
+COPY shell_scripts/wait-for-postgres.sh ./shell_scripts/wait-for-postgres.sh
+
+#chmod +x the postgres checker script
+RUN chmod +x ./shell_scripts/wait-for-postgres.sh
+
+ENTRYPOINT ["./shell_scripts/wait-for-postgres.sh"]
+CMD ["sh", "-c", "flask db upgrade && gunicorn -b 0.0.0.0:$PORT --workers 2 --threads 1 'run:create_app()'"]
