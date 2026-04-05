@@ -281,13 +281,14 @@ export default function PatientAppointments() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           <p className="font-semibold text-base text-[var(--color-dark)]">
-                            {docName} — {appt.chief_complaint}
+                            {docName}
                           </p>
                           <span className={[
                             'text-xs font-semibold px-2.5 py-1 rounded-full shrink-0',
                             appt.status === 'accepted'             ? 'bg-green-100 text-green-700' :
                             appt.status === 'pending'              ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' :
                             appt.status === 'reschedule_requested' ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' :
+                            appt.status === 'declined'             ? 'bg-red-100 text-red-600' :
                             'bg-slate-100 text-slate-500',
                           ].join(' ')}>
                             {appt.status.replace(/_/g, ' ')}
@@ -296,6 +297,12 @@ export default function PatientAppointments() {
                         <p className="text-sm text-slate-400">
                           {formatDateFull(appt.slot.slot_date)} · {formatTimeRange(appt.slot.start_time, appt.slot.end_time)}
                         </p>
+                        {appt.status === 'declined' && appt.decline_reason && (
+                          <p className="text-xs text-slate-500 mt-1">
+                            <span className="font-medium text-slate-600">Reason: </span>
+                            {appt.decline_reason}
+                          </p>
+                        )}
                       </div>
 
                       {/* Right: action buttons */}
