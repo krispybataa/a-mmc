@@ -9,6 +9,15 @@ services:
     depends_on:
       a-mmc-backend:
         condition: service_healthy
+  
+  a-mmc-kiosk:
+    image: "${KIOSK_IMAGE}"
+    container_name: "${KIOSK_CONTAINER}"
+    networks:
+      - a-mmc-network
+    depends_on:
+      a-mmc-backend:
+        condition: service_healthy
 
   a-mmc-backend:
     image: "${BACKEND_IMAGE}"

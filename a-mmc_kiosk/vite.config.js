@@ -7,11 +7,10 @@ export default defineConfig({
   server: { fs: { allow: ['..'] } },
   resolve: {
     alias: {
-      // '@triage': path.resolve(
-      //   __dirname,
-      //   '../a-mmc_frontend/src/data/triageLogic.js'
-      // )
-      '@triage': '/src/data/triageLogic.js'
+      '@triage': path.resolve(
+        __dirname,
+        './src/data/triageLogic.js'
+      )
     }
   }
 })
