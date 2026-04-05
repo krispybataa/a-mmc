@@ -5,12 +5,12 @@ Generates presigned S3 PUT URLs for direct browser-to-bucket uploads.
 Reads all config from environment variables — no credentials in code.
 
 Required env vars (set in Railway backend service Variables):
-    AWS_ENDPOINT_URL    https://t3.storageapi.dev
-    AWS_REGION          auto
-    AWS_BUCKET_NAME     a-mmcbucket-ytqemjyosgjea
-    AWS_ACCESS_KEY_ID   tid_...
-    AWS_SECRET_ACCESS_KEY  <secret>
-    AWS_PUBLIC_BASE_URL https://t3.storageapi.dev/a-mmcbucket-ytqemjyosgjea
+    ENDPOINT_URL    https://t3.storageapi.dev
+    REGION          auto
+    BUCKET_NAME     a-mmcbucket-ytqemjyosgjea
+    ACCESS_KEY_ID   tid_...
+    SECRET_ACCESS_KEY  <secret>
+    PUBLIC_BASE_URL https://t3.storageapi.dev/a-mmcbucket-ytqemjyosgjea
                         (path-style public read URL base — verify against Railway bucket settings)
 """
 
@@ -23,10 +23,10 @@ from botocore.config import Config
 def _get_client():
     return boto3.client(
         "s3",
-        endpoint_url=os.environ.get("AWS_ENDPOINT_URL"),
-        region_name=os.environ.get("AWS_REGION", "auto"),
-        aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
-        aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
+        endpoint_url=os.environ.get("ENDPOINT"),
+        region_name=os.environ.get("REGION", "auto"),
+        aws_access_key_id=os.environ.get("ACCESS_KEY_ID"),
+        aws_secret_access_key=os.environ.get("SECRET_ACCESS_KEY"),
         config=Config(signature_version="s3v4"),
     )
 
@@ -48,13 +48,13 @@ def generate_presigned_upload(filename: str, context: str = "general", expires_i
     Raises:
         Exception if AWS env vars are missing or boto3 call fails.
     """
-    bucket = os.environ.get("AWS_BUCKET_NAME")
-    public_base = os.environ.get("AWS_PUBLIC_BASE_URL", "").rstrip("/")
+    bucket = os.environ.get("BUCKET")
+    public_base = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
 
     if not bucket:
-        raise RuntimeError("AWS_BUCKET_NAME environment variable is not set.")
+        raise RuntimeError("BUCKET environment variable is not set.")
     if not public_base:
-        raise RuntimeError("AWS_PUBLIC_BASE_URL environment variable is not set.")
+        raise RuntimeError("PUBLIC_BASE_URL environment variable is not set.")
 
     # Unique object key: context/uuid.ext
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
