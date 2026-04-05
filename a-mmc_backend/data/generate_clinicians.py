@@ -4,19 +4,38 @@ generate_clinicians.py
 Generate synthetic clinician rows in the same CSV format as clinicians_anon.csv.
 
 Reads the real anonymised data to learn schedule time patterns and uses those
-to produce realistic-looking synthetic schedules. Does NOT require Flask or
+to produce realistic-looking synthetic schedules.  Does NOT require Flask or
 any application context — stdlib only.
+
+Coverage guarantee
+------------------
+With --min-hmo-coverage N (default 3), the script guarantees that every
+(specialty, HMO) pair in the output has at least N doctors.  The minimum
+total count required for full coverage is computed automatically:
+
+    min_per_specialty = ceil(len(HMO_POOL) * N / max_hmos_per_doc)
+    min_count         = len(SPECIALTY_ROOMS) * min_per_specialty
+
+If --count is below this threshold the script raises the count automatically
+and prints a warning.  At the default of N=3 this floor is 189 doctors.
 
 Usage:
   python data/generate_clinicians.py \\
     data/clinicians_anon.csv \\
     data/clinicians_synthetic.csv \\
-    --count 52
+    --count 200
+
+  # Drop coverage requirement (pure random, old behaviour):
+  python data/generate_clinicians.py \\
+    data/clinicians_anon.csv \\
+    data/clinicians_synthetic.csv \\
+    --count 52 --min-hmo-coverage 0
 """
 
 import argparse
 import collections
 import csv
+import math
 import os
 import random
 
@@ -132,7 +151,7 @@ _DEFAULT_PM_ENDS   = ['16:00', '17:00', '18:00']
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Helpers — time / schedule (unchanged)
 # ---------------------------------------------------------------------------
 
 def _normalize_time(raw, is_pm_col=False):
@@ -203,7 +222,6 @@ def _learn_time_pools(input_path, header):
 def _pick_hmo_count():
     """Weighted random HMO count: 0=5%, 1-2=10%, 3-5=30%, 6-8=35%, 9-12=20%."""
     population = list(range(13))
-    # Distribute bucket percentages evenly across values in each bucket
     weights = [
         5,                              # 0       → 5%
         5,    5,                        # 1-2     → 10%
@@ -239,32 +257,108 @@ def _make_schedule_cols(days, am_starts, am_ends, pm_starts, pm_ends, prefix):
     return cols
 
 
-def _distribute_specialties(count):
+# ---------------------------------------------------------------------------
+# Coverage helpers — new
+# ---------------------------------------------------------------------------
+
+def _calculate_coverage_floor(hmo_pool, max_per_doc, min_coverage):
+    """
+    Return (min_per_specialty, min_total_count).
+
+    min_per_specialty: fewest doctors a specialty needs so that all HMOs
+                       can appear at least min_coverage times given the
+                       per-doctor HMO cap.
+    min_total_count:   min_per_specialty * number of specialties.
+    """
+    if min_coverage <= 0 or max_per_doc <= 0:
+        return 1, len(SPECIALTY_ROOMS)
+    min_per_spec = math.ceil(len(hmo_pool) * min_coverage / max_per_doc)
+    return min_per_spec, len(SPECIALTY_ROOMS) * min_per_spec
+
+
+def _distribute_specialties(count, min_per_specialty):
     """
     Assign specialties to `count` doctors.
-    Each of the 21 specialties gets at least 2; extras (count - 42) are distributed
-    one-per-specialty at random until all count slots are filled.
-    Result is shuffled before returning.
+    Every specialty gets at least min_per_specialty slots.
+    Extras (count - base) are distributed one-per-specialty at random
+    until all count slots are filled.  Result is shuffled before returning.
     """
     specialties = list(SPECIALTY_ROOMS.keys())
-    n = len(specialties)
+    n_specs = len(specialties)
 
-    allocation = {s: 2 for s in specialties}
-    extras = count - (n * 2)   # e.g. 52 - 44 = 8
+    allocation = {s: min_per_specialty for s in specialties}
+    base   = n_specs * min_per_specialty
+    extras = count - base
+
     if extras > 0:
-        for spec in random.sample(specialties, min(extras, n)):
+        # Cycle through specialties randomly to distribute extras evenly
+        extra_pool = specialties * (math.ceil(extras / n_specs) + 1)
+        random.shuffle(extra_pool)
+        for spec in extra_pool[:extras]:
             allocation[spec] += 1
 
     result = []
     for spec, cnt in allocation.items():
         result.extend([spec] * cnt)
 
-    # If count > n*3, pad with random picks (shouldn't happen at count=52)
-    while len(result) < count:
-        result.append(random.choice(specialties))
-
     random.shuffle(result)
     return result[:count]
+
+
+def _assign_hmos_guaranteed(n_doctors, hmo_pool, min_coverage, max_per_doc):
+    """
+    Return a list of n_doctors HMO lists such that every HMO in hmo_pool
+    appears in at least min_coverage of those lists.
+
+    Phase 1 — Guarantee:
+        Build a "must-assign" list containing each HMO exactly min_coverage
+        times (len = len(hmo_pool) * min_coverage).  Shuffle it, then assign
+        each slot to the doctor with the fewest current HMOs who doesn't
+        already hold that HMO and still has capacity.  Falls back to the
+        least-loaded doctor with capacity if all eligible are at capacity
+        or already have the HMO.
+
+    Phase 2 — Top-up:
+        Randomly top up each doctor's HMO list to the natural distribution
+        (via _pick_hmo_count), without exceeding max_per_doc.
+
+    Precondition:
+        n_doctors * max_per_doc >= len(hmo_pool) * min_coverage
+        (verified in main before calling this function)
+    """
+    doc_hmos = [set() for _ in range(n_doctors)]
+
+    # ── Phase 1: structured guarantee ───────────────────────────────────────
+    must_assign = hmo_pool * min_coverage
+    random.shuffle(must_assign)
+
+    for hmo in must_assign:
+        # Prefer doctors without this HMO, ordered by fewest HMOs first
+        candidates = sorted(
+            [i for i in range(n_doctors)
+             if hmo not in doc_hmos[i] and len(doc_hmos[i]) < max_per_doc],
+            key=lambda i: len(doc_hmos[i]),
+        )
+        if not candidates:
+            # All eligible at capacity or already have it — take least loaded with capacity
+            candidates = sorted(
+                [i for i in range(n_doctors) if len(doc_hmos[i]) < max_per_doc],
+                key=lambda i: len(doc_hmos[i]),
+            )
+        if candidates:
+            doc_hmos[candidates[0]].add(hmo)
+
+    # ── Phase 2: random top-up ───────────────────────────────────────────────
+    for i in range(n_doctors):
+        current = len(doc_hmos[i])
+        target  = max(current, min(_pick_hmo_count(), max_per_doc))
+        if target > current:
+            available  = [h for h in hmo_pool if h not in doc_hmos[i]]
+            extra_count = min(target - current, len(available))
+            if extra_count > 0:
+                doc_hmos[i].update(random.sample(available, extra_count))
+
+    return [sorted(s) for s in doc_hmos]
 
 
 # ---------------------------------------------------------------------------
@@ -275,9 +369,20 @@ def main():
     parser = argparse.ArgumentParser(
         description='Generate synthetic clinician rows in clinicians_anon.csv format.'
     )
-    parser.add_argument('input',  help='Path to clinicians_anon.csv (header source + pattern learning)')
-    parser.add_argument('output', help='Path to write clinicians_synthetic.csv')
-    parser.add_argument('--count', type=int, default=52, help='Number of rows to generate (default: 52)')
+    parser.add_argument('input',  help='Path to clinicians_anon.csv (header + pattern source)')
+    parser.add_argument('output', help='Path to write the synthetic CSV')
+    parser.add_argument(
+        '--count', type=int, default=200,
+        help='Number of rows to generate.  Auto-raised to coverage floor if needed (default: 200)',
+    )
+    parser.add_argument(
+        '--min-hmo-coverage', type=int, default=3,
+        dest='min_hmo_coverage',
+        help=(
+            'Minimum doctors per (specialty, HMO) pair (default: 3). '
+            'Set to 0 to disable the guarantee and use pure-random HMO assignment.'
+        ),
+    )
     args = parser.parse_args()
 
     if not os.path.isfile(args.input):
@@ -294,21 +399,66 @@ def main():
     am_starts, am_ends, pm_starts, pm_ends = _learn_time_pools(args.input, header)
 
     # ── Identify HMO column names in order ────────────────────────────────
-    hmo_cols = [c for c in header if c.startswith('hmo_')]
+    hmo_cols    = [c for c in header if c.startswith('hmo_')]
+    max_per_doc = min(len(HMO_POOL), len(hmo_cols))   # hard cap per clinician row
 
-    # ── Distribute specialties ─────────────────────────────────────────────
-    specialty_list   = _distribute_specialties(args.count)
+    # ── Compute coverage floor and (optionally) adjust count ──────────────
+    min_per_spec, min_count = _calculate_coverage_floor(
+        HMO_POOL, max_per_doc, args.min_hmo_coverage,
+    )
+
+    count = args.count
+    if args.min_hmo_coverage > 0 and count < min_count:
+        print(
+            f'WARNING: --count {count} is below the coverage floor of {min_count} '
+            f'({len(SPECIALTY_ROOMS)} specialties × {min_per_spec} doctors minimum for '
+            f'{args.min_hmo_coverage}× HMO coverage). '
+            f'Raising count to {min_count}.'
+        )
+        count = min_count
+
+    # ── Distribute specialties (floor enforced) ────────────────────────────
+    specialty_list = _distribute_specialties(count, min_per_spec if args.min_hmo_coverage > 0 else 1)
+
+    # Adjust to exact count (distribute_specialties may overshoot by rounding)
+    if len(specialty_list) != count:
+        specialty_list = specialty_list[:count]
+
     specialty_counts = collections.Counter(specialty_list)
 
+    # ── Pre-assign HMOs per specialty group ───────────────────────────────
+    # Group doctor indices by specialty so coverage is computed within each group.
+    spec_to_indices: dict[str, list[int]] = collections.defaultdict(list)
+    for i, spec in enumerate(specialty_list):
+        spec_to_indices[spec].append(i)
+
+    hmo_assignments: dict[int, list[str]] = {}
+
+    if args.min_hmo_coverage > 0:
+        for spec, indices in spec_to_indices.items():
+            group_hmos = _assign_hmos_guaranteed(
+                n_doctors   = len(indices),
+                hmo_pool    = HMO_POOL,
+                min_coverage = args.min_hmo_coverage,
+                max_per_doc  = max_per_doc,
+            )
+            for doc_idx, hmo_list in zip(indices, group_hmos):
+                hmo_assignments[doc_idx] = hmo_list
+    else:
+        # Pure-random fallback (original behaviour)
+        for i in range(count):
+            n_hmos = min(_pick_hmo_count(), max_per_doc, len(HMO_POOL))
+            hmo_assignments[i] = random.sample(HMO_POOL, n_hmos)
+
     # ── Generate rows ──────────────────────────────────────────────────────
-    rows = []
+    rows      = []
     tele_count = 0
 
     for i, specialty in enumerate(specialty_list):
-        hall, floor    = SPECIALTY_ROOMS[specialty]
-        room_suffix    = random.randint(1, 99)
-        room_number    = f'{hall} {floor}{room_suffix:02d}'
-        local_number   = f'{floor}{room_suffix:03d}'
+        hall, floor  = SPECIALTY_ROOMS[specialty]
+        room_suffix  = random.randint(1, 99)
+        room_number  = f'{hall} {floor}{room_suffix:02d}'
+        local_number = f'{floor}{room_suffix:03d}'
 
         first_name  = random.choice(FIRST_NAMES)
         last_name   = random.choice(LAST_NAMES)
@@ -318,17 +468,14 @@ def main():
         pw_prefix   = random.choice(['testpassword', 'stafflogin', 'clinicuser', 'testaccount'])
         password    = pw_prefix + str(random.randint(100, 999))
 
-        hmo_count   = min(_pick_hmo_count(), len(hmo_cols), len(HMO_POOL))
-        chosen_hmos = random.sample(HMO_POOL, hmo_count)
-
         # F2F schedule
         f2f_day_count = _pick_day_count()
         f2f_days      = random.sample(ALL_DAYS, min(f2f_day_count, len(ALL_DAYS)))
         f2f_cols      = _make_schedule_cols(f2f_days, am_starts, am_ends, pm_starts, pm_ends, 'f2f_')
 
-        # Teleconsult schedule (~20% of doctors, on different days from F2F)
-        tele_cols     = {}
-        remaining     = [d for d in ALL_DAYS if d not in f2f_days]
+        # Teleconsult schedule (~20% of doctors, on days not used for F2F)
+        tele_cols = {}
+        remaining = [d for d in ALL_DAYS if d not in f2f_days]
         if remaining and random.random() < 0.20:
             tele_day_count = _pick_day_count()
             tele_days      = random.sample(remaining, min(tele_day_count, len(remaining)))
@@ -347,8 +494,9 @@ def main():
         row['login_email']  = login_email
         row['password']     = password
 
-        for j, hmo_name in enumerate(chosen_hmos):
-            row[hmo_cols[j]] = hmo_name
+        for j, hmo_name in enumerate(hmo_assignments[i]):
+            if j < len(hmo_cols):
+                row[hmo_cols[j]] = hmo_name
 
         row.update(f2f_cols)
         row.update(tele_cols)
@@ -365,13 +513,13 @@ def main():
         writer.writeheader()
         writer.writerows(rows)
 
-    # ── Verify column counts ───────────────────────────────────────────────
+    # ── Column-count validation ────────────────────────────────────────────
     print('\n--- Column check ---')
     check_ok = True
     with open(args.output, newline='', encoding='utf-8') as f:
-        reader      = csv.reader(f)
-        out_header  = next(reader)
-        expected    = len(out_header)
+        reader     = csv.reader(f)
+        out_header = next(reader)
+        expected   = len(out_header)
         for idx, data_row in enumerate(reader, 1):
             if len(data_row) != expected:
                 print(f'  FAIL row {idx}: {len(data_row)} cols (expected {expected})')
@@ -379,8 +527,40 @@ def main():
     if check_ok:
         print('Column check: PASS')
 
+    # ── Coverage verification ──────────────────────────────────────────────
+    if args.min_hmo_coverage > 0:
+        print('\n--- Coverage verification ---')
+        # Build (specialty, hmo) → doctor count from actual output rows
+        coverage: dict[tuple[str, str], int] = collections.defaultdict(int)
+        for row in rows:
+            spec = row['specialty']
+            for col in hmo_cols:
+                hmo = row.get(col, '').strip()
+                if hmo:
+                    coverage[(spec, hmo)] += 1
+
+        gaps = [
+            (spec, hmo)
+            for spec in SPECIALTY_ROOMS
+            for hmo in HMO_POOL
+            if coverage[(spec, hmo)] < args.min_hmo_coverage
+        ]
+        if gaps:
+            print(f'  FAIL: {len(gaps)} (specialty, HMO) pairs below {args.min_hmo_coverage}× coverage:')
+            for spec, hmo in sorted(gaps)[:10]:
+                print(f'    [{coverage[(spec, hmo)]}] {spec} / {hmo}')
+            if len(gaps) > 10:
+                print(f'    ... and {len(gaps) - 10} more')
+        else:
+            total_pairs = len(SPECIALTY_ROOMS) * len(HMO_POOL)
+            print(
+                f'  PASS: all {total_pairs} (specialty, HMO) pairs have '
+                f'>= {args.min_hmo_coverage} doctors.'
+            )
+
     # ── Summary ────────────────────────────────────────────────────────────
     print(f'\nGenerated {len(rows)} synthetic clinicians')
+    print(f'Coverage guarantee: {args.min_hmo_coverage}x per (specialty, HMO) pair')
     print('Specialty distribution:')
     for spec in sorted(specialty_counts):
         print(f'  {spec}: {specialty_counts[spec]}')
