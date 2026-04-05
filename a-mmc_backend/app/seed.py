@@ -19,9 +19,21 @@ from datetime import time, date, timedelta
 from app.services.auth_service import hash_password
 
 from app.models.patient import Patient
+from app.models.admin import Admin
 from app.models.secretary import Secretary, SecretaryClinicianLink
 from app.models.appointment import Appointment
 from app.services.timeslot_service import generate_slots
+
+# =====================================================
+# CONSTANTS
+# =====================================================
+
+# Login emails for the 12 real Rheumatology test clinicians (from clinicians_real.csv)
+RHEUM_CLINICIAN_EMAILS = [f'testclinician{i}@ammc.com' for i in range(1, 13)]
+
+# Admin default credentials — change after first login
+_ADMIN_EMAIL    = 'admin@alagang-mmc.local'
+_ADMIN_PASSWORD = 'ChangeMe123!'
 
 # =====================================================
 # DB SEEDING
@@ -460,6 +472,241 @@ def run_seed_csv(csv_path):
 
 
 # =====================================================
+# PRODUCTION SEED ADDITIONS
+# =====================================================
+
+def run_seed_admin():
+    """
+    Create the system admin account if it doesn't already exist.
+    Returns the plaintext password (for manifest), or None if already existed.
+    """
+    existing = Admin.query.filter_by(login_email=_ADMIN_EMAIL).first()
+    if existing:
+        print(f"Admin already exists: {_ADMIN_EMAIL}")
+        return None
+
+    admin = Admin(
+        first_name='System',
+        last_name='Administrator',
+        login_email=_ADMIN_EMAIL,
+        login_password_hash=hash_password(_ADMIN_PASSWORD),
+    )
+    db.session.add(admin)
+    db.session.commit()
+    print(f"Admin created: {_ADMIN_EMAIL}")
+    return _ADMIN_PASSWORD
+
+
+def run_seed_rheum_secretaries():
+    """
+    Create one secretary for each of the 12 Rheumatology test clinicians
+    and link them via SecretaryClinicianLink.
+
+    Idempotent: skips clinicians whose secretary+link already exist.
+    Returns a list of dicts with plaintext credentials for the manifest.
+    """
+    alphabet = string.ascii_letters + string.digits
+    entries  = []
+
+    for i, clin_email in enumerate(RHEUM_CLINICIAN_EMAILS, 1):
+        clinician = Clinician.query.filter_by(login_email=clin_email).first()
+        if not clinician:
+            print(f"  WARNING: clinician {clin_email} not found — run CSV seed first.")
+            continue
+
+        sec_email = f'testsecretary{i}@ammc.com'
+
+        existing_sec = Secretary.query.filter_by(login_email=sec_email).first()
+        if existing_sec:
+            # Ensure the link exists even if secretary was created manually
+            existing_link = SecretaryClinicianLink.query.filter_by(
+                secretary_id=existing_sec.secretary_id,
+                clinician_id=clinician.clinician_id,
+            ).first()
+            if not existing_link:
+                db.session.add(SecretaryClinicianLink(
+                    secretary_id=existing_sec.secretary_id,
+                    clinician_id=clinician.clinician_id,
+                ))
+                db.session.commit()
+                print(f"  Linked existing secretary {sec_email} → {clin_email}")
+            else:
+                print(f"  Already linked: {sec_email} → {clin_email}")
+            continue
+
+        password = ''.join(secrets.choice(alphabet) for _ in range(14))
+        secretary = Secretary(
+            first_name=f'Secretary{i}',
+            last_name=clinician.last_name,
+            contact_phone='09000000000',
+            contact_email=sec_email,
+            login_email=sec_email,
+            login_password_hash=hash_password(password),
+        )
+        db.session.add(secretary)
+        db.session.flush()
+
+        db.session.add(SecretaryClinicianLink(
+            secretary_id=secretary.secretary_id,
+            clinician_id=clinician.clinician_id,
+        ))
+        db.session.commit()
+
+        clin_name = f'{clinician.first_name} {clinician.last_name}'.title()
+        print(f"  Created {sec_email} (pw: {password}) → {clin_email}")
+        entries.append({
+            'sec_email':  sec_email,
+            'password':   password,
+            'clin_name':  clin_name,
+            'clin_email': clin_email,
+            'room':       clinician.room_number or 'N/A',
+        })
+
+    return entries
+
+
+def _read_rheum_passwords_from_csv(csv_path):
+    """
+    Scan the CSV for Rheumatology rows and return {login_email: plaintext_password}.
+    Used so the manifest can include clinician passwords from the source CSV.
+    """
+    creds = {}
+    try:
+        with open(csv_path, newline='', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                dept = row.get('department', '').strip().lower()
+                if dept == 'rheumatology':
+                    email = row.get('login_email', '').strip()
+                    pw    = row.get('password', '').strip()
+                    if email and pw:
+                        creds[email] = pw
+    except FileNotFoundError:
+        pass
+    return creds
+
+
+def _write_production_manifest(csv_path, admin_password, secretary_entries):
+    """
+    Write a unified credentials document covering:
+      - Admin account
+      - All 12 Rheumatology clinicians (names, rooms, passwords read from CSV)
+      - All 12 Rheumatology secretaries (linked clinician, generated passwords)
+    """
+    rheum_passwords = _read_rheum_passwords_from_csv(csv_path)
+    out_dir         = os.path.dirname(os.path.abspath(csv_path))
+    manifest_path   = os.path.join(out_dir, 'credentials_manifest.txt')
+
+    W = 62
+    lines = [
+        '=' * W,
+        '  UNICORN — TESTER CREDENTIALS MANIFEST',
+        '  Keep this file offline. Do not commit.',
+        '=' * W,
+        '',
+    ]
+
+    # ── Admin ──────────────────────────────────────────────────
+    lines += [
+        'ADMIN ACCOUNT',
+        '-' * W,
+        f'  Email   : {_ADMIN_EMAIL}',
+        f'  Password: {admin_password if admin_password else "(pre-existing — see prior manifest)"}',
+        '  Login at: /staff/login  →  select "Admin" role',
+        '',
+    ]
+
+    # ── Rheumatology clinicians ───────────────────────────────────────
+    lines += [
+        'RHEUMATOLOGY CLINICIANS  (login at /staff/login → Clinician)',
+        '-' * W,
+    ]
+    for i, clin_email in enumerate(RHEUM_CLINICIAN_EMAILS, 1):
+        clin = Clinician.query.filter_by(login_email=clin_email).first()
+        if not clin:
+            lines.append(f'  {i:2}. {clin_email}  — NOT FOUND (CSV import may have failed)')
+            continue
+        name = f'{clin.first_name} {clin.last_name}'.title()
+        pw   = rheum_passwords.get(clin_email, '(auto-generated — see original manifest)')
+        lines += [
+            f'  {i:2}. {name}',
+            f'      Email   : {clin_email}',
+            f'      Password: {pw}',
+            f'      Room    : {clin.room_number or "N/A"}',
+            '',
+        ]
+
+    # ── Secretaries ────────────────────────────────────────────────
+    lines += [
+        'RHEUMATOLOGY SECRETARIES  (login at /staff/login → Secretary)',
+        '-' * W,
+    ]
+    if not secretary_entries:
+        lines.append('  (all secretaries were pre-existing — passwords not available here)')
+        lines.append('')
+    for e in secretary_entries:
+        lines += [
+            f'  Secretary for : {e["clin_name"]}  ({e["clin_email"]})',
+            f'  Email         : {e["sec_email"]}',
+            f'  Password      : {e["password"]}',
+            f'  Clinician Room: {e["room"]}',
+            '',
+        ]
+
+    lines += [
+        '=' * W,
+        '  NOTES',
+        '  • Admin password should be changed after first login.',
+        '  • Secretary accounts share the same dashboard as clinicians.',
+        '  • Synthetic clinicians (non-Rheumatology) have no dedicated testers.',
+        '=' * W,
+        '',
+    ]
+
+    with open(manifest_path, 'w', encoding='utf-8') as mf:
+        mf.write('\n'.join(lines))
+    print(f"Credentials manifest written to: {manifest_path}")
+
+
+def run_seed_production(csv_path):
+    """
+    Full production seed — run once on Railway after first deploy.
+
+    Steps:
+      1. Bulk-import all clinicians from CSV (idempotent)
+      2. Create system admin account
+      3. Create + link 12 Rheumatology secretaries
+      4. Write unified credentials manifest
+
+    Usage:
+      python seed.py data/clinicians_full.csv --production
+    """
+    print("\n" + "=" * 50)
+    print("STEP 1 — CSV clinician import")
+    print("=" * 50)
+    run_seed_csv(csv_path)
+
+    print("\n" + "=" * 50)
+    print("STEP 2 — Admin account")
+    print("=" * 50)
+    admin_password = run_seed_admin()
+
+    print("\n" + "=" * 50)
+    print("STEP 3 — Rheumatology secretaries")
+    print("=" * 50)
+    secretary_entries = run_seed_rheum_secretaries()
+
+    print("\n" + "=" * 50)
+    print("STEP 4 — Credentials manifest")
+    print("=" * 50)
+    _write_production_manifest(csv_path, admin_password, secretary_entries)
+
+    print("\n" + "=" * 50)
+    print("Production seed complete.")
+    print("=" * 50)
+
+
+# =====================================================
 # MAIN
 # =====================================================
 
@@ -472,8 +719,13 @@ if __name__ == "__main__":
             run_seed_part2(app)
         elif len(sys.argv) == 2 and sys.argv[1].endswith(".csv"):
             run_seed_csv(sys.argv[1])
+        elif len(sys.argv) == 3 and sys.argv[1].endswith(".csv") and sys.argv[2] == "--production":
+            run_seed_production(sys.argv[1])
         else:
             print("Usage:")
-            print("  python seed.py              — dev seed")
-            print("  python seed.py data.csv     — bulk import")
+            print("  python seed.py                                — dev seed (part1 + part2)")
+            print("  python seed.py data.csv                       — CSV bulk import only")
+            print("  python seed.py data/clinicians_full.csv --production")
+            print("                                                — full production seed")
+            print("                                                  (CSV + admin + secretaries + manifest)")
             sys.exit(1)
