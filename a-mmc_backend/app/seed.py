@@ -444,7 +444,11 @@ def run_seed_csv(csv_path):
                             commit=True,
                         )
 
-                if row.get("department", "").strip().lower() == "rheumatology":
+                is_rheum = (
+                    row.get("specialty", "").strip().lower() == "rheumatology" or
+                    row.get("department", "").strip().lower() == "rheumatology"
+                )
+                if is_rheum:
                     rheum_entries.append(
                         f"Name: {clinician.first_name} {clinician.last_name}\n"
                         f"Login Email: {login_email}\n"
@@ -576,7 +580,11 @@ def _read_rheum_passwords_from_csv(csv_path):
             reader = csv.DictReader(f)
             for row in reader:
                 dept = row.get('department', '').strip().lower()
-                if dept == 'rheumatology':
+                is_rheum = (
+                    row.get('specialty', '').strip().lower() == 'rheumatology' or
+                    row.get('department', '').strip().lower() == 'rheumatology'
+                )
+                if is_rheum:
                     email = row.get('login_email', '').strip()
                     pw    = row.get('password', '').strip()
                     if email and pw:

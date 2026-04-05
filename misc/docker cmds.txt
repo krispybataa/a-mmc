@@ -23,9 +23,14 @@ docker build .\a-mmc_frontend\ -t krispybata/a-mmc-frontend:latest
 cd .\a-mmc_infra\ ; docker compose up -d 
 cd .\a-mmc_infra\ ; docker compose down -v
 
-docker build . -t krispybata/a-mmc-nginx:latest
+docker build . -t krispybata/a-mmc-nginx:latest ; docker push krispybata/a-mmc-nginx:latest
 
 docker push krispybata/a-mmc-nginx:latest
 
+docker push krispybata/a-mmc-frontend:latest
+
+docker push krispybata/a-mmc-backend:latest
+
+ammcprod
 
 cd /app && python -m app.seed data/clinicians_full.csv
