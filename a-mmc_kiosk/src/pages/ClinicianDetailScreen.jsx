@@ -121,6 +121,23 @@ export default function ClinicianDetailScreen({ clinician: stub, onBack }) {
             className="flex flex-col overflow-y-auto px-8 py-6 gap-5"
             style={{ width: '40%', borderRight: '1px solid #e5e7eb' }}
           >
+            {/* Profile picture */}
+            {(() => {
+              const initials = [data.first_name?.[0], data.last_name?.[0]].filter(Boolean).join('').toUpperCase()
+              return data.profile_picture ? (
+                <img
+                  src={data.profile_picture}
+                  alt=""
+                  style={{ width: '180px', height: '180px', borderRadius: '16px', objectFit: 'cover', border: `3px solid ${PRIMARY}` }}
+                  onError={e => { e.target.style.display = 'none' }}
+                />
+              ) : (
+                <div style={{ width: '180px', height: '180px', borderRadius: '16px', backgroundColor: PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ color: '#fff', fontSize: '40px', fontWeight: '700' }}>{initials || '?'}</span>
+                </div>
+              )
+            })()}
+
             {/* Name + specialty + location */}
             <div>
               <p className="font-bold" style={{ fontSize: '30px', color: PRIMARY }}>

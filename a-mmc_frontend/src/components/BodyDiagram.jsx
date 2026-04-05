@@ -31,7 +31,7 @@ const SUBSTEPS = {
   limbs: {
     question: 'What concerns you about your muscles or joints?',
     options: [
-      { label: 'Joints, Muscles & Arthritis', subtext: 'Joint pain, swelling, stiffness, or arthritis',    specialty: 'Rheumatology' },
+      { label: 'Joints & Muscles', subtext: 'Joint pain, swelling, stiffness, or arthritis',    specialty: 'Rheumatology' },
       { label: 'Bone or Injury Concerns',     subtext: 'Fractures, injuries, or structural bone issues',   specialty: 'Orthopedic Surgery' },
       { label: 'Skin',                        subtext: 'Rashes, itching, or skin changes',                 specialty: 'Dermatology' },
     ],
