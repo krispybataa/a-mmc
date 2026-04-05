@@ -15,20 +15,20 @@ const hmoList      = HMO_STEP.options.filter(o => !o.emphasized)
 
 // ── Body region options ───────────────────────────────────────────────────────
 const BODY_REGIONS = [
-  { icon: '🧠', label: 'Head & Brain',          specialty: 'Neurology' },
-  { icon: '👁️',  label: 'Eyes',                  specialty: 'Ophthalmology' },
-  { icon: '👂', label: 'Ears, Nose & Throat',   specialty: 'Otorhinolaryngology' },
-  { icon: '🦷', label: 'Teeth & Jaw',            specialty: 'Dental Medicine' },
-  { icon: '❤️',  label: 'Heart & Chest',          specialty: 'Cardiology' },
-  { icon: '🫁', label: 'Lungs & Breathing',      specialty: 'Pulmonary Medicine' },
-  { icon: '🫃', label: 'Stomach & Digestion',    specialty: 'Gastroenterology' },
-  { icon: '🦴', label: 'Bones & Joints',         specialty: 'Rheumatology' },
-  { icon: '🩹', label: 'Bone Injury',             specialty: 'Orthopedic Surgery' },
-  { icon: '👩', label: "Women's Health",          specialty: 'Obstetrics & Gynecology' },
-  { icon: '🧴', label: 'Skin',                    specialty: 'Dermatology' },
-  { icon: '👶', label: "Children's Health",       specialty: 'Pediatrics' },
-  { icon: '⚗️',  label: 'Hormones & Metabolism',  specialty: 'Endocrinology' },
-  { icon: '🔬', label: 'Others',                  specialty: null },
+  { label: 'Head & Brain',          subtext: 'Headaches, dizziness, seizures',               specialty: 'Neurology' },
+  { label: 'Eyes',                  subtext: 'Vision problems, eye pain, irritation',         specialty: 'Ophthalmology' },
+  { label: 'Ears, Nose & Throat',   subtext: 'Hearing, sinus, or throat issues',              specialty: 'Otorhinolaryngology' },
+  { label: 'Teeth & Jaw',           subtext: 'Tooth pain, jaw problems',                     specialty: 'Dental Medicine' },
+  { label: 'Heart & Chest',         subtext: 'Chest pain, palpitations',                     specialty: 'Cardiology' },
+  { label: 'Lungs & Breathing',     subtext: 'Shortness of breath, cough',                   specialty: 'Pulmonary Medicine' },
+  { label: 'Stomach & Digestion',   subtext: 'Pain, reflux, bowel issues',                   specialty: 'Gastroenterology' },
+  { label: 'Bones & Joints',        subtext: 'Joint pain, swelling, stiffness, arthritis',   specialty: 'Rheumatology' },
+  { label: 'Bone Injury',           subtext: 'Fractures, injuries, structural bone issues',  specialty: 'Orthopedic Surgery' },
+  { label: "Women's Health",        subtext: 'Menstrual, pregnancy, pelvic pain',            specialty: 'Obstetrics & Gynecology' },
+  { label: 'Skin',                  subtext: 'Rashes, itching, or skin changes',             specialty: 'Dermatology' },
+  { label: "Children's Health",     subtext: 'Pediatric concerns, child development',         specialty: 'Pediatrics' },
+  { label: 'Hormones & Metabolism', subtext: 'Thyroid, diabetes, metabolic conditions',      specialty: 'Endocrinology' },
+  { label: 'Others',                subtext: 'Other concerns not listed above',              specialty: null },
 ]
 
 // ── Step metadata ─────────────────────────────────────────────────────────────
@@ -49,64 +49,66 @@ const cardBase = {
 }
 
 // ── KioskResultCard ───────────────────────────────────────────────────────────
-function KioskResultCard({ clinician }) {
+function KioskResultCard({ clinician, onSelect }) {
   const name     = `${clinician.last_name}, ${clinician.first_name}`
   const initials = [clinician.first_name?.[0], clinician.last_name?.[0]].filter(Boolean).join('').toUpperCase()
   const qrUrl    = `${MAIN_URL}/clinician/${clinician.clinician_id}`
 
   return (
     <div
+      onClick={() => onSelect?.(clinician)}
       style={{
-        ...cardBase,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: '24px 20px',
-        minHeight: '400px',
+        backgroundColor: '#fff',
+        borderRadius: '16px',
+        borderLeft: `4px solid ${PRIMARY}`,
         boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-        gap: '12px',
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: '24px',
+        padding: '24px',
+        cursor: onSelect ? 'pointer' : 'default',
+        transition: 'box-shadow 0.15s',
       }}
+      onMouseEnter={e => { if (onSelect) e.currentTarget.style.boxShadow = '0 4px 20px rgba(29,64,156,0.18)' }}
+      onMouseLeave={e => { if (onSelect) e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.08)' }}
     >
-      {/* Avatar */}
+      {/* Left: profile picture — rounded square */}
       {clinician.profile_picture ? (
         <img
           src={clinician.profile_picture}
           alt=""
-          style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${PRIMARY}` }}
+          style={{ width: '220px', height: '220px', borderRadius: '16px', objectFit: 'cover', border: `2px solid ${PRIMARY}`, flexShrink: 0 }}
           onError={e => { e.target.style.display = 'none' }}
         />
       ) : (
         <div style={{
-          width: '72px', height: '72px', borderRadius: '50%',
+          width: '220px', height: '220px', borderRadius: '16px', flexShrink: 0,
           backgroundColor: PRIMARY, display: 'flex',
           alignItems: 'center', justifyContent: 'center',
         }}>
-          <span style={{ color: '#fff', fontSize: '26px', fontWeight: '700' }}>{initials || '?'}</span>
+          <span style={{ color: '#fff', fontSize: '60px', fontWeight: '700' }}>{initials || '?'}</span>
         </div>
       )}
 
-      {/* Name + specialty + room */}
-      <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: '22px', fontWeight: '700', color: '#1e293b', lineHeight: 1.2 }}>{name}</p>
-        <p style={{ fontSize: '18px', color: '#6B7280', marginTop: '4px' }}>{clinician.specialty}</p>
+      {/* Right: name, specialty, room, QR */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <p style={{ fontSize: '30px', fontWeight: '700', color: '#1e293b', lineHeight: 1.2, marginBottom: '2px' }}>{name}</p>
+        <p style={{ fontSize: '20px', color: '#6B7280' }}>{clinician.specialty}</p>
         {clinician.room_number && (
           <p style={{ fontSize: '18px', color: '#6B7280' }}>📍 {clinician.room_number}</p>
         )}
-      </div>
-
-      {/* QR code */}
-      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-        <QRCodeSVG value={qrUrl} size={180} />
-        <p style={{ fontSize: '16px', color: '#9CA3AF', textAlign: 'center' }}>
-          Scan to book on your phone
-        </p>
+        <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <QRCodeSVG value={qrUrl} size={190} />
+          <p style={{ fontSize: '15px', color: '#9CA3AF' }}>Scan to book on your phone</p>
+        </div>
       </div>
     </div>
   )
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
-export default function KioskTriageScreen({ onNavigate }) {
+export default function KioskTriageScreen({ onNavigate, onSelectClinician }) {
   const [step,              setStep]             = useState('visit')
   const [selectedHmo,       setSelectedHmo]      = useState(null)
   const [selectedSpecialty, setSelectedSpecialty] = useState(null)
@@ -200,8 +202,8 @@ export default function KioskTriageScreen({ onNavigate }) {
           flexShrink: 0,
         }}
       >
-        ← Back
-      </button>
+        ←
+      </button>  {/* arrow-only, matches directory back button */}
       <p style={{ color: '#fff', fontSize: '20px', fontWeight: '600', flex: 1, textAlign: 'center' }}>
         {STEP_LABEL[step]}
       </p>
@@ -356,37 +358,41 @@ export default function KioskTriageScreen({ onNavigate }) {
               <p style={{ fontSize: '22px', color: '#6B7280', marginBottom: '16px' }}>
                 Select the option that best matches your concern:
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 {BODY_REGIONS.map(region => (
                   <button
                     key={region.label}
                     onClick={() => handleRegionSelect(region.specialty)}
                     style={{
                       ...cardBase,
-                      minHeight: '160px',
-                      padding: 0,
-                      overflow: 'hidden',
+                      minHeight: '100px',
+                      padding: '20px 24px',
                       display: 'flex',
                       flexDirection: 'column',
+                      justifyContent: 'center',
+                      textAlign: 'left',
+                      borderLeft: `4px solid ${PRIMARY}`,
+                      borderRadius: '12px',
                     }}
                     onMouseEnter={e => {
                       e.currentTarget.style.backgroundColor = PRIMARY
-                      e.currentTarget.querySelector('.region-label').style.color = '#fff'
-                      e.currentTarget.querySelector('.region-icon').style.filter = 'brightness(0) invert(1)'
+                      e.currentTarget.style.borderLeftColor = PRIMARY
+                      e.currentTarget.querySelector('.rl').style.color = '#fff'
+                      e.currentTarget.querySelector('.rs').style.color = 'rgba(255,255,255,0.75)'
                     }}
                     onMouseLeave={e => {
                       e.currentTarget.style.backgroundColor = '#fff'
-                      e.currentTarget.querySelector('.region-label').style.color = '#1e293b'
-                      e.currentTarget.querySelector('.region-icon').style.filter = ''
+                      e.currentTarget.style.borderLeftColor = PRIMARY
+                      e.currentTarget.querySelector('.rl').style.color = '#1e293b'
+                      e.currentTarget.querySelector('.rs').style.color = '#6B7280'
                     }}
                   >
-                    <div style={{ backgroundColor: PRIMARY, height: '12px', width: '100%', borderRadius: '16px 16px 0 0' }} />
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px' }}>
-                      <span className="region-icon" style={{ fontSize: '40px', lineHeight: 1 }}>{region.icon}</span>
-                      <span className="region-label" style={{ fontSize: '22px', fontWeight: '600', color: '#1e293b', textAlign: 'center', lineHeight: 1.2 }}>
-                        {region.label}
-                      </span>
-                    </div>
+                    <span className="rl" style={{ fontSize: '22px', fontWeight: '700', color: '#1e293b', lineHeight: 1.25 }}>
+                      {region.label}
+                    </span>
+                    <span className="rs" style={{ fontSize: '18px', color: '#6B7280', marginTop: '6px', lineHeight: 1.4 }}>
+                      {region.subtext}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -454,7 +460,7 @@ export default function KioskTriageScreen({ onNavigate }) {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
               {filtered.map(c => (
-                <KioskResultCard key={c.clinician_id} clinician={c} />
+                <KioskResultCard key={c.clinician_id} clinician={c} onSelect={onSelectClinician} />
               ))}
             </div>
 

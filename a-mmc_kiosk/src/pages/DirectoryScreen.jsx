@@ -6,25 +6,42 @@ const PRIMARY = '#1D409C'
 const ACCENT  = '#CE1117'
 
 function ClinicianKioskCard({ clinician, onSelect }) {
-  const name = [clinician.first_name, clinician.last_name].filter(Boolean).join(' ')
+  const name     = [clinician.first_name, clinician.last_name].filter(Boolean).join(' ')
+  const initials = [clinician.first_name?.[0], clinician.last_name?.[0]].filter(Boolean).join('').toUpperCase()
 
   return (
     <button
       onClick={() => onSelect(clinician)}
       className="flex flex-col rounded-2xl shadow-md bg-white text-left transition-colors duration-150 overflow-hidden w-full"
-      style={{ minHeight: '320px', cursor: 'pointer' }}
+      style={{ minHeight: '280px', cursor: 'pointer' }}
     >
-      {/* Top band */}
+      {/* Top band — photo left, name/specialty right */}
       <div
-        className="flex flex-col justify-center px-6 py-5"
+        className="flex flex-row items-center gap-4 px-5 py-4"
         style={{ backgroundColor: PRIMARY }}
       >
-        <p className="text-white font-semibold" style={{ fontSize: '26px' }}>
-          {name}
-        </p>
-        <p className="text-blue-200" style={{ fontSize: '20px' }}>
-          {clinician.specialty}
-        </p>
+        {/* Profile picture */}
+        {clinician.profile_picture ? (
+          <img
+            src={clinician.profile_picture}
+            alt=""
+            style={{ width: '120px', height: '120px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(255,255,255,0.35)' }}
+            onError={e => { e.target.style.display = 'none' }}
+          />
+        ) : (
+          <div style={{ width: '120px', height: '120px', borderRadius: '12px', flexShrink: 0, backgroundColor: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: '28px', fontWeight: '700', color: '#fff' }}>{initials || '?'}</span>
+          </div>
+        )}
+        {/* Name + specialty */}
+        <div>
+          <p className="text-white font-semibold" style={{ fontSize: '24px' }}>
+            {name}
+          </p>
+          <p className="text-blue-200" style={{ fontSize: '18px' }}>
+            {clinician.specialty}
+          </p>
+        </div>
       </div>
       {/* Bottom section */}
       <div className="flex flex-col justify-between flex-1 px-6 py-5 gap-2">

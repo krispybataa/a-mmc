@@ -8,15 +8,17 @@ import KioskTriageScreen from './pages/KioskTriageScreen'
 export default function App() {
   const [screen,             setScreen]             = useState('home')
   const [selectedClinician,  setSelectedClinician]  = useState(null)
+  const [fromScreen,         setFromScreen]         = useState('directory')
 
   const handleNavigate = useCallback((target) => {
     setScreen(target)
   }, [])
 
   const handleSelectClinician = useCallback((clinician) => {
+    setFromScreen(screen)          // remember where we came from
     setSelectedClinician(clinician)
     setScreen('clinician')
-  }, [])
+  }, [screen])
 
   const handleIdle = useCallback(() => {
     setScreen('home')
@@ -41,12 +43,15 @@ export default function App() {
       {screen === 'clinician' && selectedClinician && (
         <ClinicianDetailScreen
           clinician={selectedClinician}
-          onBack={() => setScreen('directory')}
+          onBack={() => setScreen(fromScreen)}
         />
       )}
 
       {screen === 'triage' && (
-        <KioskTriageScreen onNavigate={handleNavigate} />
+        <KioskTriageScreen
+          onNavigate={handleNavigate}
+          onSelectClinician={handleSelectClinician}
+        />
       )}
     </>
   )
