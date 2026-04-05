@@ -33,6 +33,7 @@ a-mmc_backend/.pytest_cache/
 a-mmc_infra/certs/
 
 a-mmc_backend/data/*.csv
+!a-mmc_backend/data/clinicians_full.csv  
 a-mmc_backend/data/clinicians_sample.csv
 a-mmc_backend/data/credentials_manifest.txt
 a-mmc_backend/data/name_map.csv
