@@ -2,6 +2,9 @@
 *.log
 logs/
 
+CLAUDE.md
+.claude
+
 a-mmc_frontend/node_modules/
 a-mmc_frontend/dist/
 a-mmc_frontend/build/

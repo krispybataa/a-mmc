@@ -3,15 +3,17 @@ generate_clinicians.py
 ----------------------
 Generate synthetic clinician rows in the same CSV format as clinicians_anon.csv.
 
-Reads the real anonymised data to learn schedule time patterns and uses those
-to produce realistic-looking synthetic schedules. Does NOT require Flask or
-any application context — stdlib only.
+Guarantees:
+  - Every specialty (22) has at least 2 clinicians
+  - Every HMO in HMO_POOL (29) appears on at least 2 clinicians
+  - Default count is 64 (minimum safe floor: 22 specialties × 2 = 44,
+    but HMO coverage pushes the practical floor higher; see _distribute below)
 
 Usage:
   python data/generate_clinicians.py \\
     data/clinicians_anon.csv \\
     data/clinicians_synthetic.csv \\
-    --count 52
+    [--count N]
 """
 
 import argparse
@@ -130,17 +132,19 @@ _DEFAULT_AM_ENDS   = ['11:00', '12:00']
 _DEFAULT_PM_STARTS = ['13:00', '14:00', '15:00']
 _DEFAULT_PM_ENDS   = ['16:00', '17:00', '18:00']
 
+# Minimum required count: 22 specialties × 2 = 44, but HMO coverage
+# needs at least 2 per HMO across the pool. With 29 HMOs and a typical
+# 6–8 HMOs per clinician, ~10 clinicians cover all HMOs once. So 2×
+# coverage needs ~20 clinicians just for HMOs. 64 is a safe floor that
+# comfortably satisfies both constraints with realistic distribution.
+MIN_COUNT = 64
+
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 def _normalize_time(raw, is_pm_col=False):
-    """
-    Normalize a raw time string (e.g. '9:00', '1:00', '13:00') to HH:MM.
-    For PM columns where the hour < 8, add 12 to convert 12-hr → 24-hr.
-    Returns None on invalid input.
-    """
     raw = raw.strip()
     if not raw:
         return None
@@ -157,10 +161,6 @@ def _normalize_time(raw, is_pm_col=False):
 
 
 def _learn_time_pools(input_path, header):
-    """
-    Scan all rows in input_path and collect observed AM/PM start/end times.
-    Falls back to built-in defaults when fewer than 3 values are found.
-    """
     am_starts, am_ends, pm_starts, pm_ends = [], [], [], []
 
     am_start_cols = [c for c in header if c.endswith('_am_start')]
@@ -200,36 +200,18 @@ def _learn_time_pools(input_path, header):
     return am_starts, am_ends, pm_starts, pm_ends
 
 
-def _pick_hmo_count():
-    """Weighted random HMO count: 0=5%, 1-2=10%, 3-5=30%, 6-8=35%, 9-12=20%."""
-    population = list(range(13))
-    # Distribute bucket percentages evenly across values in each bucket
-    weights = [
-        5,                              # 0       → 5%
-        5,    5,                        # 1-2     → 10%
-        10,   10,   10,                 # 3-5     → 30%
-        11.7, 11.7, 11.6,              # 6-8     → 35%
-        5,    5,    5,    5,           # 9-12    → 20%
-    ]
-    return random.choices(population, weights=weights, k=1)[0]
-
-
 def _pick_day_count():
     """Weighted day count: 1=10%, 2=35%, 3=35%, 4=20%."""
     return random.choices([1, 2, 3, 4], weights=[10, 35, 35, 20], k=1)[0]
 
 
 def _make_schedule_cols(days, am_starts, am_ends, pm_starts, pm_ends, prefix):
-    """
-    Build schedule column dict for the given days under `prefix` ('f2f_' or 'tele_').
-    Each day gets AM only, PM only, or both — chosen randomly.
-    """
     cols = {}
     for day in days:
         has_am = random.random() < 0.70
         has_pm = random.random() < 0.60
         if not has_am and not has_pm:
-            has_am = True  # guarantee at least one session per active day
+            has_am = True
         if has_am:
             cols[f'{prefix}{day}_am_start'] = random.choice(am_starts)
             cols[f'{prefix}{day}_am_end']   = random.choice(am_ends)
@@ -241,30 +223,66 @@ def _make_schedule_cols(days, am_starts, am_ends, pm_starts, pm_ends, prefix):
 
 def _distribute_specialties(count):
     """
-    Assign specialties to `count` doctors.
-    Each of the 21 specialties gets at least 2; extras (count - 42) are distributed
-    one-per-specialty at random until all count slots are filled.
-    Result is shuffled before returning.
+    Assign specialties so every specialty gets exactly 2 guaranteed slots,
+    then distribute extras randomly. Result is shuffled.
     """
     specialties = list(SPECIALTY_ROOMS.keys())
     n = len(specialties)
 
-    allocation = {s: 2 for s in specialties}
-    extras = count - (n * 2)   # e.g. 52 - 44 = 8
-    if extras > 0:
-        for spec in random.sample(specialties, min(extras, n)):
-            allocation[spec] += 1
-
+    # Base: 2 per specialty
     result = []
-    for spec, cnt in allocation.items():
-        result.extend([spec] * cnt)
+    for spec in specialties:
+        result.extend([spec, spec])
 
-    # If count > n*3, pad with random picks (shouldn't happen at count=52)
-    while len(result) < count:
+    # Extras: random picks until we hit count
+    extras = count - len(result)
+    for _ in range(max(0, extras)):
         result.append(random.choice(specialties))
 
     random.shuffle(result)
     return result[:count]
+
+
+def _assign_hmos_with_coverage_guarantee(count, hmo_cols):
+    """
+    Assign HMO lists to `count` clinicians so that every HMO in HMO_POOL
+    appears on at least 2 clinician records.
+
+    Strategy:
+      1. Build a coverage queue: each HMO needs to appear at least 2 times.
+         Shuffle the 2-copy deck and deal them out as mandatory HMOs,
+         one per clinician slot until the deck is exhausted.
+      2. Each clinician gets their mandatory HMO(s) plus random extras
+         drawn from the full pool, capped at len(hmo_cols).
+
+    Returns a list of `count` lists-of-HMO-strings.
+    """
+    max_hmos = len(hmo_cols)
+
+    # Build the mandatory deck: 2 copies of each HMO, shuffled
+    mandatory_deck = HMO_POOL * 2
+    random.shuffle(mandatory_deck)
+
+    # One slot per clinician in the mandatory deck
+    # (29 HMOs × 2 = 58 mandatory slots; spread across `count` clinicians)
+    mandatory_per_clinician = [[] for _ in range(count)]
+    for idx, hmo in enumerate(mandatory_deck):
+        mandatory_per_clinician[idx % count].append(hmo)
+
+    # Now build final HMO lists: mandatory + random extras, deduplicated
+    result = []
+    for mandatory in mandatory_per_clinician:
+        # How many slots are left after mandatory?
+        slots_left = max_hmos - len(mandatory)
+        # Pick random extras (avoid duplicating what's already mandatory)
+        pool_without_mandatory = [h for h in HMO_POOL if h not in mandatory]
+        extra_count = random.randint(0, min(slots_left, len(pool_without_mandatory)))
+        extras = random.sample(pool_without_mandatory, extra_count)
+        combined = mandatory + extras
+        random.shuffle(combined)
+        result.append(combined[:max_hmos])
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -277,8 +295,17 @@ def main():
     )
     parser.add_argument('input',  help='Path to clinicians_anon.csv (header source + pattern learning)')
     parser.add_argument('output', help='Path to write clinicians_synthetic.csv')
-    parser.add_argument('--count', type=int, default=52, help='Number of rows to generate (default: 52)')
+    parser.add_argument(
+        '--count', type=int, default=MIN_COUNT,
+        help=f'Number of rows to generate (default: {MIN_COUNT}, minimum: {MIN_COUNT})'
+    )
     args = parser.parse_args()
+
+    if args.count < MIN_COUNT:
+        print(f'WARNING: --count {args.count} is below the minimum safe floor of {MIN_COUNT}.')
+        print(f'         HMO coverage guarantee requires at least {MIN_COUNT} clinicians.')
+        print(f'         Raising count to {MIN_COUNT}.')
+        args.count = MIN_COUNT
 
     if not os.path.isfile(args.input):
         print(f'ERROR: input file not found: {args.input}')
@@ -296,15 +323,18 @@ def main():
     # ── Identify HMO column names in order ────────────────────────────────
     hmo_cols = [c for c in header if c.startswith('hmo_')]
 
-    # ── Distribute specialties ─────────────────────────────────────────────
+    # ── Distribute specialties (2 guaranteed per specialty) ───────────────
     specialty_list   = _distribute_specialties(args.count)
     specialty_counts = collections.Counter(specialty_list)
+
+    # ── Assign HMOs (2 guaranteed per HMO across the pool) ────────────────
+    hmo_assignments = _assign_hmos_with_coverage_guarantee(args.count, hmo_cols)
 
     # ── Generate rows ──────────────────────────────────────────────────────
     rows = []
     tele_count = 0
 
-    for i, specialty in enumerate(specialty_list):
+    for i, (specialty, clinician_hmos) in enumerate(zip(specialty_list, hmo_assignments)):
         hall, floor    = SPECIALTY_ROOMS[specialty]
         room_suffix    = random.randint(1, 99)
         room_number    = f'{hall} {floor}{room_suffix:02d}'
@@ -318,17 +348,14 @@ def main():
         pw_prefix   = random.choice(['testpassword', 'stafflogin', 'clinicuser', 'testaccount'])
         password    = pw_prefix + str(random.randint(100, 999))
 
-        hmo_count   = min(_pick_hmo_count(), len(hmo_cols), len(HMO_POOL))
-        chosen_hmos = random.sample(HMO_POOL, hmo_count)
-
         # F2F schedule
         f2f_day_count = _pick_day_count()
         f2f_days      = random.sample(ALL_DAYS, min(f2f_day_count, len(ALL_DAYS)))
         f2f_cols      = _make_schedule_cols(f2f_days, am_starts, am_ends, pm_starts, pm_ends, 'f2f_')
 
         # Teleconsult schedule (~20% of doctors, on different days from F2F)
-        tele_cols     = {}
-        remaining     = [d for d in ALL_DAYS if d not in f2f_days]
+        tele_cols = {}
+        remaining = [d for d in ALL_DAYS if d not in f2f_days]
         if remaining and random.random() < 0.20:
             tele_day_count = _pick_day_count()
             tele_days      = random.sample(remaining, min(tele_day_count, len(remaining)))
@@ -347,8 +374,9 @@ def main():
         row['login_email']  = login_email
         row['password']     = password
 
-        for j, hmo_name in enumerate(chosen_hmos):
-            row[hmo_cols[j]] = hmo_name
+        for j, hmo_name in enumerate(clinician_hmos):
+            if j < len(hmo_cols):
+                row[hmo_cols[j]] = hmo_name
 
         row.update(f2f_cols)
         row.update(tele_cols)
@@ -378,6 +406,40 @@ def main():
                 check_ok = False
     if check_ok:
         print('Column check: PASS')
+
+    # ── Coverage verification ──────────────────────────────────────────────
+    print('\n--- Coverage check ---')
+
+    # Specialty coverage
+    spec_ok = True
+    for spec in SPECIALTY_ROOMS:
+        cnt = specialty_counts[spec]
+        if cnt < 2:
+            print(f'  FAIL specialty "{spec}": only {cnt} clinician(s)')
+            spec_ok = False
+    if spec_ok:
+        print(f'Specialty coverage: PASS (all {len(SPECIALTY_ROOMS)} specialties ≥ 2)')
+
+    # HMO coverage — scan the written CSV
+    hmo_coverage = collections.Counter()
+    with open(args.output, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            seen = set()
+            for col in hmo_cols:
+                val = row.get(col, '').strip()
+                if val and val not in seen:
+                    hmo_coverage[val] += 1
+                    seen.add(val)
+
+    hmo_ok = True
+    for hmo in HMO_POOL:
+        cnt = hmo_coverage.get(hmo, 0)
+        if cnt < 2:
+            print(f'  FAIL HMO "{hmo}": only {cnt} clinician(s)')
+            hmo_ok = False
+    if hmo_ok:
+        print(f'HMO coverage: PASS (all {len(HMO_POOL)} HMOs ≥ 2)')
 
     # ── Summary ────────────────────────────────────────────────────────────
     print(f'\nGenerated {len(rows)} synthetic clinicians')
