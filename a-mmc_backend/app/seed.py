@@ -1,5 +1,7 @@
 import csv
 import os
+import random as _random
+import re
 import secrets
 import string
 import sys
@@ -136,6 +138,15 @@ def run_seed_part1():
 # =====================================================
 
 def run_seed_part2(app):
+    existing_patient = Patient.query.filter_by(login_email='patient@test.com').first()
+    if existing_patient:
+        test_clinician = Clinician.query.filter_by(login_email='clinician@test.com').first()
+        if test_clinician and test_clinician.profile_picture is None:
+            test_clinician.profile_picture = '/assets/clin-avatars/doc-01.png'
+            db.session.commit()
+        print("DB already seeded.")
+        return
+
     print("Running DB seed...")
 
     # -------------------------
@@ -173,7 +184,8 @@ def run_seed_part2(app):
         room_number="Hall A Rm 230",
         contact_email="clinician@test.com",
         login_email="clinician@test.com",
-        login_password_hash=hash_password("testpassword123")
+        login_password_hash=hash_password("testpassword123"),
+        profile_picture='/assets/clin-avatars/doc-01.png',
     )
     db.session.add(clinician)
     db.session.commit()
@@ -185,6 +197,7 @@ def run_seed_part2(app):
     secretary = Secretary(
         first_name="Test",
         last_name="Secretary",
+        contact_phone="09000000000",
         contact_email="secretary@test.com",
         login_email="secretary@test.com",
         login_password_hash=hash_password("testpassword123")
@@ -273,12 +286,15 @@ def run_seed_part2(app):
 # CSV BULK IMPORT
 # =====================================================
 
+_AVATAR_POOL = [f'/assets/clin-avatars/doc-{i:02d}.png' for i in range(1, 9)]
+
 _DAYS = [
-    ("Monday",    "mon"),
-    ("Tuesday",   "tue"),
-    ("Wednesday", "wed"),
-    ("Thursday",  "thu"),
-    ("Friday",    "fri"),
+    ("mon", "Monday"),
+    ("tue", "Tuesday"),
+    ("wed", "Wednesday"),
+    ("thu", "Thursday"),
+    ("fri", "Friday"),
+    ("sat", "Saturday"),
 ]
 
 
@@ -296,11 +312,23 @@ def run_seed_csv(csv_path):
     Bulk import clinicians from a CSV file.
     Idempotent — skips rows where login_email already exists.
     Outputs credentials_manifest.txt for Rheumatology clinicians.
+
+    One row per clinician. F2F and teleconsult schedules are expressed as
+    separate column sets (f2f_* and tele_*) on the same row. A schedule row
+    is only created for a consultation type when at least one time column for
+    that type is non-blank. contact_phone and contact_email are auto-generated
+    if not provided in the CSV.
     """
     alphabet = string.ascii_letters + string.digits
     created = 0
     skipped = 0
     rheum_entries = []
+
+    # Build short-day → full-day-name lookup from the module-level _DAYS constant
+    _DAY_FULL = {short: full for short, full in _DAYS}
+    _DAY_KEYS = [short for short, _ in _DAYS]   # ['mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+
+    _CONSULT_TYPES = [("f2f_", "f2f"), ("tele_", "teleconsult")]
 
     with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -314,14 +342,38 @@ def run_seed_csv(csv_path):
             try:
                 existing = Clinician.query.filter_by(login_email=login_email).first()
                 if existing:
-                    print(f"Skipping {login_email} (already exists)")
+                    print(f"Skipping {login_email} — already exists")
+                    if existing.profile_picture is None:
+                        existing.profile_picture = _random.choice(_AVATAR_POOL)
+                        db.session.commit()
                     skipped += 1
                     continue
 
-                password = "".join(secrets.choice(alphabet) for _ in range(12))
+                password = row.get("password", "").strip()
+                if not password:
+                    password = "".join(secrets.choice(alphabet) for _ in range(12))
+
+                # Auto-generate contact fields when not provided in the CSV
+                contact_phone = row.get("contact_phone", "").strip()
+                if not contact_phone:
+                    contact_phone = "09000000000"
+
+                contact_email = row.get("contact_email", "").strip()
+                if not contact_email:
+                    login = login_email
+                    contact_email = (
+                        login.replace("@", ".clinic@")
+                        if "@" in login
+                        else "clinic@asclepius.test"
+                    )
+
+                local_number = row.get("local_number", "").strip()
+                if not local_number:
+                    room = row.get("room_number", "").strip()
+                    nums = re.findall(r'\d+', room)
+                    local_number = nums[-1] if nums else None
 
                 clinician = Clinician(
-                    title=row.get("title", "").strip(),
                     first_name=row.get("first_name", "").strip(),
                     middle_name=row.get("middle_name", "").strip() or None,
                     last_name=row.get("last_name", "").strip(),
@@ -329,39 +381,20 @@ def run_seed_csv(csv_path):
                     specialty=row.get("specialty", "").strip(),
                     department=row.get("department", "").strip(),
                     room_number=row.get("room_number", "").strip() or None,
-                    local_number=row.get("local_number", "").strip() or None,
-                    contact_phone=row.get("contact_phone", "").strip() or None,
-                    contact_email=row.get("contact_email", "").strip() or None,
+                    local_number=local_number or None,
+                    contact_phone=contact_phone,
+                    contact_email=contact_email,
                     login_email=login_email,
                     login_password_hash=hash_password(password),
                 )
                 db.session.add(clinician)
                 db.session.flush()
 
-                consultation_type = row.get("consultation_type", "f2f").strip() or "f2f"
+                clinician.profile_picture = _random.choice(_AVATAR_POOL)
 
-                for day_name, prefix in _DAYS:
-                    am_start = _parse_time(row.get(f"{prefix}_am_start", ""))
-                    am_end   = _parse_time(row.get(f"{prefix}_am_end",   ""))
-                    pm_start = _parse_time(row.get(f"{prefix}_pm_start", ""))
-                    pm_end   = _parse_time(row.get(f"{prefix}_pm_end",   ""))
-
-                    if am_start is None and am_end is None and pm_start is None and pm_end is None:
-                        continue
-
-                    schedule = ClinicianSchedule(
-                        clinician_id=clinician.clinician_id,
-                        day_of_week=day_name,
-                        am_start=am_start,
-                        am_end=am_end,
-                        pm_start=pm_start,
-                        pm_end=pm_end,
-                        consultation_type=consultation_type,
-                    )
-                    db.session.add(schedule)
-
-                for hmo_key in ("hmo_1", "hmo_2", "hmo_3"):
-                    hmo_name = row.get(hmo_key, "").strip()
+                # HMO accreditations (hmo_1 through hmo_10)
+                for i in range(1, 11):
+                    hmo_name = row.get(f"hmo_{i}", "").strip()
                     if hmo_name:
                         db.session.add(ClinicianHMO(
                             clinician_id=clinician.clinician_id,
@@ -370,16 +403,38 @@ def run_seed_csv(csv_path):
 
                 db.session.commit()
 
-                generate_slots(
-                    clinician_id=clinician.clinician_id,
-                    from_date=date.today(),
-                    to_date=date.today() + timedelta(days=90),
-                    commit=True,
-                )
+                # Schedules — one pass per consultation type
+                for col_prefix, ctype in _CONSULT_TYPES:
+                    has_any = False
+                    for day in _DAY_KEYS:
+                        am_s = _parse_time(row.get(f"{col_prefix}{day}_am_start", ""))
+                        am_e = _parse_time(row.get(f"{col_prefix}{day}_am_end",   ""))
+                        pm_s = _parse_time(row.get(f"{col_prefix}{day}_pm_start", ""))
+                        pm_e = _parse_time(row.get(f"{col_prefix}{day}_pm_end",   ""))
+                        if not any([am_s, am_e, pm_s, pm_e]):
+                            continue
+                        has_any = True
+                        db.session.add(ClinicianSchedule(
+                            clinician_id=clinician.clinician_id,
+                            day_of_week=_DAY_FULL[day],
+                            am_start=am_s,
+                            am_end=am_e,
+                            pm_start=pm_s,
+                            pm_end=pm_e,
+                            consultation_type=ctype,
+                        ))
+                    if has_any:
+                        db.session.commit()
+                        generate_slots(
+                            clinician_id=clinician.clinician_id,
+                            from_date=date.today(),
+                            to_date=date.today() + timedelta(days=90),
+                            commit=True,
+                        )
 
                 if row.get("department", "").strip().lower() == "rheumatology":
                     rheum_entries.append(
-                        f"Name: {clinician.title} {clinician.first_name} {clinician.last_name}\n"
+                        f"Name: {clinician.first_name} {clinician.last_name}\n"
                         f"Login Email: {login_email}\n"
                         f"Password: {password}\n"
                         f"Department: {clinician.department}\n"

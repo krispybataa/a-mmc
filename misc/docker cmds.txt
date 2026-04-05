@@ -26,3 +26,6 @@ cd .\a-mmc_infra\ ; docker compose down -v
 docker build . -t krispybata/a-mmc-nginx:latest
 
 docker push krispybata/a-mmc-nginx:latest
+
+
+cd /app && python -m app.seed data/clinicians_full.csv

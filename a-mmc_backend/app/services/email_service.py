@@ -91,6 +91,29 @@ def _system_url() -> str:
 # Public notification functions
 # ---------------------------------------------------------------------------
 
+def _secretary_contact_for(clinician_id: int) -> dict:
+    """
+    Return contact details for the first secretary linked to this clinician.
+    Returns a dict with keys: email, name, phone.
+    All values default to empty string if no secretary is linked or fields are unset.
+    Uses deferred imports to avoid circular references.
+    """
+    try:
+        from app.models.secretary import SecretaryClinicianLink, Secretary
+        link = SecretaryClinicianLink.query.filter_by(clinician_id=clinician_id).first()
+        if link:
+            secretary = Secretary.query.get(link.secretary_id)
+            if secretary:
+                return {
+                    "email": secretary.contact_email or "",
+                    "name":  f"{secretary.first_name} {secretary.last_name}".strip(),
+                    "phone": secretary.contact_phone or "",
+                }
+    except Exception:
+        pass
+    return {"email": "", "name": "", "phone": ""}
+
+
 def send_appointment_confirmation(appointment) -> None:
     """
     Notify the patient that their appointment has been accepted by C/S.
@@ -102,16 +125,20 @@ def send_appointment_confirmation(appointment) -> None:
         clinician = appointment.clinician
         slot      = appointment.slot
 
+        sec = _secretary_contact_for(clinician.clinician_id)
         tpl = appointment_confirmation(
-            patient_name      = f"{patient.first_name} {patient.last_name}",
-            clinician_name    = f"{clinician.first_name} {clinician.last_name}",
-            clinician_title   = clinician.title or "",
-            date              = str(appointment.consultation_date),
-            time              = str(slot.start_time)[:5],
-            room_number       = clinician.room_number or "",
-            chief_complaint   = appointment.chief_complaint or "",
-            payment_type      = appointment.payment_type or "",
-            consultation_type = appointment.consultation_type or "",
+            patient_name             = f"{patient.first_name} {patient.last_name}",
+            clinician_name           = f"{clinician.first_name} {clinician.last_name}",
+            clinician_title          = clinician.title or "",
+            date                     = str(appointment.consultation_date),
+            time                     = str(slot.start_time)[:5],
+            room_number              = clinician.room_number or "",
+            chief_complaint          = appointment.chief_complaint or "",
+            payment_type             = appointment.payment_type or "",
+            consultation_type        = appointment.consultation_type or "",
+            secretary_email          = sec["email"],
+            secretary_name           = sec["name"],
+            secretary_contact_phone  = sec["phone"],
         )
         _send(patient.login_email, tpl["subject"], tpl["html"])
     except Exception:
@@ -321,13 +348,17 @@ def send_reschedule_confirmation_to_patient(appointment) -> None:
         clinician = appointment.clinician
         slot      = appointment.slot   # reflects the newly assigned slot post-commit
 
+        sec = _secretary_contact_for(clinician.clinician_id)
         tpl = reschedule_confirmation_to_patient(
-            patient_name    = f"{patient.first_name} {patient.last_name}",
-            clinician_name  = f"{clinician.first_name} {clinician.last_name}",
-            clinician_title = clinician.title or "",
-            new_date        = str(slot.slot_date),
-            new_time        = str(slot.start_time)[:5],
-            room_number     = clinician.room_number or "",
+            patient_name            = f"{patient.first_name} {patient.last_name}",
+            clinician_name          = f"{clinician.first_name} {clinician.last_name}",
+            clinician_title         = clinician.title or "",
+            new_date                = str(slot.slot_date),
+            new_time                = str(slot.start_time)[:5],
+            room_number             = clinician.room_number or "",
+            secretary_email         = sec["email"],
+            secretary_name          = sec["name"],
+            secretary_contact_phone = sec["phone"],
         )
         _send(patient.login_email, tpl["subject"], tpl["html"])
     except Exception:

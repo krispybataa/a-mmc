@@ -13,6 +13,20 @@ function formatDateFull(dateStr) {
   return `${weekday}, ${String(d).padStart(2, '0')} ${MONTHS[mo - 1]} ${y}`
 }
 
+function formatTime(t) {
+  if (!t) return ''
+  const [h, m] = t.split(':')
+  const hour   = parseInt(h, 10)
+  const period = hour >= 12 ? 'PM' : 'AM'
+  const h12    = hour % 12 || 12
+  return `${h12}:${m} ${period}`
+}
+
+function formatTimeRange(start, end) {
+  if (!end) return formatTime(start)
+  return `${formatTime(start)} – ${formatTime(end)}`
+}
+
 // ── Status badge config ────────────────────────────────────────────────────────
 
 const STATUS_BADGE = {
@@ -67,7 +81,7 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
   const appt = appointment
   const { clinician, slot } = appt
 
-  const docFull = `${clinician.title} ${clinician.first_name} ${clinician.last_name}`
+  const docFull = `${clinician.last_name}, ${clinician.first_name}`
   const badge   = STATUS_BADGE[appt.status] ?? { label: appt.status, cls: 'bg-slate-100 text-slate-500' }
 
   const canCancel     = ['pending', 'accepted', 'reschedule_requested'].includes(appt.status)
@@ -149,7 +163,7 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
             </p>
             <div className="space-y-4">
               <DetailRow label="Date"           value={formatDateFull(slot.slot_date)} />
-              <DetailRow label="Time"           value={slot.start_time.slice(0, 5)} />
+              <DetailRow label="Time"           value={formatTimeRange(slot.start_time, slot.end_time)} />
               <DetailRow label="Chief Complaint" value={appt.chief_complaint} />
               <DetailRow label="Booking Type"   value={appt.booking_type} />
               <DetailRow label="Payment"        value={appt.payment_type} />

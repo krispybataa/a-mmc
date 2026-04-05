@@ -6,15 +6,15 @@ import api from '../../services/api'
 const PAGE_SIZE = 10
 
 const EMPTY_FORM = {
-  title: '', first_name: '', last_name: '', middle_name: '', suffix: '',
+  first_name: '', last_name: '', middle_name: '', suffix: '',
   specialty: '', department: '', room_number: '', local_number: '',
   contact_phone: '', contact_email: '', login_email: '', password: '',
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function formatName({ title, first_name, last_name }) {
-  return [title, first_name, last_name].filter(Boolean).join(' ')
+function formatName({ first_name, last_name }) {
+  return [first_name, last_name].filter(Boolean).join(' ')
 }
 
 // ── Modal ──────────────────────────────────────────────────────────────────────
@@ -80,9 +80,8 @@ function AddClinicianModal({ onClose, onCreated }) {
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          {/* Row: title + first + last */}
-          <div className="grid grid-cols-3 gap-3">
-            <Field label="Title" value={form.title} onChange={v => set('title', v)} />
+          {/* Row: first + last */}
+          <div className="grid grid-cols-2 gap-3">
             <Field label="First Name *" value={form.first_name} onChange={v => set('first_name', v)} error={errors.first_name} />
             <Field label="Last Name *" value={form.last_name} onChange={v => set('last_name', v)} error={errors.last_name} />
           </div>

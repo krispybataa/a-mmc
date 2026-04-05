@@ -1,26 +1,47 @@
 import { useEffect, useState } from 'react'
 import api from '../services/api'
+import KioskClock from '../components/KioskClock'
 
 const PRIMARY = '#1D409C'
+const ACCENT  = '#CE1117'
 
 function ClinicianKioskCard({ clinician, onSelect }) {
+  const name     = [clinician.first_name, clinician.last_name].filter(Boolean).join(' ')
+  const initials = [clinician.first_name?.[0], clinician.last_name?.[0]].filter(Boolean).join('').toUpperCase()
+
   return (
     <button
       onClick={() => onSelect(clinician)}
       className="flex flex-col rounded-2xl shadow-md bg-white text-left transition-colors duration-150 overflow-hidden w-full"
       style={{ minHeight: '280px', cursor: 'pointer' }}
     >
-      {/* Top band */}
+      {/* Top band — photo left, name/specialty right */}
       <div
-        className="flex flex-col justify-center px-6 py-5"
+        className="flex flex-row items-center gap-4 px-5 py-4"
         style={{ backgroundColor: PRIMARY }}
       >
-        <p className="text-white font-semibold" style={{ fontSize: '24px' }}>
-          {clinician.title} {clinician.first_name} {clinician.last_name}
-        </p>
-        <p className="text-blue-200" style={{ fontSize: '18px' }}>
-          {clinician.specialty}
-        </p>
+        {/* Profile picture */}
+        {clinician.profile_picture ? (
+          <img
+            src={clinician.profile_picture}
+            alt=""
+            style={{ width: '120px', height: '120px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(255,255,255,0.35)' }}
+            onError={e => { e.target.style.display = 'none' }}
+          />
+        ) : (
+          <div style={{ width: '120px', height: '120px', borderRadius: '12px', flexShrink: 0, backgroundColor: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: '28px', fontWeight: '700', color: '#fff' }}>{initials || '?'}</span>
+          </div>
+        )}
+        {/* Name + specialty */}
+        <div>
+          <p className="text-white font-semibold" style={{ fontSize: '24px' }}>
+            {name}
+          </p>
+          <p className="text-blue-200" style={{ fontSize: '18px' }}>
+            {clinician.specialty}
+          </p>
+        </div>
       </div>
       {/* Bottom section */}
       <div className="flex flex-col justify-between flex-1 px-6 py-5 gap-2">
@@ -29,13 +50,13 @@ function ClinicianKioskCard({ clinician, onSelect }) {
             {clinician.department}
           </p>
           {clinician.room_number && (
-            <p className="text-gray-500" style={{ fontSize: '16px' }}>
+            <p className="text-gray-500" style={{ fontSize: '18px' }}>
               {clinician.room_number}
             </p>
           )}
         </div>
-        <p className="font-medium" style={{ fontSize: '16px', color: PRIMARY }}>
-          Tap for details →
+        <p className="font-semibold" style={{ fontSize: '20px', color: ACCENT }}>
+          View Profile →
         </p>
       </div>
     </button>
@@ -43,9 +64,9 @@ function ClinicianKioskCard({ clinician, onSelect }) {
 }
 
 export default function DirectoryScreen({ onNavigate, onSelectClinician }) {
-  const [clinicians, setClinicians] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [clinicians,        setClinicians]        = useState([])
+  const [loading,           setLoading]           = useState(true)
+  const [error,             setError]             = useState(null)
   const [selectedSpecialty, setSelectedSpecialty] = useState('All')
 
   function fetchClinicians() {
@@ -77,15 +98,14 @@ export default function DirectoryScreen({ onNavigate, onSelectClinician }) {
         <button
           onClick={() => onNavigate('home')}
           className="flex items-center justify-center rounded-xl bg-white font-bold transition-colors duration-150 hover:bg-blue-50 shrink-0"
-          style={{ fontSize: '24px', color: PRIMARY, minWidth: '64px', minHeight: '64px' }}
+          style={{ fontSize: '24px', color: PRIMARY, minWidth: '72px', minHeight: '72px' }}
         >
           ←
         </button>
         <h2 className="text-white font-bold flex-1 text-center" style={{ fontSize: '28px' }}>
           Clinician Directory
         </h2>
-        {/* Spacer to balance back button */}
-        <div style={{ minWidth: '64px' }} />
+        <KioskClock />
       </div>
 
       {loading && (
@@ -99,8 +119,8 @@ export default function DirectoryScreen({ onNavigate, onSelectClinician }) {
           <p className="text-gray-600" style={{ fontSize: '22px' }}>{error}</p>
           <button
             onClick={fetchClinicians}
-            className="rounded-2xl px-10 py-4 text-white font-semibold transition-colors duration-150"
-            style={{ backgroundColor: PRIMARY, fontSize: '20px' }}
+            className="rounded-2xl px-10 font-semibold text-white transition-colors duration-150"
+            style={{ backgroundColor: PRIMARY, fontSize: '22px', minHeight: '72px' }}
           >
             Retry
           </button>
@@ -117,8 +137,8 @@ export default function DirectoryScreen({ onNavigate, onSelectClinician }) {
                 onClick={() => setSelectedSpecialty(spec)}
                 className="rounded-full border-2 font-medium whitespace-nowrap transition-colors duration-150 px-6"
                 style={{
-                  minHeight: '56px',
-                  fontSize: '18px',
+                  minHeight: '64px',
+                  fontSize: '20px',
                   backgroundColor: selectedSpecialty === spec ? PRIMARY : '#fff',
                   color: selectedSpecialty === spec ? '#fff' : PRIMARY,
                   borderColor: PRIMARY,
@@ -133,7 +153,7 @@ export default function DirectoryScreen({ onNavigate, onSelectClinician }) {
           <div className="flex-1 overflow-y-auto px-6 pb-6">
             {filtered.length === 0 ? (
               <div className="flex items-center justify-center h-40">
-                <p className="text-gray-400" style={{ fontSize: '20px' }}>
+                <p className="text-gray-400" style={{ fontSize: '22px' }}>
                   No clinicians found for this specialty.
                 </p>
               </div>

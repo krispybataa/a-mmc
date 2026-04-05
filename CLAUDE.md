@@ -276,7 +276,7 @@ A patient books an appointment within a clinician's timeslot.
 - `consultation_type` (varchar: `f2f` | `teleconsult`, server_default `f2f`) — must match the booked slot's consultation_type
 - `status` (varchar: "pending", "accepted", "reschedule_requested", "rejected", "cancelled")
 - `reschedule_reason` (text, nullable)
-- `cancellation_reason` (text, nullable)
+- `decline_reason` (text, nullable) — populated when C/S rejects an appointment
 - `created_at`, `updated_at` (timestamp)
 
 ---
@@ -289,6 +289,12 @@ A patient books an appointment within a clinician's timeslot.
 - **No integration** with external MMC systems (iHIMS, EMR) — operates as a standalone system
 - **No billing, diagnostics, or post-consultation data** — strictly pre-consultation coordination
 - **Gender filter removed** from Doctors.jsx — field not present in Clinician schema
+
+### Kiosk triage — shared source
+The kiosk imports `TRIAGE_STEPS`, `SYMPTOM_SPECIALTY_MAP`, and `HMO_LABEL_MAP` directly
+from `a-mmc_frontend/src/data/triageLogic.js` via a Vite alias (`@triage`). Any update
+to `triageLogic.js` in the main frontend automatically applies to the kiosk on next build.
+Do NOT maintain a separate copy of triage data in the kiosk.
 
 ### Auth token strategy
 - Access token: 60 minutes, returned in response body as `{ "access_token": "...", "user": {...} }`
@@ -308,8 +314,9 @@ A patient books an appointment within a clinician's timeslot.
   (`# TODO(scheduler)` marked in appointment_routes.py)
 
 ### Schedule change handling (timeslot invariant)
-- `generate_slots()` is idempotent — it skips existing `(clinician, date, start_time)` keys and never deletes
+- `generate_slots()` is idempotent — it skips existing `(clinician, date, start_time, consultation_type)` keys and never deletes
 - `generate_slots()` accepts `commit=False` param for parent-transaction participation
+- `slot_duration_minutes` parameter has been **removed** — one slot per AM window and one per PM window, spanning the full period (e.g. 09:00–12:00). Multiple patients book the same slot FCFS.
 - `_time_to_minutes()` handles all three types: `timedelta`, `str` ("HH:MM" or "HH:MM:SS"), `datetime.time`
 - If a `ClinicianSchedule` row is edited, `regenerate_slots_for_schedule_change()` handles cleanup:
   - **Safe orphans** (available, zero active appointments) → deleted automatically
@@ -319,6 +326,7 @@ A patient books an appointment within a clinician's timeslot.
 
 ### Slot model invariants (DO NOT CHANGE without design review)
 - A slot (`CLINICIAN_TIMESLOT`) may hold **multiple appointments** — it is NOT 1:1 with a patient
+- Each slot represents **one AM or PM window** (e.g. start=09:00, end=12:00). There is exactly one slot per window per day per consultation_type — not hourly chunks
 - Slot `status` is **only ever written by C/S explicitly** (`available` → `blocked` and back), or auto-blocked when `max_patients` is reached. **Booking, rescheduling, and cancelling an appointment never write to slot status**
 - `"booked"` is NOT a valid slot status. Valid values: `available | blocked`
 - `max_patients` is nullable. When set, the slot auto-blocks after that many `accepted` appointments (opt-in soft capacity). Slot count is NOT shown to patients.
@@ -346,6 +354,7 @@ cancelled → (terminal)
 ### Patient overlap check
 - Overlap test: `NOT (A.end <= B.start OR B.end <= A.start)` — touching boundaries are allowed
 - Active statuses checked: `pending | accepted | reschedule_requested`
+- Scoped by `slot_date` via JOIN on `ClinicianTimeslot` — appointments on different dates can never conflict
 - Implemented in `app/services/appointment_service.py` — `has_overlap(patient_id, candidate_slot, exclude_appointment_id=None)`
 - Wired into: `POST /api/appointments/` and reschedule-confirm branch of `PATCH /api/appointments/<id>`
 
@@ -380,10 +389,11 @@ uploads both follow this pattern.
 
 ### Appointment serializer (_serialize in appointment_routes.py)
 Returns nested objects for related entities:
-- `clinician: { clinician_id, title, first_name, last_name, specialty, room_number }`
-- `slot: { slot_id, slot_date, start_time }` (start_time sliced to HH:MM)
+- `clinician: { clinician_id, title, first_name, last_name, specialty, room_number }` — `title` serialized as `""` when null
+- `slot: { slot_id, slot_date, start_time, end_time }` (times sliced to HH:MM)
 - `patient: { patient_id, first_name, last_name }` (nested object)
 - `patient_first_name`, `patient_last_name` (flat fields, preserved for compatibility)
+- `decline_reason` included at top level (nullable)
 
 ### Security implementation (B-SEC-1)
 - **Rate limiting:** Flask-Limiter with `memory://` storage (single-instance deployment, no Redis needed). Default: 200/min API-wide. Login endpoints: 10/min + 50/hr. Patient registration: 5/hr.
@@ -406,7 +416,7 @@ enables usability testing and SRET presentation without a live mail server. All 
 functions follow this pattern. Switching to a live provider requires only `.env` changes.
 
 ### Display name
-All UI-visible and email-visible text uses **"Asclepius"** as the system name. Internal
+All UI-visible and email-visible text uses **"Unicorn"** as the system name. Internal
 code identifiers, variable names, file names, API routes, and CLAUDE.md use
 "Alagang MMC" / "a-mmc". Devlogs and the thesis proposal (.tex) are exempt.
 The repository is public — "Makati Medical Center" must never appear in committed
@@ -495,7 +505,7 @@ Patients can browse clinicians without an account but must register to book.
 - ✅ F7-A — UpdateProfile.jsx fully implemented with all 5 sections (Personal, Contact, Next of Kin, Preferences, SC/PWD); uploadService.js stub for file uploads
 - ✅ uploadService.js — Railway bucket stub, returns null until wired, degrades gracefully
 - ✅ F-PATCH-UI-1 — Staff mobile responsiveness, role subtitle (Staff · Clinician / Staff · Secretary), A-MMC redaction
-- ✅ F-PATCH-UI-2 — Full rebrand to "Asclepius" across all UI-visible text and email templates
+- ✅ F-PATCH-UI-2 — Full rebrand to "Asclepius" across all UI-visible text and email templates (display name subsequently changed to "Unicorn" — CLAUDE.md updated)
 - ✅ B-EMAIL-1 / F-EMAIL-1 — Email template framework + admin email preview page at
   /admin/email-previews; iframe rendering with srcdoc, Copy HTML button
 - ✅ F-PDF-1 — pdfService.js with jsPDF; patient + staff PDF variants; wired into
@@ -506,6 +516,25 @@ Patients can browse clinicians without an account but must register to book.
   4 recharts cards (status breakdown, consultation type split, bookings over time, top 5 clinicians)
 - ✅ F-NOSHOW-BANNER-1 — AppointmentReminderBanner; amber banner on PatientDashboard and
   PatientAppointments when accepted appointment is tomorrow; F2F and teleconsult variants
+- ✅ F-UI-POLISH-3 — Comprehensive accent injection: Book CTAs to accent red, active nav
+  indicators, status badges color-coded, F2F/Teleconsult pill distinction, section headings
+  with accent border (`.section-heading` utility class), sidebar active state red left border;
+  AppointmentReminderBanner recolored to brand palette
+- ✅ B-BOOKING-PATCH-1 — Fixed `_serialize()` 500 crash (`cancellation_reason` doesn't exist
+  on model); available days in SlotPicker filtered by consultation_type; slot display shows
+  time windows; "no slots" copy updated
+- ✅ B-DB-1 — Added `decline_reason` column to Appointment model; null title defensive
+  handling (`c.title or ""`) in clinician serializers; title dropped from all patient-facing
+  display; DB migration required
+- ✅ B-BOOKING-PATCH-2 — Fixed patient overlap check: JOIN on ClinicianTimeslot to scope
+  conflict detection by `slot_date` — prevents cross-date false positives
+- ✅ B-SLOT-REWORK-1 — Slot generation reworked: one slot per AM/PM window (full window
+  span, e.g. 09:00–12:00) instead of hourly chunks; `slot_duration_minutes` removed from
+  `generate_slots()` and all callers; SlotPicker shows window ranges; slot regeneration and
+  DB reseed required
+- ✅ B-BOOKING-PATCH-3 — Consult type cards disabled when unavailable for that clinician;
+  appointment list shows "Lastname, Firstname · Specialty"; email templates include
+  secretary name + phone via `_secretary_contact_for()` dict
 
 ### Docker
 - ✅ a-mmc-postgres: up and running, all 10 tables migrated
@@ -523,36 +552,44 @@ Patients can browse clinicians without an account but must register to book.
 - AdminSecretaries linked clinician display depends on API response shape — verify `clinician_ids` vs `linked_clinicians` field name against live backend response
 - Admin delete-clinician cascade — verify backend handles SecretaryClinicianLink cleanup on clinician delete
 - recharts added to `package.json` for analytics — `package-lock.json` must be committed and kept in sync (`npm install` locally before Docker build)
+- **B-DB-1 migration pending** — `decline_reason` column added to Appointment model; `flask db migrate` + `flask db upgrade` required before backend restart
+- **B-SLOT-REWORK-1 reseed pending** — slot structure changed from hourly chunks to one-per-window; existing slots in DB are stale; regenerate via the `generate_clinician_slots` endpoint or reseed
+- Appointment cancellation reason has no dedicated column — cancellations accepted but reason is not persisted; add `cancellation_reason` column if audit trail is required post-SRET
 
 ---
 
 ## Agenda
 
+**IMMEDIATE (before next smoke test):**
+1. Run `flask db migrate -m "add decline_reason to appointment"` + `flask db upgrade` — required for B-DB-1
+2. Regenerate slots for all clinicians — required for B-SLOT-REWORK-1 (one slot per window)
+
 **PRE-DEPLOY:**
-1. B-SEED-1 — Seed script for Railway first deploy: reads clinicians CSV, creates
+3. B-SEED-1 — Seed script for Railway first deploy: reads clinicians CSV, creates
    `Clinician` + `ClinicianSchedule` rows, calls `generate_slots()`, outputs credentials
    manifest for Rheumatology clinicians. Idempotent. Run once via Railway shell after
    first deploy.
 
 **RAILWAY DEPLOYMENT PHASE (collaborator-led):**
-2. Railway setup per `DEPLOY.md`
-3. Profile picture upload — wire `uploadService.js` in ClinicianProfileManager and
+4. Railway setup per `DEPLOY.md`
+5. Profile picture upload — wire `uploadService.js` in ClinicianProfileManager and
    UpdateProfile to Railway bucket when credentials available (`# TODO(upload)`)
-4. Redis blocklist + rate limit tuning for production
+6. Redis blocklist + rate limit tuning for production
 
 **KIOSK (proof of concept, pre-panel presentation):**
-5. K-A — a-mmc_kiosk app scaffolding + Directory mode: separate React + Vite app in
+7. K-A — a-mmc_kiosk app scaffolding + Directory mode: separate React + Vite app in
    `a-mmc/a-mmc_kiosk/`, reads from same backend API, large touch targets, clinician cards
    with QR codes linking to `/clinician/:id` on main app, idle timeout 2 min
-6. K-B — Kiosk Triage mode: step-by-step triage using `triageLogic.js` (pending domain
+8. K-B — Kiosk Triage mode: step-by-step triage using `triageLogic.js` (pending domain
    expert validation), result screen shows matching clinicians with QR codes
 
 **DEFERRED (post-SRET):**
-7. triageLogic.js — domain expert validation finalized
-8. Admin delete-clinician cascade verification
-9. Email template editor (if SRET feedback warrants it)
-10. `send_noshow_confirmation_prompt` — wire to Railway scheduler when ready
-11. Appointment analytics — add more aggregate views as data accumulates post-SRET
+9. triageLogic.js — domain expert validation finalized
+10. Admin delete-clinician cascade verification
+11. Email template editor (if SRET feedback warrants it)
+12. `send_noshow_confirmation_prompt` — wire to Railway scheduler when ready
+13. Appointment analytics — add more aggregate views as data accumulates post-SRET
+14. `cancellation_reason` column — add if audit trail required
 
 ---
 
@@ -582,7 +619,7 @@ smoke testing.
 - Services in `app/services/`, pure logic functions (no route handling)
 - Deferred imports inside service functions to avoid circular references
 - All secrets and DB credentials via `.env` (never hardcoded)
-- 24hr time throughout (TIME columns, API responses, frontend display) — no AM/PM anywhere
+- 24hr time in DB columns and API responses; frontend display converts to 12hr AM/PM via `formatTime()` helpers
 - Desktop-first layout that degrades gracefully to mobile
 - Touch targets minimum 44px, base font minimum 16px — primary demographic is 60+ users
 - Use brand tokens only — no arbitrary hex colors in frontend code

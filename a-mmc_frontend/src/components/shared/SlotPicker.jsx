@@ -1,5 +1,11 @@
-// ── Mock taken indices — swap for real availability data during backend integration ──
-const TAKEN_INDICES = new Set([1, 3])
+function formatTime(timeStr) {
+  if (!timeStr) return ''
+  const [h, m] = timeStr.split(':')
+  const hour   = parseInt(h, 10)
+  const period = hour >= 12 ? 'PM' : 'AM'
+  const h12    = hour % 12 || 12
+  return `${h12}:${m} ${period}`
+}
 
 const WEEKDAYS  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
 const DAY_ORDER = ['Mon','Tue','Wed','Thu','Fri','Sat']
@@ -18,52 +24,48 @@ function toDateStr(date) {
 }
 
 function generateSlots(dayEntry) {
-  const raw = []
+  const slots = []
   if (dayEntry.am_start && dayEntry.am_end) {
-    const sh = parseInt(dayEntry.am_start, 10)
-    const eh = parseInt(dayEntry.am_end,   10)
-    for (let h = sh; h < eh; h++) {
-      const t = `${String(h).padStart(2, '0')}:00`
-      raw.push({ id: t, label: t, period: 'AM' })
-    }
+    slots.push({
+      id: dayEntry.am_start.slice(0, 5),
+      label: `${formatTime(dayEntry.am_start)} – ${formatTime(dayEntry.am_end)}`,
+      period: 'AM',
+      start_time: dayEntry.am_start,
+      end_time: dayEntry.am_end,
+    })
   }
   if (dayEntry.pm_start && dayEntry.pm_end) {
-    const sh = parseInt(dayEntry.pm_start, 10)
-    const eh = parseInt(dayEntry.pm_end,   10)
-    for (let h = sh; h < eh; h++) {
-      const t = `${String(h).padStart(2, '0')}:00`
-      raw.push({ id: t, label: t, period: 'PM' })
-    }
+    slots.push({
+      id: dayEntry.pm_start.slice(0, 5),
+      label: `${formatTime(dayEntry.pm_start)} – ${formatTime(dayEntry.pm_end)}`,
+      period: 'PM',
+      start_time: dayEntry.pm_start,
+      end_time: dayEntry.pm_end,
+    })
   }
-  return raw.map((slot, i) => ({ ...slot, globalIdx: i }))
+  return slots
 }
 
 // ── SlotButton ─────────────────────────────────────────────────────────────────
 
-function SlotButton({ slot, isSelected, isTaken, onSelect }) {
+function SlotButton({ slot, isSelected, onSelect }) {
   return (
     <button
       type="button"
-      disabled={isTaken}
       onClick={() => onSelect(slot)}
       className={[
-        'flex flex-col items-center justify-center rounded-lg border min-h-[52px] px-2 py-2.5 transition-colors',
-        isTaken
-          ? 'bg-slate-50 border-slate-200 cursor-not-allowed'
-          : isSelected
+        'flex items-center justify-center rounded-lg border min-h-[52px] px-3 py-2.5 transition-colors text-center',
+        isSelected
           ? 'bg-[var(--color-primary)] border-[var(--color-primary)]'
           : 'bg-white border-slate-200 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]',
       ].join(' ')}
     >
       <span className={[
         'text-xs font-medium leading-tight',
-        isTaken ? 'text-slate-300' : isSelected ? 'text-white' : 'text-[var(--color-dark)]',
+        isSelected ? 'text-white' : 'text-[var(--color-dark)]',
       ].join(' ')}>
         {slot.label}
       </span>
-      {isTaken && (
-        <span className="text-xs text-slate-400 mt-0.5">Taken</span>
-      )}
     </button>
   )
 }
@@ -99,12 +101,12 @@ export default function SlotPicker({
   const min   = minDate ?? today
   const max   = maxDate ?? toDateStr(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000))
 
-  // Which abbreviated day names have at least one time block
-  const availableDaySet = new Set(
-    schedule
-      .filter(s => s.am_start || s.pm_start)
-      .map(s => s.day_of_week.slice(0, 3))
-  )
+  // Which abbreviated day names have available slots.
+  // When real slots are provided, derive from those (respects consultation_type filtering done upstream).
+  // Fall back to the schedule when no real slot data is present.
+  const availableDaySet = availableSlots
+    ? new Set(Object.keys(availableSlots).map(date => getDayOfWeek(date).slice(0, 3)))
+    : new Set(schedule.filter(s => s.am_start || s.pm_start).map(s => s.day_of_week.slice(0, 3)))
 
   // Derive everything from selectedDate + schedule/availableSlots — no internal state needed
   const dow = selectedDate ? getDayOfWeek(selectedDate) : null
@@ -122,8 +124,10 @@ export default function SlotPicker({
           slot_id: s.slot_id,
           slot_date: s.slot_date,
           id: s.start_time.slice(0, 5),
-          label: s.start_time.slice(0, 5),
+          label: `${formatTime(s.start_time)} – ${formatTime(s.end_time)}`,
           period: parseInt(s.start_time.slice(0, 2), 10) < 12 ? 'AM' : 'PM',
+          start_time: s.start_time,
+          end_time: s.end_time,
         }))
       }
     } else {
@@ -186,7 +190,7 @@ export default function SlotPicker({
         <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
           <p className="text-sm text-amber-800">
             {availableSlots
-              ? `${clinicianName} has no available slots on this date. Please try another date.`
+              ? `No available slots on this date. Please try another date.`
               : `${clinicianName} is not available on ${dow}. Please select another date.`}
           </p>
         </div>
@@ -205,13 +209,12 @@ export default function SlotPicker({
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
                 Morning
               </p>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {amSlots.map(slot => (
                   <SlotButton
                     key={slot.id}
                     slot={slot}
                     isSelected={selectedSlot?.id === slot.id}
-                    isTaken={!availableSlots && TAKEN_INDICES.has(slot.globalIdx)}
                     onSelect={onSlotSelect}
                   />
                 ))}
@@ -224,13 +227,12 @@ export default function SlotPicker({
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
                 Afternoon
               </p>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {pmSlots.map(slot => (
                   <SlotButton
                     key={slot.id}
                     slot={slot}
                     isSelected={selectedSlot?.id === slot.id}
-                    isTaken={!availableSlots && TAKEN_INDICES.has(slot.globalIdx)}
                     onSelect={onSlotSelect}
                   />
                 ))}

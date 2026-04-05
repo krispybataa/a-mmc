@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, MapPin, Mail, ShieldCheck, Building2, Video } from 'lucide-react'
+import { ArrowLeft, MapPin, DoorOpen, ShieldCheck, Building2, Video } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import ClinicianCard from '../../components/ClinicianCard'
@@ -13,42 +13,47 @@ const DAY_ABBREV = {
   Thursday: 'Thu', Friday: 'Fri', Saturday: 'Sat',
 }
 
-function formatTime(t) {
-  if (!t) return null
-  const [h, m] = t.split(':').map(Number)
-  const period = h >= 12 ? 'PM' : 'AM'
-  const h12 = h % 12 || 12
-  return `${h12}:${String(m).padStart(2, '0')} ${period}`
+function formatTime(timeStr) {
+  if (!timeStr) return null
+  const [hourStr, minStr] = timeStr.split(':')
+  let hour = parseInt(hourStr, 10)
+  const min = minStr || '00'
+  const period = hour >= 12 ? 'PM' : 'AM'
+  if (hour === 0) hour = 12
+  else if (hour > 12) hour = hour - 12
+  return `${hour}:${min} ${period}`
 }
 
-function formatRange(start, end) {
-  if (!start || !end) return null
-  return `${formatTime(start)} – ${formatTime(end)}`
+function isValidSlot(start, end) {
+  if (!start || !end) return false
+  const toMins = t => {
+    const [h, m] = t.split(':').map(Number)
+    return h * 60 + m
+  }
+  return toMins(end) > toMins(start)
 }
 
 function buildScheduleRows(schedule) {
   const byDay = Object.fromEntries(schedule.map((s) => [s.day_of_week, s]))
   return WEEK_DAYS.map((day) => {
     const s = byDay[day]
+    const showAM = s && isValidSlot(s.am_start, s.am_end)
+    const showPM = s && isValidSlot(s.pm_start, s.pm_end)
     return {
       day,
       abbrev: DAY_ABBREV[day],
-      am: s ? (formatRange(s.am_start, s.am_end) ?? '—') : '—',
-      pm: s ? (formatRange(s.pm_start, s.pm_end) ?? '—') : '—',
+      am: showAM ? `${formatTime(s.am_start)} – ${formatTime(s.am_end)}` : '—',
+      pm: showPM ? `${formatTime(s.pm_start)} – ${formatTime(s.pm_end)}` : '—',
       active: !!s,
     }
   })
 }
 
-function formatName({ title, first_name, middle_name, last_name, suffix }) {
-  const mid = middle_name ? `${middle_name[0]}.` : ''
-  const base = [title, first_name, mid, last_name].filter(Boolean).join(' ')
+function formatName({ first_name, last_name, suffix }) {
+  const base = [first_name, last_name].filter(Boolean).join(' ')
   return suffix ? `${base}, ${suffix}` : base
 }
 
-function getInitials(first_name, last_name) {
-  return `${first_name[0]}${last_name[0]}`.toUpperCase()
-}
 
 function ScheduleTable({ rows }) {
   return (
@@ -191,15 +196,14 @@ export default function ClinicianProfile() {
     department,
     specialty,
     room_number,
-    contact_email,
+    local_number,
     profile_picture,
     schedules,
     hmos,
     infos = [],
   } = clinician
 
-  const fullName    = formatName(clinician)
-  const initials    = getInitials(clinician.first_name, clinician.last_name)
+  const fullName = formatName(clinician)
 
   const f2fSchedules         = schedules.filter((s) => s.consultation_type === 'f2f' || !s.consultation_type)
   const teleconsultSchedules = schedules.filter((s) => s.consultation_type === 'teleconsult')
@@ -229,12 +233,14 @@ export default function ClinicianProfile() {
               <img
                 src={profile_picture}
                 alt={fullName}
-                className="w-24 h-24 rounded-full object-cover mb-4"
+                className="w-48 h-48 rounded-2xl object-cover mb-4"
               />
             ) : (
-              <div className="w-24 h-24 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-white font-bold text-2xl mb-4 select-none">
-                {initials}
-              </div>
+              <img
+                src={`https://api.dicebear.com/7.x/personas/svg?seed=${clinician.clinician_id}`}
+                alt={fullName}
+                className="w-48 h-48 rounded-2xl mb-4"
+              />
             )}
 
             <h1 className="text-base font-bold text-[var(--color-dark)] leading-snug">
@@ -250,10 +256,12 @@ export default function ClinicianProfile() {
                 <MapPin size={13} className="mt-0.5 shrink-0 text-slate-400" />
                 <span>{room_number}</span>
               </div>
-              <div className="flex items-start gap-2.5">
-                <Mail size={13} className="mt-0.5 shrink-0 text-slate-400" />
-                <span className="break-all">{contact_email}</span>
-              </div>
+              {local_number && (
+                <div className="flex items-center gap-2 text-sm text-[var(--color-muted)]">
+                  <DoorOpen className="w-4 h-4 flex-shrink-0" />
+                  <span>Local {local_number}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -261,7 +269,7 @@ export default function ClinicianProfile() {
           <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
             <button
               onClick={handleBook}
-              className="w-full py-3 px-6 rounded-lg text-sm font-semibold text-white bg-[var(--color-primary)] hover:opacity-90 transition-opacity duration-150"
+              className="w-full py-3 px-6 rounded-lg text-sm font-semibold text-white bg-[var(--color-accent)] hover:opacity-90 transition-opacity duration-150"
             >
               Book an Appointment
             </button>
@@ -279,7 +287,7 @@ export default function ClinicianProfile() {
           {/* Clinic Schedule (F2F) */}
           {f2fSchedules.length > 0 && (
             <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-primary)] mb-5">
+              <h2 className="section-heading flex items-center gap-2 text-sm mb-5">
                 <Building2 size={15} className="shrink-0" />
                 Clinic Schedule
               </h2>
@@ -290,7 +298,7 @@ export default function ClinicianProfile() {
           {/* Teleconsultation Schedule */}
           {teleconsultSchedules.length > 0 && (
             <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-primary)] mb-5">
+              <h2 className="section-heading flex items-center gap-2 text-sm mb-5">
                 <Video size={15} className="shrink-0" />
                 Teleconsultation Schedule
               </h2>
@@ -307,9 +315,9 @@ export default function ClinicianProfile() {
 
           {/* HMOs */}
           <section className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-            <h2 className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">
+            <h2 className="section-heading flex items-center gap-2 text-xs mb-4">
               <ShieldCheck size={13} />
-              Accepted HMOs
+              HMO Accreditations
             </h2>
             {hmos.length > 0 ? (
               <div className="flex flex-wrap gap-2">
@@ -351,18 +359,13 @@ export default function ClinicianProfile() {
             <p className="text-sm text-slate-400 mt-0.5">Other clinicians in {specialty}</p>
           </div>
 
-          <div className="flex gap-4 overflow-x-auto pb-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
             {similarLoading
-              ? Array.from({ length: 3 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex-shrink-0 w-64 h-48 rounded-xl bg-gray-100 animate-pulse"
-                  />
+              ? [1, 2, 3].map(i => (
+                  <div key={i} className="w-full h-48 rounded-2xl animate-pulse bg-gray-100" />
                 ))
               : similar.map(c => (
-                  <div key={c.clinician_id} className="flex-shrink-0 w-64">
-                    <ClinicianCard clinician={c} />
-                  </div>
+                  <ClinicianCard key={c.clinician_id} clinician={c} />
                 ))
             }
           </div>

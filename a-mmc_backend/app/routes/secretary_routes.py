@@ -67,6 +67,34 @@ def create_secretary():
     return jsonify({"secretary_id": secretary.secretary_id}), 201
 
 
+@secretary_bp.patch("/<int:secretary_id>/profile")
+@jwt_required()
+def update_secretary_profile(secretary_id: int):
+    claims  = get_jwt()
+    role    = claims.get("role")
+    user_id = claims.get("user", {}).get("id")
+    if role != "admin" and user_id != secretary_id:
+        return {"error": "Forbidden"}, 403
+    s = db.get_or_404(Secretary, secretary_id)
+    data = request.get_json(force=True) or {}
+    for field in ["first_name", "last_name", "contact_phone", "contact_email"]:
+        if field in data:
+            setattr(s, field, data[field])
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+    return jsonify({
+        "secretary_id":  s.secretary_id,
+        "first_name":    s.first_name,
+        "last_name":     s.last_name,
+        "contact_phone": s.contact_phone,
+        "contact_email": s.contact_email,
+        "login_email":   s.login_email,
+    })
+
+
 @secretary_bp.patch("/<int:secretary_id>")
 def update_secretary(secretary_id: int):
     s = db.get_or_404(Secretary, secretary_id)
