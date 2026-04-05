@@ -42,6 +42,7 @@ a-mmc_backend/data/credentials_manifest.txt
 a-mmc_backend/data/name_map.csv
 
 a-mmc_kiosk/node_modules/
+a-mmc_kiosk/.env*
 
 .vscode/*
 !.vscode/extensions.json

@@ -6,7 +6,6 @@ ENV PYTHONUNBUFFERED=1
 ENV FLASK_APP=app:create_app
 
 RUN apk add --no-cache \
-    curl \
     gcc \
     musl-dev \
     libffi-dev \
@@ -31,4 +30,4 @@ COPY shell_scripts/wait-for-postgres.sh ./shell_scripts/wait-for-postgres.sh
 RUN chmod +x ./shell_scripts/wait-for-postgres.sh
 
 ENTRYPOINT ["./shell_scripts/wait-for-postgres.sh"]
-CMD ["sh", "-c", "flask db upgrade && gunicorn -b 0.0.0.0:$PORT --workers 2 --threads 1 'run:create_app()'"]
+CMD ["sh", "-c", "flask db upgrade && gunicorn -b 0.0.0.0:5000 --workers 2 --threads 1 'run:create_app()'"]
