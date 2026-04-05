@@ -4,6 +4,8 @@ import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api, { configureApiAuth } from '../../services/api'
 
+const HERO_IMAGE = 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1200&q=80'
+
 function validate(email, password) {
   const errs = {}
   if (!email.trim()) {
@@ -53,33 +55,55 @@ export default function Login() {
 
   const inputCls = (hasError) =>
     [
-      'w-full px-4 py-3 rounded-lg border text-sm',
-      'text-[var(--color-dark)] placeholder:text-slate-400',
-      'focus:outline-none focus:ring-2 focus:border-transparent',
+      'w-full px-4 py-3 rounded-xl border text-base min-h-[48px]',
+      'text-[var(--color-text)] placeholder:text-gray-400 bg-white',
+      'focus:outline-none focus:ring-2 focus:border-[var(--color-primary)]',
       hasError
-        ? 'border-[var(--color-accent)] focus:ring-[var(--color-accent)]'
-        : 'border-slate-200 focus:ring-[var(--color-primary)]',
+        ? 'border-[var(--color-accent)] focus:ring-[var(--color-accent)]/30'
+        : 'border-[var(--color-border)] focus:ring-[var(--color-primary)]/30',
     ].join(' ')
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-14">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-8 py-10">
+    <div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center px-4 py-14">
+      <div className="w-full max-w-4xl flex rounded-2xl overflow-hidden shadow-lg">
 
-          {/* Header */}
+        {/* ── Left panel (desktop only) ── */}
+        <div
+          className="hidden md:flex flex-col justify-center px-10 py-12 w-5/12 relative"
+          style={{
+            backgroundImage: `url(${HERO_IMAGE})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{ background: 'linear-gradient(to bottom, rgba(29,64,156,0.85), rgba(29,64,156,0.65))' }}
+          />
+          <div className="relative z-10">
+            <p className="text-white font-bold text-2xl mb-4">Unicorn</p>
+            <h2 className="text-white font-bold text-3xl leading-tight mb-3">
+              Welcome back
+            </h2>
+            <p className="text-white/80 text-base leading-relaxed">
+              Sign in to manage your appointments and connect with your care team.
+            </p>
+          </div>
+        </div>
+
+        {/* ── Right panel — form ── */}
+        <div className="flex-1 bg-white px-8 py-10">
           <div className="mb-8">
             <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-primary-light)] mb-2">
-              Asclepius
+              Unicorn
             </p>
-            <h1 className="text-2xl font-bold text-[var(--color-dark)]">Welcome back</h1>
-            <p className="text-sm text-slate-400 mt-1">Sign in to your patient account to continue.</p>
+            <h1 className="text-2xl font-bold text-[var(--color-text)]">Sign in</h1>
+            <p className="text-sm text-[var(--color-muted)] mt-1">Sign in to your patient account to continue.</p>
           </div>
 
           <form onSubmit={handleSubmit} noValidate className="space-y-5">
-
-            {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-[var(--color-dark)] mb-1.5">
+              <label htmlFor="email" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
                 Email address
                 <span className="text-[var(--color-accent)] ml-0.5">*</span>
               </label>
@@ -100,9 +124,8 @@ export default function Login() {
               )}
             </div>
 
-            {/* Password */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-[var(--color-dark)] mb-1.5">
+              <label htmlFor="password" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
                 Password
                 <span className="text-[var(--color-accent)] ml-0.5">*</span>
               </label>
@@ -123,7 +146,7 @@ export default function Login() {
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -133,12 +156,11 @@ export default function Login() {
               )}
             </div>
 
-            {/* Submit */}
             <div className="pt-1">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-6 rounded-lg text-sm font-semibold text-white bg-[var(--color-primary)] hover:opacity-90 transition-opacity duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full py-3 px-6 rounded-xl text-base font-semibold text-white bg-[var(--color-accent)] hover:brightness-110 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed min-h-[48px]"
               >
                 {loading ? 'Signing in…' : 'Sign In'}
               </button>
@@ -148,7 +170,7 @@ export default function Login() {
             </div>
           </form>
 
-          <p className="text-sm text-slate-500 text-center mt-7">
+          <p className="text-sm text-[var(--color-muted)] text-center mt-7">
             Don't have an account?{' '}
             <Link
               to={searchParams.get('redirect')

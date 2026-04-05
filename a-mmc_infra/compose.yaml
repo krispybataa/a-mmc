@@ -19,6 +19,8 @@ services:
     #### FOR DEV ONLY - MOUNT MIGRATIONS, REMOVE IN PRODUCTION
     volumes:
       - ../a-mmc_backend/migrations:/app/migrations
+      # Seed data
+      - ../a-mmc_backend/data:/app/data 
     ####
     env_file:
       - ../a-mmc_backend/.env.example

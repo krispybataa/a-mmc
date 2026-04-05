@@ -66,7 +66,7 @@ export default function Doctors() {
     async function load() {
       try {
         const { data } = await api.get('/clinicians/')
-        setClinicians(data)
+        setClinicians(data.slice().sort((a, b) => a.last_name.localeCompare(b.last_name)))
       } catch {
         setFetchError('Unable to load clinicians. Please try again.')
       } finally {
@@ -188,7 +188,12 @@ export default function Doctors() {
                 />
                 <button
                   onClick={() => setFiltersOpen(v => !v)}
-                  className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 text-sm font-medium text-[var(--color-dark)] hover:bg-slate-50 transition-colors min-h-[44px]"
+                  className={[
+                    'shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors min-h-[44px]',
+                    activeCount > 0
+                      ? 'border-[var(--color-accent)] text-[var(--color-accent)] bg-[var(--color-accent)]/5'
+                      : 'border-slate-200 text-[var(--color-dark)] hover:bg-slate-50',
+                  ].join(' ')}
                 >
                   <SlidersHorizontal size={15} className="text-slate-400" />
                   <span>Filters{activeCount > 0 ? ` · ${activeCount}` : ''}</span>
@@ -320,7 +325,11 @@ export default function Doctors() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {visible.map(c => (
-              <ClinicianCard key={c.clinician_id} clinician={c} />
+              <ClinicianCard
+                key={c.clinician_id}
+                clinician={c}
+                displayName={`${c.last_name}, ${c.first_name}`}
+              />
             ))}
           </div>
         )}

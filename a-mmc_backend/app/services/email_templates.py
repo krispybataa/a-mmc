@@ -41,7 +41,7 @@ def _base(title: str, body_html: str) -> str:
         '<td style="background-color:#1D409C;padding:24px 32px;'
         'border-radius:8px 8px 0 0;">'
         '<p style="margin:0;color:#FFFFFF;font-size:20px;font-weight:bold;'
-        'letter-spacing:-0.3px;">Asclepius</p>'
+        'letter-spacing:-0.3px;">Unicorn</p>'
         '</td>'
         '</tr>'
 
@@ -59,7 +59,7 @@ def _base(title: str, body_html: str) -> str:
         '<td style="background-color:#f0f0f0;padding:16px 32px;'
         'border-radius:0 0 8px 8px;border:1px solid #e8e8e8;border-top:none;">'
         '<p style="margin:0;color:#888888;font-size:12px;line-height:1.5;">'
-        'This is an automated message from Asclepius. '
+        'This is an automated message from Unicorn. '
         'Please do not reply to this email.'
         '</p>'
         '</td>'
@@ -156,6 +156,9 @@ def appointment_confirmation(
     chief_complaint: str,
     payment_type: str,
     consultation_type: str,
+    secretary_email: str = '',
+    secretary_name: str = '',
+    secretary_contact_phone: str = '',
 ) -> dict:
     """
     Sent to the patient when C/S accepts a pending appointment.
@@ -163,7 +166,7 @@ def appointment_confirmation(
     subject = f"Appointment Confirmed \u2014 {date}"
     title_str = clinician_title or ""
 
-    details = _detail_table([
+    detail_rows = [
         ("Clinician",          f"{title_str} {clinician_name}".strip()),
         ("Date",               date),
         ("Time",               time),
@@ -171,16 +174,30 @@ def appointment_confirmation(
         ("Chief Complaint",    chief_complaint or "\u2014"),
         ("Payment Type",       payment_type or "\u2014"),
         ("Consultation Type",  (consultation_type or "").upper() or "\u2014"),
-    ])
+    ]
+    if secretary_name and secretary_email and secretary_contact_phone:
+        detail_rows.append((
+            "Contact",
+            f'For more information about your appointment, contact '
+            f'<strong>{secretary_name}</strong> at '
+            f'<a href="mailto:{secretary_email}">{secretary_email}</a>'
+            f' or {secretary_contact_phone}.',
+        ))
+    elif secretary_email:
+        detail_rows.append((
+            "Contact",
+            f'For more information, contact the clinic at '
+            f'<a href="mailto:{secretary_email}">{secretary_email}</a>.',
+        ))
 
     body = (
         f'<p>Dear <strong>{patient_name}</strong>,</p>'
         f'<p>Your appointment has been confirmed. Please review the details below.</p>'
-        f'{details}'
+        f'{_detail_table(detail_rows)}'
         f'{_info_box(_ARRIVAL_REMINDER)}'
         f'<p>If you need to cancel or reschedule, please log in to your account '
         f'at least 24 hours in advance.</p>'
-        f'<p style="margin-top:24px;">Thank you for choosing Asclepius.</p>'
+        f'<p style="margin-top:24px;">Thank you for choosing Unicorn.</p>'
     )
     return {"subject": subject, "html": _base(subject, body)}
 
@@ -339,7 +356,7 @@ def initial_credentials_clinician(
     """
     Sent to a newly created clinician with their login credentials.
     """
-    subject = "Welcome to Asclepius \u2014 Your Account Has Been Created"
+    subject = "Welcome to Unicorn \u2014 Your Account Has Been Created"
     title_str = clinician_title or ""
     login_url = (
         f"{system_url.rstrip('/')}/staff/login"
@@ -354,7 +371,7 @@ def initial_credentials_clinician(
     )
     body = (
         f'<p>Dear <strong>{title_str} {clinician_name}</strong>,</p>'
-        f'<p>Your Asclepius staff account has been created. You can now log in to '
+        f'<p>Your Unicorn staff account has been created. You can now log in to '
         f'manage your profile, schedule, and appointments.</p>'
         f'{_credential_box(login_email, temporary_password)}'
         f'{_info_box(pw_warning, colour="#CE1117", bg="#fff5f5")}'
@@ -373,7 +390,7 @@ def initial_credentials_secretary(
     """
     Sent to a newly created secretary with their login credentials.
     """
-    subject = "Welcome to Asclepius \u2014 Your Staff Account Is Ready"
+    subject = "Welcome to Unicorn \u2014 Your Staff Account Is Ready"
     login_url = (
         f"{system_url.rstrip('/')}/staff/login"
         if system_url else
@@ -387,7 +404,7 @@ def initial_credentials_secretary(
     )
     body = (
         f'<p>Dear <strong>{secretary_name}</strong>,</p>'
-        f'<p>Your Asclepius staff account has been created. You can now log in to '
+        f'<p>Your Unicorn staff account has been created. You can now log in to '
         f'manage clinician profiles, schedules, and patient appointments.</p>'
         f'{_credential_box(login_email, temporary_password)}'
         f'{_info_box(pw_warning, colour="#CE1117", bg="#fff5f5")}'
@@ -404,6 +421,9 @@ def reschedule_confirmation_to_patient(
     new_date: str,
     new_time: str,
     room_number: str,
+    secretary_email: str = '',
+    secretary_name: str = '',
+    secretary_contact_phone: str = '',
 ) -> dict:
     """
     Sent to the patient when C/S confirms their rescheduled appointment.
@@ -411,18 +431,32 @@ def reschedule_confirmation_to_patient(
     subject = f"Your Appointment Has Been Confirmed for {new_date}"
     title_str = clinician_title or ""
 
-    details = _detail_table([
+    detail_rows = [
         ("Clinician",       f"{title_str} {clinician_name}".strip()),
         ("New Date",        new_date),
         ("New Time",        new_time),
         ("Room / Location", room_number or "To be confirmed"),
-    ])
+    ]
+    if secretary_name and secretary_email and secretary_contact_phone:
+        detail_rows.append((
+            "Contact",
+            f'For more information about your appointment, contact '
+            f'<strong>{secretary_name}</strong> at '
+            f'<a href="mailto:{secretary_email}">{secretary_email}</a>'
+            f' or {secretary_contact_phone}.',
+        ))
+    elif secretary_email:
+        detail_rows.append((
+            "Contact",
+            f'For more information, contact the clinic at '
+            f'<a href="mailto:{secretary_email}">{secretary_email}</a>.',
+        ))
 
     body = (
         f'<p>Dear <strong>{patient_name}</strong>,</p>'
         f'<p>Great news \u2014 your rescheduled appointment has been confirmed. '
         f'Please review your new appointment details below.</p>'
-        f'{details}'
+        f'{_detail_table(detail_rows)}'
         f'{_info_box(_ARRIVAL_REMINDER)}'
         f'<p>We look forward to seeing you. If you need to make changes, please log in '
         f'to your account at least 24 hours in advance.</p>'

@@ -12,7 +12,9 @@ a-mmc_frontend/npm-debug.log*
 a-mmc_frontend/yarn-debug.log*
 a-mmc_frontend/yarn-error.log*
 a-mmc_frontend/pnpm-debug.log*
-
+a-mmc_frontend/public/assets/hmo-logos/logos.psd*
+a-mmc_frontend/public/assets/site-logos/site-logo.psd*
+a-mmc_frontend/public/assets/site-logos/site-logo-raw.psd*
 **/__pycache__/
 **/*.py[cod]
 **/*.pyo

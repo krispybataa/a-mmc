@@ -5,7 +5,7 @@ import api from '../../services/api'
 
 function StatCard({ label, value, loading }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 flex flex-col gap-2">
+    <div className="bg-white rounded-2xl border border-[var(--color-border)] shadow-md p-6 flex flex-col gap-2">
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
       <p className={[
         'text-4xl font-bold',
@@ -33,8 +33,10 @@ export default function AdminDashboard() {
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
-      <h1 className="text-3xl font-bold text-[var(--color-dark)] mb-2">Dashboard</h1>
-      <p className="text-sm text-slate-500 mb-8">System-wide counts at a glance.</p>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-[var(--color-text)]">Dashboard</h1>
+        <p className="text-[var(--color-muted)] mt-1">System-wide counts at a glance.</p>
+      </div>
 
       {error && (
         <p className="text-sm text-[var(--color-accent)] mb-6">{error}</p>

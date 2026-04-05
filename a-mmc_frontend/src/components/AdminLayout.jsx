@@ -24,7 +24,7 @@ function SidebarNav({ email, onLogout, onNavClick }) {
       {/* Wordmark + badge */}
       <div className="px-6 py-5 border-b border-white/10 shrink-0">
         <p className="text-white font-bold text-lg tracking-tight select-none">
-          Asclepius
+          Unicorn
         </p>
         <span className="mt-1.5 inline-block bg-white/20 text-white text-xs font-semibold px-2 py-0.5 rounded-full select-none">
           Admin
@@ -40,10 +40,10 @@ function SidebarNav({ email, onLogout, onNavClick }) {
             end={end}
             onClick={onNavClick}
             className={({ isActive }) => [
-              'flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px]',
+              'flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors min-h-[48px] border-l-4',
               isActive
-                ? 'bg-white/20 text-white'
-                : 'text-white/70 hover:text-white hover:bg-white/10',
+                ? 'bg-white/20 text-white border-[var(--color-accent)]'
+                : 'text-white/70 hover:text-white hover:bg-white/10 border-transparent',
             ].join(' ')}
           >
             {label}
@@ -90,7 +90,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-[var(--color-bg)]">
 
       {/* ── Desktop sidebar (md+) ── */}
       <aside className="hidden md:flex md:flex-col md:w-56 md:fixed md:inset-y-0 z-30 shrink-0">
@@ -112,7 +112,7 @@ export default function AdminLayout() {
           <Menu size={22} />
         </button>
         <span className="text-white font-bold text-base tracking-tight select-none">
-          Asclepius
+          Unicorn
         </span>
         <span className="bg-white/20 text-white text-xs font-semibold px-2 py-0.5 rounded-full select-none">
           Admin

@@ -14,15 +14,17 @@ const STATUS_LABELS = {
   accepted:              'Accepted',
   reschedule_requested:  'Reschedule Requested',
   rejected:              'Rejected',
+  declined:              'Declined',
   cancelled:             'Cancelled',
 }
 
 const STATUS_COLORS = {
-  pending:               'bg-yellow-100 text-yellow-800',
+  pending:               'bg-[var(--color-primary)]/10 text-[var(--color-primary)]',
   accepted:              'bg-green-100 text-green-700',
-  reschedule_requested:  'bg-amber-100 text-amber-800',
-  rejected:              'bg-red-100 text-red-700',
-  cancelled:             'bg-slate-100 text-slate-600',
+  reschedule_requested:  'bg-[var(--color-accent)]/10 text-[var(--color-accent)]',
+  rejected:              'bg-slate-100 text-slate-500',
+  declined:              'bg-slate-100 text-slate-500',
+  cancelled:             'bg-slate-100 text-slate-500',
 }
 
 const STATUS_FILTER_OPTIONS = [
@@ -30,6 +32,7 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'pending',              label: 'Pending' },
   { value: 'accepted',             label: 'Accepted' },
   { value: 'reschedule_requested', label: 'Reschedule Requested' },
+  { value: 'declined',             label: 'Declined' },
   { value: 'rejected',             label: 'Rejected' },
   { value: 'cancelled',            label: 'Cancelled' },
 ]
@@ -67,7 +70,7 @@ function RescheduleModal({ target, onSubmit, onClose }) {
   const [success, setSuccess] = useState(false)
   const [schedule, setSchedule] = useState([])
 
-  const clinicianName = `${target.clinician.title} ${target.clinician.last_name}`
+  const clinicianName = `${target.clinician.first_name} ${target.clinician.last_name}`
 
   // Fetch clinician schedule for SlotPicker
   useEffect(() => {
@@ -83,12 +86,16 @@ function RescheduleModal({ target, onSubmit, onClose }) {
     return () => document.removeEventListener('keydown', handler)
   }, [onClose])
 
+  // When target is already reschedule_requested, C/S is *confirming* with a new slot.
+  // When target is accepted, C/S is *initiating* the reschedule (reason required, no slot yet).
+  const isConfirming = target.status === 'reschedule_requested'
+
   async function handleSubmit() {
-    if (!reason.trim()) {
+    if (!isConfirming && !reason.trim()) {
       setError('Reschedule reason is required.')
       return
     }
-    if (!selectedSlot) {
+    if (isConfirming && !selectedSlot) {
       setError('Please select a new time slot.')
       return
     }
@@ -108,7 +115,9 @@ function RescheduleModal({ target, onSubmit, onClose }) {
     >
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-[var(--color-dark)]">Request Reschedule</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-dark)]">
+            {isConfirming ? 'Confirm Reschedule' : 'Request Reschedule'}
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -144,23 +153,25 @@ function RescheduleModal({ target, onSubmit, onClose }) {
                 <p className="text-slate-500 mt-0.5">{target.chief_complaint}</p>
               </div>
 
-              {/* Reason */}
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-dark)] mb-1.5">
-                  Reschedule Reason
-                  <span className="text-[var(--color-accent)] ml-0.5">*</span>
-                </label>
-                <textarea
-                  rows={3}
-                  value={reason}
-                  onChange={(e) => {
-                    setReason(e.target.value)
-                    if (error) setError('')
-                  }}
-                  placeholder="Explain why the appointment needs to be rescheduled…"
-                  className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm text-[var(--color-dark)] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none"
-                />
-              </div>
+              {/* Reason — only required when initiating */}
+              {!isConfirming && (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-dark)] mb-1.5">
+                    Reschedule Reason
+                    <span className="text-[var(--color-accent)] ml-0.5">*</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={reason}
+                    onChange={(e) => {
+                      setReason(e.target.value)
+                      if (error) setError('')
+                    }}
+                    placeholder="Explain why the appointment needs to be rescheduled…"
+                    className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm text-[var(--color-dark)] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none"
+                  />
+                </div>
+              )}
 
               {/* Slot picker */}
               <SlotPicker
@@ -192,7 +203,119 @@ function RescheduleModal({ target, onSubmit, onClose }) {
                   onClick={handleSubmit}
                   className="flex-1 min-h-[44px] rounded-lg bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 transition-opacity"
                 >
-                  Submit Request
+                  {isConfirming ? 'Confirm & Rebook' : 'Submit Request'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── DeclineModal ───────────────────────────────────────────────────────────────
+
+function DeclineModal({ target, onSubmit, onClose }) {
+  const [reason,  setReason]  = useState('')
+  const [error,   setError]   = useState('')
+  const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    function handler(e) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  async function handleSubmit() {
+    if (!reason.trim() || reason.trim().length < 10) {
+      setError('Please provide a reason (at least 10 characters).')
+      return
+    }
+    setError('')
+    try {
+      await onSubmit(target.appointment_id, reason.trim())
+      setSuccess(true)
+    } catch (err) {
+      setError(err?.response?.data?.error ?? 'Failed to decline appointment.')
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-[var(--color-text)]">Decline Appointment</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="text-slate-400 hover:text-slate-600 p-1 min-h-[44px] min-w-[44px] flex items-center justify-center"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          {success ? (
+            <div className="text-center space-y-4 py-4">
+              <p className="text-[var(--color-accent)] font-medium">Appointment declined.</p>
+              <p className="text-sm text-slate-500">The patient has been notified.</p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-6 py-2.5 rounded-xl bg-[var(--color-primary)] text-white text-sm font-semibold hover:brightness-110 min-h-[44px]"
+              >
+                Close
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="bg-slate-50 rounded-lg px-4 py-3 text-sm text-[var(--color-text)]">
+                <p className="font-medium">
+                  {target.patient.last_name}, {target.patient.first_name}
+                </p>
+                <p className="text-slate-500 mt-0.5">{target.chief_complaint}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+                  Reason for Declining
+                  <span className="text-[var(--color-accent)] ml-0.5">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={reason}
+                  onChange={(e) => {
+                    setReason(e.target.value)
+                    if (error) setError('')
+                  }}
+                  placeholder="Explain why this appointment cannot be accepted…"
+                  className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] text-sm text-[var(--color-text)] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] resize-none"
+                />
+              </div>
+
+              {error && (
+                <p className="text-sm text-[var(--color-accent)]">{error}</p>
+              )}
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 min-h-[48px] rounded-xl border border-[var(--color-border)] text-sm font-semibold text-[var(--color-muted)] hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="flex-1 min-h-[48px] rounded-xl bg-[var(--color-accent)] text-white text-sm font-semibold hover:brightness-110 active:scale-95"
+                >
+                  Decline Appointment
                 </button>
               </div>
             </>
@@ -219,6 +342,7 @@ export default function ClinicianDashboard() {
   const [page, setPage]                 = useState(1)
 
   const [rescheduleTarget, setRescheduleTarget] = useState(null)
+  const [declineTarget,   setDeclineTarget]     = useState(null)
   const [acceptConfirmId, setAcceptConfirmId]   = useState(null)
   const [acceptError, setAcceptError]           = useState('')
 
@@ -290,20 +414,36 @@ export default function ClinicianDashboard() {
     }
   }
 
-  async function handleRescheduleSubmit(appointmentId, reason) {
-    await api.patch(`/appointments/${appointmentId}`, {
-      status: 'reschedule_requested',
-      reschedule_reason: reason,
-      role: 'cs',
-    })
+  async function handleRescheduleSubmit(appointmentId, reason, selectedSlot) {
+    const isConfirming = rescheduleTarget?.status === 'reschedule_requested'
+    const payload = isConfirming
+      ? { status: 'accepted', new_slot_id: selectedSlot?.slot_id }
+      : { status: 'reschedule_requested', reschedule_reason: reason, role: 'cs' }
+    await api.patch(`/appointments/${appointmentId}`, payload)
     setAppointments(prev =>
       prev.map(a =>
         a.appointment_id === appointmentId
-          ? { ...a, status: 'reschedule_requested', reschedule_reason: reason }
+          ? { ...a, status: isConfirming ? 'accepted' : 'reschedule_requested',
+              reschedule_reason: isConfirming ? a.reschedule_reason : reason }
           : a
       )
     )
     setRescheduleTarget(null)
+  }
+
+  async function handleDeclineSubmit(appointmentId, reason) {
+    await api.patch(`/appointments/${appointmentId}`, {
+      status: 'declined',
+      decline_reason: reason,
+    })
+    setAppointments(prev =>
+      prev.map(a =>
+        a.appointment_id === appointmentId
+          ? { ...a, status: 'declined', cancellation_reason: reason }
+          : a
+      )
+    )
+    setDeclineTarget(null)
   }
 
   // ── Shared styles ──────────────────────────────────────────────────────────
@@ -319,19 +459,26 @@ export default function ClinicianDashboard() {
           onClose={() => setRescheduleTarget(null)}
         />
       )}
+      {declineTarget && (
+        <DeclineModal
+          target={declineTarget}
+          onSubmit={handleDeclineSubmit}
+          onClose={() => setDeclineTarget(null)}
+        />
+      )}
 
       <div className="min-h-screen bg-slate-50">
         <div className="max-w-5xl mx-auto px-6 py-10">
 
           {/* ── Page header ── */}
-          <div className="flex items-start justify-between gap-4 mb-8">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-8">
             <div>
               <h1 className="text-3xl font-bold text-[var(--color-dark)]">Appointment Inbox</h1>
               <p className="text-lg italic text-slate-500 mt-1">
                 Welcome, {user.first_name} {user.last_name}!
               </p>
             </div>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex gap-2 flex-wrap sm:shrink-0">
               <Link
                 to="/clinician-dashboard/schedule"
                 className="px-4 py-2.5 rounded-lg border border-slate-200 text-sm font-medium text-[var(--color-dark)] hover:bg-slate-100 transition-colors min-h-[44px] flex items-center"
@@ -406,8 +553,9 @@ export default function ClinicianDashboard() {
                   </thead>
                   <tbody>
                     {pageData.map(appt => {
-                      const canAccept    = appt.status === 'pending'
-                      const canReschedule = appt.status === 'pending' || appt.status === 'accepted'
+                      const canAccept     = appt.status === 'pending'
+                      const canDecline    = appt.status === 'pending'
+                      const canReschedule = appt.status === 'accepted' || appt.status === 'reschedule_requested'
                       const isConfirming  = acceptConfirmId === appt.appointment_id
                       return (
                         <tr
@@ -461,6 +609,15 @@ export default function ClinicianDashboard() {
                                     Accept
                                   </button>
                                 )}
+                                {canDecline && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setDeclineTarget(appt)}
+                                    className={`${actionBtnBase} border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-red-50`}
+                                  >
+                                    Decline
+                                  </button>
+                                )}
                                 {canReschedule && (
                                   <button
                                     type="button"
@@ -490,8 +647,9 @@ export default function ClinicianDashboard() {
               {/* Mobile cards (below md) */}
               <div className="md:hidden space-y-4">
                 {pageData.map(appt => {
-                  const canAccept    = appt.status === 'pending'
-                  const canReschedule = appt.status === 'pending' || appt.status === 'accepted'
+                  const canAccept     = appt.status === 'pending'
+                  const canDecline    = appt.status === 'pending'
+                  const canReschedule = appt.status === 'accepted' || appt.status === 'reschedule_requested'
                   const isConfirming  = acceptConfirmId === appt.appointment_id
                   return (
                     <div
@@ -548,6 +706,15 @@ export default function ClinicianDashboard() {
                               className={`${actionBtnBase} flex-1 bg-green-600 text-white hover:bg-green-700`}
                             >
                               Accept
+                            </button>
+                          )}
+                          {canDecline && (
+                            <button
+                              type="button"
+                              onClick={() => setDeclineTarget(appt)}
+                              className={`${actionBtnBase} flex-1 border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-red-50`}
+                            >
+                              Decline
                             </button>
                           )}
                           {canReschedule && (

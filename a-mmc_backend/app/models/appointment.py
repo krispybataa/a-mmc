@@ -17,6 +17,7 @@ class Appointment(db.Model):
     # pending | accepted | reschedule_requested | rejected | cancelled
     status = db.Column(db.String(30), nullable=False, default="pending")
     reschedule_reason = db.Column(db.Text)
+    decline_reason    = db.Column(db.Text)
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(
         db.DateTime,
