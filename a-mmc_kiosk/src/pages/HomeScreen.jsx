@@ -90,7 +90,7 @@ export default function HomeScreen({ onNavigate }) {
         style={{ backgroundColor: PRIMARY }}
       >
         <h1 className="text-white font-bold tracking-wide" style={{ fontSize: '36px' }}>
-          Asclepius
+          Unicorn
         </h1>
         <KioskClock />
       </div>

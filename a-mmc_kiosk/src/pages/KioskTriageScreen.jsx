@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { TRIAGE_STEPS, SYMPTOM_SPECIALTY_MAP, HMO_LABEL_MAP } from '@triage'
 import api from '../services/api'
 import KioskClock from '../components/KioskClock'
+import KioskBodyDiagram from '../components/KioskBodyDiagram'
 
 const PRIMARY   = '#1D409C'
 const ACCENT    = '#CE1117'
@@ -112,6 +113,12 @@ export default function KioskTriageScreen({ onNavigate }) {
   const [clinicians,        setClinicians]        = useState([])
   const [loading,           setLoading]           = useState(false)
   const [fetchError,        setFetchError]        = useState('')
+  const [showFallback,      setShowFallback]      = useState(false)
+
+  // Reset fallback grid whenever step changes
+  useEffect(() => {
+    setShowFallback(false)
+  }, [step])
 
   // Fetch clinicians when entering results step
   useEffect(() => {
@@ -207,37 +214,43 @@ export default function KioskTriageScreen({ onNavigate }) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#F8F7FF' }}>
         {header}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '40px 48px' }}>
-          <p style={{ fontSize: '28px', fontWeight: '700', color: '#1e293b', marginBottom: '12px' }}>
-            Is this your first time visiting?
-          </p>
-          <p style={{ fontSize: '20px', color: '#6B7280', marginBottom: '40px' }}>
-            This helps us tailor your experience.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '600px' }}>
-            {[
-              'Yes, this is my first visit',
-              'No, I have visited before',
-            ].map(label => (
-              <button
-                key={label}
-                onClick={() => setStep('hmo')}
-                style={{
-                  ...cardBase,
-                  minHeight: '120px',
-                  padding: '24px 32px',
-                  fontSize: '28px',
-                  fontWeight: '600',
-                  color: '#1e293b',
-                  textAlign: 'left',
-                  width: '100%',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.backgroundColor = PRIMARY; e.currentTarget.style.color = '#fff' }}
-                onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.color = '#1e293b' }}
-              >
-                {label}
-              </button>
-            ))}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 48px' }}>
+          <div style={{ width: '100%', maxWidth: '672px' }}>
+            <h2 style={{ fontSize: '32px', fontWeight: '700', color: PRIMARY, marginBottom: '12px', textAlign: 'center' }}>
+              Is this your first time visiting?
+            </h2>
+            <p style={{ fontSize: '20px', color: '#6B7280', marginBottom: '40px', textAlign: 'center' }}>
+              This helps us tailor your experience.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {[
+                'Yes, this is my first visit',
+                'No, I have visited before',
+              ].map(label => (
+                <button
+                  key={label}
+                  onClick={() => setStep('hmo')}
+                  style={{
+                    minHeight: '120px',
+                    padding: '24px 32px',
+                    fontSize: '28px',
+                    fontWeight: '600',
+                    color: '#1e293b',
+                    textAlign: 'center',
+                    width: '100%',
+                    backgroundColor: '#fff',
+                    border: `2px solid ${PRIMARY}`,
+                    borderRadius: '16px',
+                    cursor: 'pointer',
+                    transition: 'all 0.12s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = PRIMARY; e.currentTarget.style.color = '#fff' }}
+                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.color = '#1e293b' }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -324,60 +337,61 @@ export default function KioskTriageScreen({ onNavigate }) {
         {header}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px 48px' }}>
           <p style={{ fontSize: '28px', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>
-            What area concerns you?
+            Where do you feel discomfort?
           </p>
           <p style={{ fontSize: '20px', color: '#6B7280', marginBottom: '24px' }}>
-            Tap the option that best matches your concern.
+            Tap a body area or browse all options below.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-            {BODY_REGIONS.map(region => (
-              <button
-                key={region.label}
-                onClick={() => handleRegionSelect(region.specialty)}
-                style={{
-                  ...cardBase,
-                  minHeight: '160px',
-                  padding: 0,
-                  overflow: 'hidden',
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.backgroundColor = PRIMARY; e.currentTarget.querySelector('.region-label').style.color = '#fff'; e.currentTarget.querySelector('.region-icon').style.filter = 'brightness(0) invert(1)' }}
-                onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.querySelector('.region-label').style.color = '#1e293b'; e.currentTarget.querySelector('.region-icon').style.filter = '' }}
-              >
-                {/* Primary color top strip */}
-                <div style={{ backgroundColor: PRIMARY, height: '12px', width: '100%', borderRadius: '16px 16px 0 0' }} />
-                {/* Card body */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px' }}>
-                  <span className="region-icon" style={{ fontSize: '40px', lineHeight: 1 }}>{region.icon}</span>
-                  <span className="region-label" style={{ fontSize: '22px', fontWeight: '600', color: '#1e293b', textAlign: 'center', lineHeight: 1.2 }}>
-                    {region.label}
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
+          <KioskBodyDiagram
+            onSelect={(specialty) => {
+              setSelectedSpecialty(specialty)
+              setStep('results')
+            }}
+            onFallback={() => setShowFallback(true)}
+          />
 
-          {/* Browse all */}
-          <div style={{ marginTop: '28px', textAlign: 'center' }}>
-            <button
-              onClick={() => handleRegionSelect(null)}
-              style={{
-                fontSize: '20px',
-                color: PRIMARY,
-                fontWeight: '600',
-                textDecoration: 'underline',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                minHeight: '72px',
-                padding: '16px',
-              }}
-            >
-              Browse All Doctors →
-            </button>
-          </div>
+          {showFallback && (
+            <div style={{ marginTop: '32px' }}>
+              <p style={{ fontSize: '22px', color: '#6B7280', marginBottom: '16px' }}>
+                Select the option that best matches your concern:
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                {BODY_REGIONS.map(region => (
+                  <button
+                    key={region.label}
+                    onClick={() => handleRegionSelect(region.specialty)}
+                    style={{
+                      ...cardBase,
+                      minHeight: '160px',
+                      padding: 0,
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = PRIMARY
+                      e.currentTarget.querySelector('.region-label').style.color = '#fff'
+                      e.currentTarget.querySelector('.region-icon').style.filter = 'brightness(0) invert(1)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = '#fff'
+                      e.currentTarget.querySelector('.region-label').style.color = '#1e293b'
+                      e.currentTarget.querySelector('.region-icon').style.filter = ''
+                    }}
+                  >
+                    <div style={{ backgroundColor: PRIMARY, height: '12px', width: '100%', borderRadius: '16px 16px 0 0' }} />
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px' }}>
+                      <span className="region-icon" style={{ fontSize: '40px', lineHeight: 1 }}>{region.icon}</span>
+                      <span className="region-label" style={{ fontSize: '22px', fontWeight: '600', color: '#1e293b', textAlign: 'center', lineHeight: 1.2 }}>
+                        {region.label}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )

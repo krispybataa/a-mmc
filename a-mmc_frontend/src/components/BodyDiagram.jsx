@@ -108,10 +108,17 @@ export default function BodyDiagram({ onSelect }) {
   ]
 
   return (
-    <div className="flex flex-col items-center gap-5">
+    /* Mobile: stack vertically. sm+: side-by-side when substep open */
+    <div className="flex flex-col sm:flex-row items-start gap-5 w-full">
 
-      {/* Body diagram — front view only */}
-      <div style={{ width: '100%', maxWidth: '420px', margin: '0 auto' }}>
+      {/* Body diagram — pure Tailwind so sm: breakpoints aren't overridden by inline style */}
+      <div
+        className={
+          substep
+            ? 'w-full mx-auto max-w-[420px] sm:w-[160px] sm:max-w-[160px] sm:mx-0 shrink-0'
+            : 'w-full mx-auto max-w-[420px] shrink-0'
+        }
+      >
         <Model
           data={modelData}
           bodyColor="#E2E0F0"
@@ -122,9 +129,9 @@ export default function BodyDiagram({ onSelect }) {
         />
       </div>
 
-      {/* Substep narrowing card */}
+      {/* Substep narrowing card — below on mobile, right-of-diagram on sm+ */}
       {substep && (
-        <div className="w-full bg-white rounded-xl border border-[var(--color-border)] shadow-sm p-5">
+        <div className="flex-1 w-full bg-white rounded-xl border border-[var(--color-border)] shadow-sm p-5 self-start">
           <p className="font-semibold text-base text-[var(--color-text)] mb-4">
             {substep.question}
           </p>

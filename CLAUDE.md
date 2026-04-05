@@ -416,7 +416,7 @@ enables usability testing and SRET presentation without a live mail server. All 
 functions follow this pattern. Switching to a live provider requires only `.env` changes.
 
 ### Display name
-All UI-visible and email-visible text uses **"Asclepius"** as the system name. Internal
+All UI-visible and email-visible text uses **"Unicorn"** as the system name. Internal
 code identifiers, variable names, file names, API routes, and CLAUDE.md use
 "Alagang MMC" / "a-mmc". Devlogs and the thesis proposal (.tex) are exempt.
 The repository is public — "Makati Medical Center" must never appear in committed
@@ -505,7 +505,7 @@ Patients can browse clinicians without an account but must register to book.
 - ✅ F7-A — UpdateProfile.jsx fully implemented with all 5 sections (Personal, Contact, Next of Kin, Preferences, SC/PWD); uploadService.js stub for file uploads
 - ✅ uploadService.js — Railway bucket stub, returns null until wired, degrades gracefully
 - ✅ F-PATCH-UI-1 — Staff mobile responsiveness, role subtitle (Staff · Clinician / Staff · Secretary), A-MMC redaction
-- ✅ F-PATCH-UI-2 — Full rebrand to "Asclepius" across all UI-visible text and email templates
+- ✅ F-PATCH-UI-2 — Full rebrand to "Asclepius" across all UI-visible text and email templates (display name subsequently changed to "Unicorn" — CLAUDE.md updated)
 - ✅ B-EMAIL-1 / F-EMAIL-1 — Email template framework + admin email preview page at
   /admin/email-previews; iframe rendering with srcdoc, Copy HTML button
 - ✅ F-PDF-1 — pdfService.js with jsPDF; patient + staff PDF variants; wired into
