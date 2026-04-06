@@ -128,7 +128,7 @@ export default function KioskTriageScreen({ onNavigate, onSelectClinician }) {
     setLoading(true)
     setFetchError('')
     api.get('/clinicians/')
-      .then(res => setClinicians(res.data))
+      .then(res => setClinicians(Array.isArray(res.data) ? res.data : []))
       .catch(() => setFetchError('Unable to load clinicians. Please try again.'))
       .finally(() => setLoading(false))
   }, [step])
@@ -159,7 +159,7 @@ export default function KioskTriageScreen({ onNavigate, onSelectClinician }) {
   }
 
   // ── Filtered results ────────────────────────────────────────────────────────
-  const filtered = clinicians.filter(c => {
+  const filtered = (Array.isArray(clinicians) ? clinicians : []).filter(c => {
     if (selectedSpecialty && c.specialty !== selectedSpecialty) return false
     if (selectedHmo && selectedHmo !== 'no_hmo') {
       const hmoName = HMO_LABEL_MAP[selectedHmo]
