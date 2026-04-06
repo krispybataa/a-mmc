@@ -7,9 +7,15 @@ export default defineConfig({
   server: { fs: { allow: ['..'] } },
   preview: {
     allowedHosts: true,
+    proxy: {
+      '/api': {
+        target: 'http://a-mmc-nginx',
+        changeOrigin: true,
+      }
+    }
   },
   resolve: {
-    alias: {
+    alias: {  
       '@triage': path.resolve(
         __dirname,
         './src/data/triageLogic.js'
