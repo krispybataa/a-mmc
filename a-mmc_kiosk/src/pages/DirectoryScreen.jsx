@@ -73,7 +73,7 @@ export default function DirectoryScreen({ onNavigate, onSelectClinician }) {
     setLoading(true)
     setError(null)
     api.get('/clinicians/')
-      .then(res => setClinicians(res.data))
+      .then(res => setClinicians(Array.isArray(res.data) ? res.data : []))
       .catch(() => setError('Could not load clinicians. Please try again.'))
       .finally(() => setLoading(false))
   }
