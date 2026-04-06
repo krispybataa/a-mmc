@@ -7,7 +7,7 @@ import KioskBodyDiagram from '../components/KioskBodyDiagram'
 
 const PRIMARY   = '#1D409C'
 const ACCENT    = '#CE1117'
-const MAIN_URL  = import.meta.env.VITE_MAIN_APP_URL || 'http://localhost'
+const MAIN_URL  = import.meta.env.VITE_MAIN_APP_URL 
 
 const HMO_STEP     = TRIAGE_STEPS.find(s => s.id === 'hmo')
 const noHmoOption  = HMO_STEP.options.find(o => o.emphasized)

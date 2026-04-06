@@ -6,6 +6,8 @@ services:
     container_name: "${FRONTEND_CONTAINER}"
     networks:
       - a-mmc-network
+    env_file:
+      - ../a-mmc_frontend/.env
     depends_on:
       a-mmc-backend:
         condition: service_healthy
@@ -15,6 +17,10 @@ services:
     container_name: "${KIOSK_CONTAINER}"
     networks:
       - a-mmc-network
+    ports:
+      - "${KIOSK_PORT}:${KIOSK_PORT}"
+    env_file:
+      - ../a-mmc_kiosk/.env
     depends_on:
       a-mmc-backend:
         condition: service_healthy
@@ -32,7 +38,7 @@ services:
       - ../a-mmc_backend/data:/app/data 
     ####
     env_file:
-      - ../a-mmc_backend/.env.example
+      - ../a-mmc_backend/.env
     depends_on:
       a-mmc-postgres:
         condition: service_healthy
@@ -48,7 +54,6 @@ services:
     container_name: "${NGINX_CONTAINER}"
     ports:
       - "${NGINX_HTTP_PORT}:${NGINX_HTTP_PORT}"
-      - "${NGINX_HTTPS_PORT}:${NGINX_HTTPS_PORT}"
     networks:
       - a-mmc-network
     volumes:
@@ -64,7 +69,7 @@ services:
     networks:
       - a-mmc-network
     env_file:
-      - ../a-mmc_backend/.env.example
+      - ../a-mmc_backend/.env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_DB: ${POSTGRES_DB}
