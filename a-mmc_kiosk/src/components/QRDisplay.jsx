@@ -1,6 +1,6 @@
 import { QRCodeSVG } from 'qrcode.react'
 
-const MAIN_APP_URL = import.meta.env.VITE_MAIN_APP_URL || 'http://localhost'
+const MAIN_APP_URL = import.meta.env.VITE_MAIN_APP_URL
 
 export default function QRDisplay({ clinicianId, size = 180 }) {
   const url = `${MAIN_APP_URL}/clinician/${clinicianId}`

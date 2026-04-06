@@ -18,6 +18,6 @@ class DevelopmentConfig(BaseConfig):
     f"postgresql://{os.getenv('PGUSER')}:"
     f"{os.getenv('PGPASSWORD')}@"
     f"{os.getenv('PGHOST')}:"
-    f"{os.getenv('PGPORT', '5432')}/"
+    f"{os.getenv('PGPORT')}/"
     f"{os.getenv('PGDATABASE')}"
 )

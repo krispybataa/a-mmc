@@ -5,6 +5,9 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   server: { fs: { allow: ['..'] } },
+  preview: {
+    allowedHosts: true,
+  },
   resolve: {
     alias: {
       '@triage': path.resolve(
