@@ -27,9 +27,9 @@ docker build . -t krispybata/a-mmc-nginx:latest ; docker push krispybata/a-mmc-n
 
 docker push krispybata/a-mmc-nginx:latest
 
-docker push krispybata/a-mmc-frontend:latest
+docker build .\a-mmc_frontend\ -t krispybata/a-mmc-frontend:latest; docker push krispybata/a-mmc-frontend:latest
 
-docker push krispybata/a-mmc-backend:latest
+docker build .\a-mmc_backend\ -t krispybata/a-mmc-backend:latest ; docker push krispybata/a-mmc-backend:latest
 
 ammcprod
 
