@@ -7,12 +7,6 @@ export default defineConfig({
   server: { fs: { allow: ['..'] } },
   preview: {
     allowedHosts: true,
-    proxy: {
-      '/api': {
-        target: 'http://a-mmc-nginx',
-        changeOrigin: true,
-      }
-    }
   },
   resolve: {
     alias: {  
