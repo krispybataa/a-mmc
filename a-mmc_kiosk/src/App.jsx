@@ -9,7 +9,6 @@ export default function App() {
   const [screen,             setScreen]             = useState('home')
   const [selectedClinician,  setSelectedClinician]  = useState(null)
   const [fromScreen,         setFromScreen]         = useState('directory')
-  console.log('API URL:', import.meta.env.VITE_API_URL)
   const handleNavigate = useCallback((target) => {
     setScreen(target)
   }, [])
