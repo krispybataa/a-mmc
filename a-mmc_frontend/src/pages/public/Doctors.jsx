@@ -83,6 +83,11 @@ export default function Doctors() {
     [clinicians]
   )
 
+  const specialtyOptions = useMemo(
+    () => [...new Set(clinicians.map(c => c.specialty).filter(Boolean))].sort(),
+    [clinicians]
+  )
+
   const visible = useMemo(() => applyFilters(clinicians, {
     name:    nameQuery,
     spec:    specQuery,
@@ -222,11 +227,15 @@ export default function Doctors() {
                       </label>
                       <input
                         type="text"
+                        list="specialty-options"
                         value={specQuery}
                         onChange={e => setSpecQuery(e.target.value)}
-                        placeholder="e.g. Cardiology"
+                        placeholder="e.g. Rheumatology"
                         className={inputCls}
                       />
+                      <datalist id="specialty-options">
+                        {specialtyOptions.map(s => <option key={s} value={s} />)}
+                      </datalist>
                     </div>
 
                     {/* HMO Accreditation */}

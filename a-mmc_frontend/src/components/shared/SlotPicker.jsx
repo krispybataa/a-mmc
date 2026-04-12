@@ -29,7 +29,7 @@ function generateSlots(dayEntry) {
     slots.push({
       id: dayEntry.am_start.slice(0, 5),
       label: `${formatTime(dayEntry.am_start)} – ${formatTime(dayEntry.am_end)}`,
-      period: 'AM',
+      period: parseInt(dayEntry.am_start.slice(0, 2), 10) < 12 ? 'AM' : 'PM',
       start_time: dayEntry.am_start,
       end_time: dayEntry.am_end,
     })
@@ -38,7 +38,7 @@ function generateSlots(dayEntry) {
     slots.push({
       id: dayEntry.pm_start.slice(0, 5),
       label: `${formatTime(dayEntry.pm_start)} – ${formatTime(dayEntry.pm_end)}`,
-      period: 'PM',
+      period: parseInt(dayEntry.pm_start.slice(0, 2), 10) < 12 ? 'AM' : 'PM',
       start_time: dayEntry.pm_start,
       end_time: dayEntry.pm_end,
     })
@@ -116,7 +116,16 @@ export default function SlotPicker({
 
   if (selectedDate) {
     if (availableSlots) {
-      const realDaySlots = availableSlots[selectedDate] ?? []
+      const rawDaySlots = availableSlots[selectedDate] ?? []
+      // Client-side display guard: hide slots that have already passed.
+      // Backend enforces this authoritatively on submit.
+      const nowTimeStr = (() => {
+        const n = new Date()
+        return `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`
+      })()
+      const realDaySlots = selectedDate === today
+        ? rawDaySlots.filter(s => s.start_time.slice(0, 5) > nowTimeStr)
+        : rawDaySlots
       if (realDaySlots.length === 0) {
         unavailable = true
       } else {

@@ -1,3 +1,6 @@
+import re
+from datetime import date
+
 from flask import Blueprint, jsonify, request
 from app import db, limiter
 from app.models.patient import Patient
@@ -68,6 +71,29 @@ def create_patient():
     )
     if err:
         return err
+
+    # Format validation
+    for name_field in ("first_name", "last_name"):
+        if re.search(r"\d", data[name_field]):
+            return jsonify({"error": "Please enter a valid name (letters only)."}), 422
+
+    mobile = re.sub(r"\s", "", data["mobile_number"])
+    if not re.fullmatch(r"09\d{9}", mobile):
+        return jsonify({"error": "Mobile number must be 11 digits starting with 09."}), 422
+
+    try:
+        dob = date.fromisoformat(data["birthday"])
+    except ValueError:
+        return jsonify({"error": "Please enter a valid date of birth."}), 422
+
+    today = date.today()
+    if dob > today:
+        return jsonify({"error": "Date of birth cannot be in the future."}), 422
+    if dob < date(1900, 1, 1):
+        return jsonify({"error": "Please enter a valid date of birth."}), 422
+    fifteen_years_ago = today.replace(year=today.year - 15)
+    if dob > fifteen_years_ago:
+        return jsonify({"error": "You must be at least 15 years old to register."}), 422
 
     patient = Patient(
         last_name=data["last_name"],
