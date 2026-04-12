@@ -35,6 +35,8 @@ function CardRow({ label, value }) {
 
 const NON_TERMINAL = new Set(['pending', 'accepted', 'reschedule_requested'])
 
+const capitalize = s => s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ')
+
 export default function PatientDashboard() {
   const { user } = useAuth()
   const navigate  = useNavigate()
@@ -177,7 +179,7 @@ export default function PatientDashboard() {
                     appt.status === 'rejected'             ? 'bg-red-100 text-red-700'    :
                     'bg-gray-100 text-gray-600',
                   ].join(' ')}>
-                    {appt.status.replace('_', ' ')}
+                    {capitalize(appt.status)}
                   </span>
                 </div>
               ))}
