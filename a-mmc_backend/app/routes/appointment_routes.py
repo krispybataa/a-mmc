@@ -135,7 +135,7 @@ def create_appointment():
     if err:
         return err
 
-    db.get_or_404(Patient, data["patient_id"])  # B1-A-patch-2: verify patient FK before insert
+    patient = db.get_or_404(Patient, data["patient_id"])  # B1-A-patch-2: verify patient FK before insert
 
     slot = db.get_or_404(ClinicianTimeslot, data["slot_id"])
 
@@ -162,6 +162,14 @@ def create_appointment():
             "error": f"Slot consultation type '{slot.consultation_type}' does not match "
                      f"requested type '{consultation_type}'"
         }), 400
+
+    # SC/PWD discount guard — patient must have a valid ID on file
+    payment_type_val = data.get("payment_type", "")
+    if payment_type_val and ("Senior Citizen" in payment_type_val or "PWD" in payment_type_val):
+        if not patient.sc_pwd_id_number:
+            return jsonify({
+                "error": "A valid Senior Citizen or PWD ID must be on your profile to use this discount."
+            }), 403
 
     if has_overlap(data["patient_id"], slot):
         return jsonify({"error": "This time slot conflicts with an existing appointment."}), 409

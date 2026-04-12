@@ -136,6 +136,7 @@ export default function BookAppointment() {
   const [submitError, setSubmitError] = useState('')
   // Data
   const [clinician, setClinician]           = useState(null)
+  const [patient,   setPatient]             = useState(null)
   const [availableSlots, setAvailableSlots] = useState(null)
   const [clinicianLoading, setClinicianLoading] = useState(true)
   const [slotsLoading, setSlotsLoading]         = useState(false)
@@ -145,6 +146,14 @@ export default function BookAppointment() {
   useEffect(() => {
     if (!authLoading && !user) navigate(`/login?redirect=/book/${id}`, { replace: true })
   }, [authLoading, user, id, navigate])
+
+  // Fetch patient profile to check SC/PWD eligibility
+  useEffect(() => {
+    if (!user?.id) return
+    api.get(`/patients/${user.id}`)
+      .then(res => setPatient(res.data))
+      .catch(() => {}) // non-critical — discount guard degrades to disabled
+  }, [user?.id])
 
   // Fetch clinician profile on mount
   useEffect(() => {
@@ -219,9 +228,22 @@ export default function BookAppointment() {
     )
   }
 
+  // ── Error mapper ─────────────────────────────────────────────────────────────
+  function mapApiError(err) {
+    const status = err?.response?.status
+    const apiMsg = err?.response?.data?.error
+    if (status === 400) return apiMsg || 'Something went wrong. Please try again.'
+    if (status === 403) return apiMsg || 'You are not authorised to perform this action.'
+    if (status === 409) return 'You already have an appointment at this time.'
+    if (status === 422) return 'Please check your details and try again.'
+    if (status === 500) return 'A server error occurred. Please try again later.'
+    return apiMsg || 'Failed to submit. Please try again.'
+  }
+
   // ── Derived values (clinician is guaranteed non-null here) ───────────────────
-  const hasF2F  = clinician.schedules.some(s => !s.consultation_type || s.consultation_type === 'f2f')
-  const hasTele = clinician.schedules.some(s => s.consultation_type === 'teleconsult')
+  const hasF2F   = clinician.schedules.some(s => !s.consultation_type || s.consultation_type === 'f2f')
+  const hasTele  = clinician.schedules.some(s => s.consultation_type === 'teleconsult')
+  const hasSCPWD = !!(patient?.sc_pwd_id_number)
 
   const today          = new Date()
   const minDate        = toDateStr(today)
@@ -285,7 +307,7 @@ export default function BookAppointment() {
       })
       navigate('/dashboard', { state: { bookingSuccess: true } })
     } catch (err) {
-      setSubmitError(err?.response?.data?.error ?? 'Failed to submit. Please try again.')
+      setSubmitError(mapApiError(err))
       setLoading(false)
     }
   }
@@ -587,10 +609,26 @@ export default function BookAppointment() {
                   ].join(' ')}
                 >
                   <option value="">Select…</option>
-                  {paymentOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+                  {paymentOptions.map((t) => {
+                    const isSCPWD = t === 'Senior Citizen Discount' || t === 'PWD Discount'
+                    return (
+                      <option key={t} value={t} disabled={isSCPWD && !hasSCPWD}>
+                        {t}{isSCPWD && !hasSCPWD ? ' (ID required)' : ''}
+                      </option>
+                    )
+                  })}
                 </select>
                 {step3Errors.paymentType && (
                   <p className="mt-1.5 text-xs text-[var(--color-accent)]">{step3Errors.paymentType}</p>
+                )}
+                {!hasSCPWD && (
+                  <p className="mt-1.5 text-xs text-slate-400">
+                    Senior Citizen / PWD discount requires a valid ID on file.{' '}
+                    <Link to="/dashboard/profile" className="text-[var(--color-primary)] hover:underline">
+                      Update your profile
+                    </Link>{' '}
+                    to enable this option.
+                  </p>
                 )}
                 {clinician.hmos.length === 0 && (
                   <p className="mt-1.5 text-xs text-slate-400">

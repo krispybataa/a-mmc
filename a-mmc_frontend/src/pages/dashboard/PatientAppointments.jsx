@@ -51,6 +51,8 @@ function formatTimeRange(start, end) {
 const PAGE_SIZE = 5
 const ELIGIBLE  = new Set(['pending', 'accepted', 'reschedule_requested'])
 
+const capitalize = s => s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ')
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function PatientAppointments() {
@@ -291,7 +293,7 @@ export default function PatientAppointments() {
                             appt.status === 'declined'             ? 'bg-red-100 text-red-600' :
                             'bg-slate-100 text-slate-500',
                           ].join(' ')}>
-                            {appt.status.replace(/_/g, ' ')}
+                            {capitalize(appt.status)}
                           </span>
                         </div>
                         <p className="text-sm text-slate-400">
@@ -319,7 +321,7 @@ export default function PatientAppointments() {
                         >
                           Download PDF
                         </button>
-                        {eligible && (
+                        {eligible && appt.status !== 'pending' && (
                           <button
                             onClick={() => openModal(appt.appointment_id)}
                             className="min-h-[44px] px-5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-medium hover:opacity-90 transition-opacity w-full sm:w-auto"
