@@ -58,8 +58,20 @@ export function AuthProvider({ children }) {
     tryRestore()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Refresh the user's first/last name from the API after a profile update.
+  // Only applicable to patients. Non-critical — errors are silently ignored.
+  const refreshUser = useCallback(async () => {
+    if (!user?.id || user?.role !== 'patient') return
+    try {
+      const { data } = await api.get(`/patients/${user.id}`)
+      setUser(prev => ({ ...prev, first_name: data.first_name, last_name: data.last_name }))
+    } catch {
+      // non-critical
+    }
+  }, [user?.id, user?.role])
+
   return (
-    <AuthContext.Provider value={{ user, token, setUser, setToken, logout, authLoading }}>
+    <AuthContext.Provider value={{ user, token, setUser, setToken, logout, authLoading, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )

@@ -1,3 +1,10 @@
+// ⚠️ SYNC REQUIRED
+// This file is maintained in two locations:
+//   a-mmc_frontend/src/data/triageLogic.js  (source of truth)
+//   a-mmc_kiosk/src/data/triageLogic.js     (mirror)
+// Any changes made to either file MUST be manually applied
+// to the other. Do not allow these files to diverge.
+
 /*
  * ⚠️  PLACEHOLDER — PENDING DOMAIN EXPERT REVIEW
  *

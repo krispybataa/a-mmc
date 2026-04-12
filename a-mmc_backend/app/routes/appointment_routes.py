@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 
 from flask import Blueprint, jsonify, request
 
@@ -22,6 +23,13 @@ appointment_bp = Blueprint("appointments", __name__)
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _format_payment_type(payment_type: str | None) -> str | None:
+    """Convert stored 'HMO:<name>' to display 'HMO — <name>'. Pass-through otherwise."""
+    if payment_type and payment_type.startswith("HMO:"):
+        return "HMO — " + payment_type[4:]
+    return payment_type
+
 
 def _hours_until_slot(slot: ClinicianTimeslot) -> float | None:
     """Return hours between now (UTC) and the slot's start datetime. None if undetermined."""
@@ -134,7 +142,7 @@ def create_appointment():
     if err:
         return err
 
-    db.get_or_404(Patient, data["patient_id"])  # B1-A-patch-2: verify patient FK before insert
+    patient = db.get_or_404(Patient, data["patient_id"])  # B1-A-patch-2: verify patient FK before insert
 
     slot = db.get_or_404(ClinicianTimeslot, data["slot_id"])
 
@@ -144,12 +152,32 @@ def create_appointment():
     if slot.clinician_id != data["clinician_id"]:
         return jsonify({"error": "Slot does not belong to the specified clinician"}), 409
 
+    # Temporal guard — PH time (Asia/Manila, UTC+8)
+    _manila = ZoneInfo("Asia/Manila")
+    _now_ph = datetime.now(_manila)
+    _today_ph = _now_ph.date()
+
+    if slot.slot_date < _today_ph:
+        return jsonify({"error": "Appointment date has already passed."}), 400
+
+    if slot.slot_date == _today_ph and slot.start_time <= _now_ph.time():
+        return jsonify({"error": "This time slot has already passed for today."}), 400
+
     consultation_type = data.get("consultation_type", "f2f")
     if slot.consultation_type != consultation_type:
         return jsonify({
             "error": f"Slot consultation type '{slot.consultation_type}' does not match "
                      f"requested type '{consultation_type}'"
         }), 400
+
+    # discount_type validation and SC/PWD guard
+    discount_type = data.get("discount_type") or None
+    if discount_type is not None and discount_type not in ("Senior Citizen", "PWD"):
+        return jsonify({"error": "Invalid discount type."}), 422
+    if discount_type is not None and not patient.sc_pwd_id_number:
+        return jsonify({
+            "error": "A valid Senior Citizen or PWD ID must be on your profile to use this discount."
+        }), 403
 
     if has_overlap(data["patient_id"], slot):
         return jsonify({"error": "This time slot conflicts with an existing appointment."}), 409
@@ -166,6 +194,7 @@ def create_appointment():
             chief_complaint=data.get("chief_complaint"),
             chief_complaint_description=data.get("chief_complaint_description"),
             payment_type=data.get("payment_type"),
+            discount_type=discount_type,
             consultation_type=consultation_type,
             status="pending",
         )
@@ -249,7 +278,7 @@ def update_appointment(appointment_id: int):
             a.status = new_status
 
         # Non-status field updates
-        for field in ["chief_complaint", "chief_complaint_description", "payment_type"]:
+        for field in ["chief_complaint", "chief_complaint_description", "payment_type", "discount_type"]:
             if field in data:
                 setattr(a, field, data[field])
 
@@ -371,7 +400,8 @@ def _serialize(a: Appointment) -> dict:
         "consultation_date": str(a.consultation_date),
         "chief_complaint": a.chief_complaint,
         "chief_complaint_description": a.chief_complaint_description,
-        "payment_type": a.payment_type,
+        "payment_type": _format_payment_type(a.payment_type),
+        "discount_type": a.discount_type,
         "consultation_type": a.consultation_type,
         "status": a.status,
         "reschedule_reason": a.reschedule_reason,

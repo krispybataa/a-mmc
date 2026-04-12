@@ -33,9 +33,8 @@ const BODY_REGIONS = [
 
 // ── Step metadata ─────────────────────────────────────────────────────────────
 const STEP_LABEL = {
-  visit:    'Step 1 of 3',
-  hmo:      'Step 2 of 3',
-  symptoms: 'Step 3 of 3',
+  hmo:      'Step 1 of 2',
+  symptoms: 'Step 2 of 2',
   results:  'Results',
 }
 
@@ -109,7 +108,7 @@ function KioskResultCard({ clinician, onSelect }) {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function KioskTriageScreen({ onNavigate, onSelectClinician }) {
-  const [step,              setStep]             = useState('visit')
+  const [step,              setStep]             = useState('hmo')
   const [selectedHmo,       setSelectedHmo]      = useState(null)
   const [selectedSpecialty, setSelectedSpecialty] = useState(null)
   const [clinicians,        setClinicians]        = useState([])
@@ -135,8 +134,7 @@ export default function KioskTriageScreen({ onNavigate, onSelectClinician }) {
 
   // ── Navigation ──────────────────────────────────────────────────────────────
   function handleBack() {
-    if (step === 'visit')    onNavigate('home')
-    else if (step === 'hmo')      setStep('visit')
+    if (step === 'hmo')      onNavigate('home')
     else if (step === 'symptoms') setStep('hmo')
     else if (step === 'results')  setStep('symptoms')
   }
@@ -155,7 +153,7 @@ export default function KioskTriageScreen({ onNavigate, onSelectClinician }) {
     setSelectedHmo(null)
     setSelectedSpecialty(null)
     setClinicians([])
-    setStep('visit')
+    setStep('hmo')
   }
 
   // ── Filtered results ────────────────────────────────────────────────────────
@@ -210,54 +208,6 @@ export default function KioskTriageScreen({ onNavigate, onSelectClinician }) {
       <KioskClock />
     </div>
   )
-
-  // ── Step: visit ─────────────────────────────────────────────────────────────
-  if (step === 'visit') {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#F8F7FF' }}>
-        {header}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 48px' }}>
-          <div style={{ width: '100%', maxWidth: '672px' }}>
-            <h2 style={{ fontSize: '32px', fontWeight: '700', color: PRIMARY, marginBottom: '12px', textAlign: 'center' }}>
-              Is this your first time visiting?
-            </h2>
-            <p style={{ fontSize: '20px', color: '#6B7280', marginBottom: '40px', textAlign: 'center' }}>
-              This helps us tailor your experience.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              {[
-                'Yes, this is my first visit',
-                'No, I have visited before',
-              ].map(label => (
-                <button
-                  key={label}
-                  onClick={() => setStep('hmo')}
-                  style={{
-                    minHeight: '120px',
-                    padding: '24px 32px',
-                    fontSize: '28px',
-                    fontWeight: '600',
-                    color: '#1e293b',
-                    textAlign: 'center',
-                    width: '100%',
-                    backgroundColor: '#fff',
-                    border: `2px solid ${PRIMARY}`,
-                    borderRadius: '16px',
-                    cursor: 'pointer',
-                    transition: 'all 0.12s',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = PRIMARY; e.currentTarget.style.color = '#fff' }}
-                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.color = '#1e293b' }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   // ── Step: hmo ───────────────────────────────────────────────────────────────
   if (step === 'hmo') {

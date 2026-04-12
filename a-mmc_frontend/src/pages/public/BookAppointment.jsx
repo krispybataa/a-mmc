@@ -9,7 +9,7 @@ import SlotPicker from '../../components/shared/SlotPicker'
 
 const STEPS        = ['Consult Type', 'Date & Time', 'Details', 'Review']
 const BOOKING_TYPES = ['New Consultation', 'Follow-up', 'Referral']
-const PAYMENT_BASE  = ['HMO', 'Private', 'Senior Citizen Discount', 'PWD Discount']
+const DISCOUNT_TYPES = ['Senior Citizen', 'PWD']
 
 const MONTHS = [
   'January','February','March','April','May','June',
@@ -128,7 +128,9 @@ export default function BookAppointment() {
   const [chiefComplaint, setChiefComplaint] = useState('')
   const [description, setDescription]       = useState('')
   const [bookingType, setBookingType]       = useState('')
-  const [paymentType, setPaymentType]       = useState('')
+  const [paymentMethod, setPaymentMethod]   = useState('')   // 'Private' | 'HMO'
+  const [selectedHmo, setSelectedHmo]       = useState('')   // hmo_name when HMO
+  const [discountType, setDiscountType]     = useState('')   // 'Senior Citizen' | 'PWD' | ''
   const [step3Errors, setStep3Errors]       = useState({})
   // Step 4
   const [confirmed, setConfirmed] = useState(false)
@@ -136,6 +138,7 @@ export default function BookAppointment() {
   const [submitError, setSubmitError] = useState('')
   // Data
   const [clinician, setClinician]           = useState(null)
+  const [patient,   setPatient]             = useState(null)
   const [availableSlots, setAvailableSlots] = useState(null)
   const [clinicianLoading, setClinicianLoading] = useState(true)
   const [slotsLoading, setSlotsLoading]         = useState(false)
@@ -145,6 +148,14 @@ export default function BookAppointment() {
   useEffect(() => {
     if (!authLoading && !user) navigate(`/login?redirect=/book/${id}`, { replace: true })
   }, [authLoading, user, id, navigate])
+
+  // Fetch patient profile to check SC/PWD eligibility
+  useEffect(() => {
+    if (!user?.id) return
+    api.get(`/patients/${user.id}`)
+      .then(res => setPatient(res.data))
+      .catch(() => {}) // non-critical — discount guard degrades to disabled
+  }, [user?.id])
 
   // Fetch clinician profile on mount
   useEffect(() => {
@@ -219,18 +230,36 @@ export default function BookAppointment() {
     )
   }
 
-  // ── Derived values (clinician is guaranteed non-null here) ───────────────────
-  const hasF2F  = clinician.schedules.some(s => !s.consultation_type || s.consultation_type === 'f2f')
-  const hasTele = clinician.schedules.some(s => s.consultation_type === 'teleconsult')
+  // ── Error mapper ─────────────────────────────────────────────────────────────
+  function mapApiError(err) {
+    const status = err?.response?.status
+    const apiMsg = err?.response?.data?.error
+    if (status === 400) return apiMsg || 'Something went wrong. Please try again.'
+    if (status === 403) return apiMsg || 'You are not authorised to perform this action.'
+    if (status === 409) return 'You already have an appointment at this time.'
+    if (status === 422) return 'Please check your details and try again.'
+    if (status === 500) return 'A server error occurred. Please try again later.'
+    return apiMsg || 'Failed to submit. Please try again.'
+  }
 
-  const today          = new Date()
-  const minDate        = toDateStr(today)
-  const maxDate        = toDateStr(new Date(today.getTime() + 60 * 24 * 60 * 60 * 1000))
-  const fullName       = formatName(clinician)
-  const initials       = getInitials(clinician.first_name, clinician.last_name)
-  const paymentOptions = clinician.hmos.length > 0
-    ? PAYMENT_BASE
-    : PAYMENT_BASE.filter((p) => p !== 'HMO')
+  // ── Derived values (clinician is guaranteed non-null here) ───────────────────
+  const hasF2F   = clinician.schedules.some(s => !s.consultation_type || s.consultation_type === 'f2f')
+  const hasTele  = clinician.schedules.some(s => s.consultation_type === 'teleconsult')
+  const hasSCPWD = !!(patient?.sc_pwd_id_number)
+
+  const today    = new Date()
+  const minDate  = toDateStr(today)
+  const maxDate  = toDateStr(new Date(today.getTime() + 60 * 24 * 60 * 60 * 1000))
+  const fullName = formatName(clinician)
+  const initials = getInitials(clinician.first_name, clinician.last_name)
+
+  // Derived payment string for submit + review
+  const paymentTypeValue = paymentMethod === 'HMO' && selectedHmo
+    ? `HMO:${selectedHmo}`
+    : paymentMethod || ''
+  const paymentDisplayValue = paymentMethod === 'HMO' && selectedHmo
+    ? `HMO — ${selectedHmo}`
+    : paymentMethod || '—'
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
@@ -256,7 +285,8 @@ export default function BookAppointment() {
       else if (chiefComplaint.trim().length > 100)
         errs.chiefComplaint = 'Maximum 100 characters.'
       if (!bookingType) errs.bookingType = 'Please select a booking type.'
-      if (!paymentType) errs.paymentType = 'Please select a payment type.'
+      if (!paymentMethod) errs.paymentMethod = 'Please select a payment method.'
+      if (paymentMethod === 'HMO' && !selectedHmo) errs.selectedHmo = 'Please select your HMO.'
       if (Object.keys(errs).length > 0) { setStep3Errors(errs); return }
       setStep3Errors({})
     }
@@ -280,12 +310,13 @@ export default function BookAppointment() {
         consultation_date: selectedDate,
         chief_complaint: chiefComplaint.trim(),
         chief_complaint_description: description.trim() || undefined,
-        payment_type: paymentType,
+        payment_type: paymentTypeValue || undefined,
+        discount_type: discountType || undefined,
         consultation_type: consultationType,
       })
       navigate('/dashboard', { state: { bookingSuccess: true } })
     } catch (err) {
-      setSubmitError(err?.response?.data?.error ?? 'Failed to submit. Please try again.')
+      setSubmitError(mapApiError(err))
       setLoading(false)
     }
   }
@@ -564,37 +595,111 @@ export default function BookAppointment() {
                 )}
               </div>
 
-              {/* Payment Type */}
+              {/* Payment Method */}
               <div>
-                <label htmlFor="payment-type" className="block text-sm font-medium text-[var(--color-dark)] mb-1.5">
-                  Payment Type
+                <p className="block text-sm font-medium text-[var(--color-dark)] mb-2">
+                  Payment Method
                   <span className="text-[var(--color-accent)] ml-0.5">*</span>
-                </label>
-                <select
-                  id="payment-type"
-                  value={paymentType}
-                  onChange={(e) => {
-                    setPaymentType(e.target.value)
-                    if (step3Errors.paymentType)
-                      setStep3Errors((p) => ({ ...p, paymentType: undefined }))
-                  }}
-                  className={[
-                    'w-full px-4 py-3 rounded-lg border text-sm text-[var(--color-dark)] bg-white',
-                    'focus:outline-none focus:ring-2 focus:border-transparent',
-                    step3Errors.paymentType
-                      ? 'border-[var(--color-accent)] focus:ring-[var(--color-accent)]'
-                      : 'border-slate-200 focus:ring-[var(--color-primary)]',
-                  ].join(' ')}
-                >
-                  <option value="">Select…</option>
-                  {paymentOptions.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-                {step3Errors.paymentType && (
-                  <p className="mt-1.5 text-xs text-[var(--color-accent)]">{step3Errors.paymentType}</p>
+                </p>
+                <div className="flex gap-3">
+                  {['Private', ...(clinician.hmos.length > 0 ? ['HMO'] : [])].map(method => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => {
+                        setPaymentMethod(method)
+                        setSelectedHmo('')
+                        setStep3Errors(p => ({ ...p, paymentMethod: undefined, selectedHmo: undefined }))
+                      }}
+                      className={[
+                        'flex-1 py-2.5 px-4 rounded-lg border-2 text-sm font-medium transition-colors',
+                        paymentMethod === method
+                          ? 'border-[var(--color-primary)] bg-blue-50 text-[var(--color-primary)]'
+                          : 'border-slate-200 text-slate-600 hover:border-slate-300',
+                      ].join(' ')}
+                    >
+                      {method}
+                    </button>
+                  ))}
+                </div>
+                {step3Errors.paymentMethod && (
+                  <p className="mt-1.5 text-xs text-[var(--color-accent)]">{step3Errors.paymentMethod}</p>
                 )}
                 {clinician.hmos.length === 0 && (
                   <p className="mt-1.5 text-xs text-slate-400">
                     This clinician does not accept HMO at this time.
+                  </p>
+                )}
+              </div>
+
+              {/* HMO sub-selector */}
+              {paymentMethod === 'HMO' && clinician.hmos.length > 0 && (
+                <div>
+                  <label htmlFor="hmo-select" className="block text-sm font-medium text-[var(--color-dark)] mb-1.5">
+                    Select HMO
+                    <span className="text-[var(--color-accent)] ml-0.5">*</span>
+                  </label>
+                  <select
+                    id="hmo-select"
+                    value={selectedHmo}
+                    onChange={(e) => {
+                      setSelectedHmo(e.target.value)
+                      setStep3Errors(p => ({ ...p, selectedHmo: undefined }))
+                    }}
+                    className={[
+                      'w-full px-4 py-3 rounded-lg border text-sm text-[var(--color-dark)] bg-white',
+                      'focus:outline-none focus:ring-2 focus:border-transparent',
+                      step3Errors.selectedHmo
+                        ? 'border-[var(--color-accent)] focus:ring-[var(--color-accent)]'
+                        : 'border-slate-200 focus:ring-[var(--color-primary)]',
+                    ].join(' ')}
+                  >
+                    <option value="">Select your HMO…</option>
+                    {clinician.hmos.map(h => (
+                      <option key={h.hmo_id} value={h.hmo_name}>{h.hmo_name}</option>
+                    ))}
+                  </select>
+                  {step3Errors.selectedHmo && (
+                    <p className="mt-1.5 text-xs text-[var(--color-accent)]">{step3Errors.selectedHmo}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Discount (SC/PWD) */}
+              <div>
+                <p className="block text-sm font-medium text-[var(--color-dark)] mb-2">
+                  Discount
+                  <span className="text-xs font-normal text-slate-400 ml-1.5">(optional)</span>
+                </p>
+                <div className="flex gap-3">
+                  {DISCOUNT_TYPES.map(dtype => {
+                    const active = discountType === dtype
+                    return (
+                      <button
+                        key={dtype}
+                        type="button"
+                        disabled={!hasSCPWD}
+                        onClick={() => setDiscountType(active ? '' : dtype)}
+                        className={[
+                          'flex-1 py-2.5 px-4 rounded-lg border-2 text-sm font-medium transition-colors',
+                          active
+                            ? 'border-[var(--color-primary)] bg-blue-50 text-[var(--color-primary)]'
+                            : 'border-slate-200 text-slate-600 hover:border-slate-300',
+                          !hasSCPWD ? 'opacity-40 cursor-not-allowed' : '',
+                        ].join(' ')}
+                      >
+                        {dtype}
+                      </button>
+                    )
+                  })}
+                </div>
+                {!hasSCPWD && (
+                  <p className="mt-1.5 text-xs text-slate-400">
+                    Senior Citizen / PWD discount requires a valid ID on file.{' '}
+                    <Link to="/dashboard/profile" className="text-[var(--color-primary)] hover:underline">
+                      Update your profile
+                    </Link>{' '}
+                    to enable.
                   </p>
                 )}
               </div>
@@ -653,8 +758,11 @@ export default function BookAppointment() {
                     <span className="text-sm text-slate-400 w-36 shrink-0">Consult Type</span>
                     <ConsultTypePill type={consultationType} />
                   </div>
-                  <ReviewRow label="Booking Type"     value={bookingType} />
-                  <ReviewRow label="Payment Type"     value={paymentType} />
+                  <ReviewRow label="Booking Type"  value={bookingType} />
+                  <ReviewRow label="Payment"       value={paymentDisplayValue} />
+                  {discountType && (
+                    <ReviewRow label="Discount" value={`${discountType} Discount`} />
+                  )}
                 </div>
               </div>
 

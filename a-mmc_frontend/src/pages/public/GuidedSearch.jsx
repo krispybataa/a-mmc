@@ -7,7 +7,7 @@ import BodyDiagram from '../../components/BodyDiagram'
 const HMO_STEP     = TRIAGE_STEPS[0]   // { id: 'hmo', question, options }
 const SYMPTOM_STEP = TRIAGE_STEPS[1]   // { id: 'symptoms', question, options }
 
-const TOTAL_STEPS = 3
+const TOTAL_STEPS = 2
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
@@ -23,18 +23,12 @@ export default function GuidedSearch() {
   const navigate = useNavigate()
 
   const [step,         setStep]         = useState(1)
-  const [firstVisit,   setFirstVisit]   = useState(null)
   const [selectedHMO,  setSelectedHMO]  = useState(null)   // HMO option id e.g. 'maxicare'
   const [showFallback, setShowFallback] = useState(false)
 
-  function handleFirstVisit(value) {
-    setFirstVisit(value)
-    setStep(2)
-  }
-
   function handleHMOSelect(hmoId) {
     setSelectedHMO(hmoId)
-    setStep(3)
+    setStep(2)
   }
 
   function _buildParams(specialty) {
@@ -100,39 +94,9 @@ export default function GuidedSearch() {
         </div>
 
         {/* ════════════════════════════
-            STEP 1 — First visit check
+            STEP 1 — HMO selection
         ════════════════════════════ */}
         {step === 1 && (
-          <div>
-            <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
-              Is this your first time visiting the clinic?
-            </h2>
-            <p className="text-[var(--color-muted)] mb-8">
-              This helps us tailor your experience.
-            </p>
-            <div className="space-y-4">
-              {[
-                { id: 'yes', label: 'Yes, this is my first visit' },
-                { id: 'no',  label: 'No, I have visited before'   },
-              ].map(opt => (
-                <button
-                  key={opt.id}
-                  onClick={() => handleFirstVisit(opt.id)}
-                  className={`${baseCard} min-h-[72px] px-6 py-5`}
-                >
-                  <span className="font-semibold text-base text-[var(--color-text)]">
-                    {opt.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ════════════════════════════
-            STEP 2 — HMO selection
-        ════════════════════════════ */}
-        {step === 2 && (
           <div>
             <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
               {HMO_STEP.question}
@@ -175,9 +139,9 @@ export default function GuidedSearch() {
         )}
 
         {/* ════════════════════════════
-            STEP 3 — Body diagram
+            STEP 2 — Body diagram
         ════════════════════════════ */}
-        {step === 3 && (
+        {step === 2 && (
           <div>
             <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
               {SYMPTOM_STEP.question}
