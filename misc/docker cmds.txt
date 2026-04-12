@@ -35,3 +35,5 @@ docker build .\a-mmc_backend\ -t krispybata/a-mmc-backend:latest ; docker push k
 ammcprod
 
 cd /app && python -m app.seed data/clinicians_full.csv
+
+docker build .\a-mmc_backend\ -t krispybata/a-mmc-backend:latest ; docker build .\a-mmc_frontend\ -t krispybata/a-mmc-frontend:latest

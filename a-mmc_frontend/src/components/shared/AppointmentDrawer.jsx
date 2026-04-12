@@ -167,7 +167,10 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
               <DetailRow label="Time"           value={formatTimeRange(slot.start_time, slot.end_time)} />
               <DetailRow label="Chief Complaint" value={appt.chief_complaint} />
               <DetailRow label="Booking Type"   value={appt.booking_type} />
-              <DetailRow label="Payment"        value={appt.payment_type} />
+              <DetailRow label="Payment"        value={appt.payment_type || '—'} />
+              {appt.discount_type && (
+                <DetailRow label="Discount" value={`${appt.discount_type} Discount`} />
+              )}
 
               {/* Status badge */}
               <div>
