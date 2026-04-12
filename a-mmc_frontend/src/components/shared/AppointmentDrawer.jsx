@@ -82,11 +82,12 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
   const { clinician, slot } = appt
 
   const docFull = `${clinician.last_name}, ${clinician.first_name}`
-  const badge   = STATUS_BADGE[appt.status] ?? { label: appt.status, cls: 'bg-slate-100 text-slate-500' }
+  const capitalize = s => s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ')
+  const badge      = STATUS_BADGE[appt.status] ?? { label: capitalize(appt.status), cls: 'bg-slate-100 text-slate-500' }
 
   const canCancel     = ['pending', 'accepted', 'reschedule_requested'].includes(appt.status)
-  const canReschedule = ['pending', 'accepted'].includes(appt.status)
-  const hasActions    = canCancel || canReschedule
+  const canReschedule = appt.status === 'accepted'
+  const hasActions    = canCancel || canReschedule || appt.status === 'pending'
 
   return (
     <>
@@ -198,6 +199,11 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
           </button>
           {hasActions ? (
             <>
+              {appt.status === 'pending' && (
+                <p className="text-sm text-slate-500 text-center py-1 leading-relaxed">
+                  Your request is still pending. To change your appointment, cancel this request and book again. Cancelling will not remove the slot — you may rebook it immediately.
+                </p>
+              )}
               {canCancel && (
                 <button
                   onClick={() => onCancel(appt.appointment_id)}

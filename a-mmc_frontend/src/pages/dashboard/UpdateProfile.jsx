@@ -75,7 +75,7 @@ function inputCls(hasError) {
 // ── UpdateProfile ──────────────────────────────────────────────────────────────
 
 export default function UpdateProfile() {
-  const { user, authLoading } = useAuth()
+  const { user, authLoading, refreshUser } = useAuth()
   const navigate               = useNavigate()
 
   // ── All hooks first (Rules of Hooks) ────────────────────────────────────────
@@ -198,6 +198,7 @@ export default function UpdateProfile() {
 
     try {
       await api.patch(`/patients/${user.id}`, payload)
+      refreshUser()
       setSuccessMsg('Profile updated successfully.')
       if (successTimerRef.current) clearTimeout(successTimerRef.current)
       successTimerRef.current = setTimeout(() => setSuccessMsg(''), 5000)
