@@ -71,15 +71,59 @@ function Field({ label, htmlFor, required = false, hint, error, children }) {
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
+function parseDateLocal(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
 function validateStep(step, fd) {
   const e = {}
+
   if (step === 1) {
-    if (!fd.first_name.trim())    e.first_name    = 'First name is required.'
-    if (!fd.last_name.trim())     e.last_name     = 'Last name is required.'
-    if (!fd.birthday)             e.birthday      = 'Birthday is required.'
-    if (!fd.gender)               e.gender        = 'Please select a gender.'
-    if (!fd.mobile_number.trim()) e.mobile_number = 'Mobile number is required.'
+    // first_name
+    if (!fd.first_name.trim()) {
+      e.first_name = 'First name is required.'
+    } else if (/\d/.test(fd.first_name)) {
+      e.first_name = 'Please enter a valid name (letters only).'
+    }
+
+    // last_name
+    if (!fd.last_name.trim()) {
+      e.last_name = 'Last name is required.'
+    } else if (/\d/.test(fd.last_name)) {
+      e.last_name = 'Please enter a valid name (letters only).'
+    }
+
+    // middle_name — optional, validate only if non-empty
+    if (fd.middle_name.trim() && /\d/.test(fd.middle_name)) {
+      e.middle_name = 'Please enter a valid name (letters only).'
+    }
+
+    // birthday
+    if (!fd.birthday) {
+      e.birthday = 'Birthday is required.'
+    } else {
+      const dob   = parseDateLocal(fd.birthday)
+      const today = new Date(); today.setHours(0, 0, 0, 0)
+      const minDob = new Date(1900, 0, 1)
+      const maxDob = new Date(today.getFullYear() - 15, today.getMonth(), today.getDate())
+      if (isNaN(dob.getTime()) || dob > today || dob < minDob || dob > maxDob) {
+        e.birthday = 'Invalid date.'
+      }
+    }
+
+    // gender
+    if (!fd.gender) e.gender = 'Please select a gender.'
+
+    // mobile_number: exactly 11 digits, starting with 09
+    const mobile = (fd.mobile_number || '').replace(/\s/g, '')
+    if (!mobile) {
+      e.mobile_number = 'Mobile number is required.'
+    } else if (!/^09\d{9}$/.test(mobile)) {
+      e.mobile_number = 'Mobile number must be 11 digits starting with 09.'
+    }
   }
+
   if (step === 2) {
     if (!fd.address_line_1.trim()) e.address_line_1 = 'Address is required.'
     if (!fd.barangay.trim())       e.barangay       = 'Barangay is required.'
@@ -87,6 +131,7 @@ function validateStep(step, fd) {
     if (!fd.province.trim())       e.province       = 'Province is required.'
     if (!fd.country.trim())        e.country        = 'Country is required.'
   }
+
   if (step === 3) {
     if (!fd.email.trim()) {
       e.email = 'Email address is required.'
@@ -105,9 +150,19 @@ function validateStep(step, fd) {
     } else if (fd.password !== fd.confirm_password) {
       e.confirm_password = 'Passwords do not match.'
     }
-    if (!fd.preferred_language)    e.preferred_language    = 'Please select a language.'
+    if (!fd.preferred_language)     e.preferred_language     = 'Please select a language.'
     if (!fd.educational_attainment) e.educational_attainment = 'Please select your educational attainment.'
+    // next_of_kin_name — optional, validate only if non-empty
+    if (fd.next_of_kin_name.trim() && /\d/.test(fd.next_of_kin_name)) {
+      e.next_of_kin_name = 'Please enter a valid name (letters only).'
+    }
+    // next_of_kin_contact — optional, validate only if non-empty
+    const nokContact = (fd.next_of_kin_contact || '').replace(/\s/g, '')
+    if (nokContact && !/^09\d{9}$/.test(nokContact)) {
+      e.next_of_kin_contact = 'Mobile number must be 11 digits starting with 09.'
+    }
   }
+
   return e
 }
 
@@ -142,6 +197,13 @@ export default function Register() {
     setErrors({})
     setStep((s) => s - 1)
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function handleBlur(field) {
+    const fieldErrors = validateStep(step, formData)
+    if (fieldErrors[field]) {
+      setErrors(prev => ({ ...prev, [field]: fieldErrors[field] }))
+    }
   }
 
   async function handleSubmit() {
@@ -268,6 +330,7 @@ export default function Register() {
                     id="first_name" type="text" autoComplete="given-name"
                     value={formData.first_name}
                     onChange={(e) => update('first_name', e.target.value)}
+                    onBlur={() => handleBlur('first_name')}
                     placeholder="Maria"
                     className={inputCls(!!errors.first_name)}
                   />
@@ -277,6 +340,7 @@ export default function Register() {
                     id="last_name" type="text" autoComplete="family-name"
                     value={formData.last_name}
                     onChange={(e) => update('last_name', e.target.value)}
+                    onBlur={() => handleBlur('last_name')}
                     placeholder="Reyes"
                     className={inputCls(!!errors.last_name)}
                   />
@@ -289,8 +353,9 @@ export default function Register() {
                     id="middle_name" type="text" autoComplete="additional-name"
                     value={formData.middle_name}
                     onChange={(e) => update('middle_name', e.target.value)}
+                    onBlur={() => handleBlur('middle_name')}
                     placeholder="Santos"
-                    className={inputCls(false)}
+                    className={inputCls(!!errors.middle_name)}
                   />
                 </Field>
                 <Field label="Suffix" htmlFor="suffix" error={errors.suffix}>
@@ -310,6 +375,7 @@ export default function Register() {
                     id="birthday" type="date"
                     value={formData.birthday}
                     onChange={(e) => update('birthday', e.target.value)}
+                    onBlur={() => handleBlur('birthday')}
                     className={inputCls(!!errors.birthday)}
                   />
                 </Field>
@@ -331,6 +397,7 @@ export default function Register() {
                   id="mobile_number" type="tel" autoComplete="tel"
                   value={formData.mobile_number}
                   onChange={(e) => update('mobile_number', e.target.value)}
+                  onBlur={() => handleBlur('mobile_number')}
                   placeholder="09XX XXX XXXX"
                   className={inputCls(!!errors.mobile_number)}
                 />
@@ -546,8 +613,9 @@ export default function Register() {
                         id="next_of_kin_name" type="text"
                         value={formData.next_of_kin_name}
                         onChange={(e) => update('next_of_kin_name', e.target.value)}
+                        onBlur={() => handleBlur('next_of_kin_name')}
                         placeholder="Name of contact person"
-                        className={inputCls(false)}
+                        className={inputCls(!!errors.next_of_kin_name)}
                       />
                     </Field>
                     <Field label="Relationship" htmlFor="next_of_kin_relationship" error={errors.next_of_kin_relationship}>
@@ -565,8 +633,9 @@ export default function Register() {
                       id="next_of_kin_contact" type="tel"
                       value={formData.next_of_kin_contact}
                       onChange={(e) => update('next_of_kin_contact', e.target.value)}
+                      onBlur={() => handleBlur('next_of_kin_contact')}
                       placeholder="09XX XXX XXXX"
-                      className={inputCls(false)}
+                      className={inputCls(!!errors.next_of_kin_contact)}
                     />
                   </Field>
                 </div>
