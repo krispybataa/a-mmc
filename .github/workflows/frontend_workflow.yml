@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'a-mmc_frontend/**'
+  workflow_dispatch:
 
 jobs:
   build:
