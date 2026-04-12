@@ -89,3 +89,66 @@ BF 3 -
   - Added SC/PWD guard: if payment_type contains "Senior Citizen" or "PWD" and patient.sc_pwd_id_number is falsy → 403 with plain message
 
 ✻ Brewed for 3m 44s
+
+
+BF 4 - 
+● FB-PAYMENT-1 is complete. Here's a summary of all changes made:
+
+  Backend
+  - appointment.py — discount_type column added (done last session)
+  - appointment_routes.py:
+    - _format_payment_type() helper converts "HMO:<name>" → "HMO — <name>"
+    - create_appointment() — accepts discount_type, validates "Senior Citizen"|"PWD"|None, SC/PWD guard now checks discount_type (not
+  payment_type), stores discount_type on the row
+    - update_appointment() — "discount_type" added to updatable fields
+    - _serialize() — payment_type now formatted via _format_payment_type(), discount_type included
+
+  Frontend
+  - BookAppointment.jsx:
+    - PAYMENT_BASE removed; DISCOUNT_TYPES added
+    - State: paymentMethod, selectedHmo, discountType replace paymentType
+    - paymentTypeValue / paymentDisplayValue derived values compute "HMO:<name>" for API, "HMO — <name>" for display
+    - Step 3 payment UI: pill buttons for Private/HMO → HMO sub-selector dropdown → separate SC/PWD discount toggle buttons (disabled
+  without ID on file)
+    - Step 4 review: shows Payment + optional Discount row
+    - Submit payload: payment_type: paymentTypeValue, discount_type: discountType || undefined
+  - AppointmentDrawer.jsx — discount_type row added below payment row (conditionally shown)
+
+  Pending developer action: Run flask db migrate -m "add discount_type to appointment" + flask db upgrade before rebuilding the backend
+  image.
+
+✻ Churned for 6m 44s
+
+BF 5 -
+● Done. Let me do a quick sanity check on both files to confirm the final state is correct:
+
+  Searched for 2 patterns (ctrl+o to expand)
+
+● Clean. No visit, no firstVisit, no 3 in step counts. Summary of changes:
+
+  GuidedSearch.jsx
+  - TOTAL_STEPS 3 → 2
+  - Removed firstVisit state and handleFirstVisit() function
+  - Removed the entire Step 1 (first-visit yes/no) JSX block
+  - Step 2 (HMO) renumbered → Step 1; handleHMOSelect now calls setStep(2)
+  - Step 3 (body diagram) renumbered → Step 2
+  - Step indicator now reads "Step X of 2"; Back button hidden on step 1 (no HMO back button)
+
+  KioskTriageScreen.jsx
+  - STEP_LABEL — removed visit entry; hmo → 'Step 1 of 2', symptoms → 'Step 2 of 2'
+  - Initial step state: 'visit' → 'hmo'
+  - handleBack: removed visit → home branch; hmo → onNavigate('home') (was previously only reachable after visit)
+  - handleReset: resets to 'hmo' instead of 'visit'
+  - Removed the entire visit step JSX render block (~50 lines)
+
+✻ Baked for 1m 15s
+
+● Done. Two targeted changes:
+
+  1. useMemo for specialtyOptions — derives unique, sorted specialties from the already-fetched clinicians array, placed alongside the
+  existing allHmos memo.
+  2. Input → combobox — added list="specialty-options" to the existing input and appended a <datalist id="specialty-options"> immediately
+  after. The input's value, onChange, className, and filter behaviour are completely unchanged. Updated the placeholder to match the mission
+   spec (Rheumatology vs the old Cardiology).
+
+✻ Cogitated for 35s

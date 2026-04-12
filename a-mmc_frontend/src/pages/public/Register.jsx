@@ -107,14 +107,8 @@ function validateStep(step, fd) {
       const today = new Date(); today.setHours(0, 0, 0, 0)
       const minDob = new Date(1900, 0, 1)
       const maxDob = new Date(today.getFullYear() - 15, today.getMonth(), today.getDate())
-      if (isNaN(dob.getTime())) {
-        e.birthday = 'Please enter a valid date of birth.'
-      } else if (dob > today) {
-        e.birthday = 'Date of birth cannot be in the future.'
-      } else if (dob < minDob) {
-        e.birthday = 'Please enter a valid date of birth.'
-      } else if (dob > maxDob) {
-        e.birthday = 'You must be at least 15 years old to register.'
+      if (isNaN(dob.getTime()) || dob > today || dob < minDob || dob > maxDob) {
+        e.birthday = 'Invalid date.'
       }
     }
 
