@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 
 from flask import Blueprint, jsonify, request
 
@@ -143,6 +144,17 @@ def create_appointment():
 
     if slot.clinician_id != data["clinician_id"]:
         return jsonify({"error": "Slot does not belong to the specified clinician"}), 409
+
+    # Temporal guard — PH time (Asia/Manila, UTC+8)
+    _manila = ZoneInfo("Asia/Manila")
+    _now_ph = datetime.now(_manila)
+    _today_ph = _now_ph.date()
+
+    if slot.slot_date < _today_ph:
+        return jsonify({"error": "Appointment date has already passed."}), 400
+
+    if slot.slot_date == _today_ph and slot.start_time <= _now_ph.time():
+        return jsonify({"error": "This time slot has already passed for today."}), 400
 
     consultation_type = data.get("consultation_type", "f2f")
     if slot.consultation_type != consultation_type:
