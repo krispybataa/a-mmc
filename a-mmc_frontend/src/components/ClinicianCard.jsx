@@ -28,46 +28,37 @@ export default function ClinicianCard({ clinician, displayName }) {
 
   return (
     <div
-      className="bg-white rounded-2xl shadow-sm border border-[var(--color-border)] overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col cursor-pointer"
+      className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col cursor-pointer"
       onClick={handleCardClick}
       role="button"
       tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && handleCardClick()}
     >
 
-      {/* ── Avatar area — primary bg, h-48 ── */}
-      <div className="relative bg-[var(--color-primary)] h-48 rounded-t-2xl overflow-hidden flex items-center justify-center">
-        {profile_picture ? (
-          <img
-            src={profile_picture}
-            alt={fullName}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <img
-            src={dicebearUrl}
-            alt={fullName}
-            className="w-32 h-32 rounded-full"
-          />
-        )}
+      {/* ── Title bar — primary bg with avatar, name, specialty ── */}
+      <div className="bg-[var(--color-primary)] px-5 pt-6 pb-5 flex flex-col items-center text-center">
+        {/* Avatar with white ring border */}
+        <div className="w-20 h-20 rounded-full border-4 border-white overflow-hidden mb-3 shrink-0 bg-white">
+          {profile_picture ? (
+            <img
+              src={profile_picture}
+              alt={fullName}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <img
+              src={dicebearUrl}
+              alt={fullName}
+              className="w-full h-full object-cover"
+            />
+          )}
+        </div>
+        <p className="font-bold text-base text-white leading-snug">{fullName}</p>
+        <p className="text-sm text-white/70 mt-0.5">{specialty}</p>
       </div>
 
-      {/* ── Specialty badge ── */}
-      <div className="px-5 pt-4 pb-1">
-        <span className="inline-block bg-[var(--color-primary)] text-white text-xs font-semibold px-3 py-1 rounded-full">
-          {specialty}
-        </span>
-      </div>
-
-      {/* ── Name ── */}
-      <div className="px-5 pb-2">
-        <p className="font-semibold text-base text-[var(--color-text)] leading-snug">
-          {fullName}
-        </p>
-      </div>
-
-      {/* ── Details ── */}
-      <div className="px-5 pb-5 flex-1 flex flex-col gap-3">
+      {/* ── Card body — white background with details ── */}
+      <div className="px-5 py-4 flex-1 flex flex-col gap-3">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2 text-sm text-[var(--color-muted)]">
             <Building2 size={14} className="shrink-0 text-[var(--color-primary)]" />
@@ -96,9 +87,9 @@ export default function ClinicianCard({ clinician, displayName }) {
           </div>
         )}
 
-        <div className="mt-auto">
-          <span className="text-sm font-medium text-[var(--color-primary)]">
-            View Profile →
+        <div className="mt-auto pt-1">
+          <span className="block w-full text-center text-sm font-semibold text-white bg-[var(--color-accent)] px-4 py-2 rounded-lg">
+            View Profile
           </span>
         </div>
       </div>

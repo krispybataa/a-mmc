@@ -16,8 +16,25 @@
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  background-color: var(--color-bg);
+  background-color: #ffffff;
   font-size: 16px;
+}
+
+/* Fixed background texture — sits behind all content on every page.
+   Rendered as a div in main.jsx (z-index: -1) so bg-* utility classes
+   on layout wrappers do not override it. opacity controls visibility. */
+.site-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: url('/assets/images/site-bg.png');
+  background-size: cover;
+  background-position: center;
+  /* background-attachment: fixed may render poorly on iOS Safari;
+     if reported, change to scroll */
+  background-attachment: fixed;
+  opacity: 0.10;
+  pointer-events: none;
 }
 
 *, *::before, *::after {
@@ -45,4 +62,8 @@ body {
   padding-left: 10px;
   font-weight: 600;
   color: var(--color-text);
+}
+
+.navbar-gradient {
+  background: linear-gradient(135deg, #1D409C 0%, #162f75 100%);
 }

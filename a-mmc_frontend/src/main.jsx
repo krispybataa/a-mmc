@@ -7,6 +7,7 @@ import './index.css'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>
+      <div className="site-bg" />
       <App />
     </AuthProvider>
   </StrictMode>,
