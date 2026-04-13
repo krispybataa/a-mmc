@@ -141,12 +141,6 @@ export default function Doctors() {
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-5xl mx-auto px-6 py-10">
 
-        {/* Page header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-[var(--color-dark)]">Clinician Directory</h1>
-          <p className="text-sm text-slate-400 mt-1">Browse and find the right specialist for your needs.</p>
-        </div>
-
         {/* ── Triage results banner ── */}
         {showBanner && (
           <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 mb-6">
@@ -311,6 +305,11 @@ export default function Doctors() {
             </div>
           )
         })()}
+
+        {/* ── Directory header band ── */}
+        <div className="navbar-gradient rounded-xl h-14 flex items-center mb-6 px-6">
+          <h1 className="text-lg font-bold text-white">Clinician Directory</h1>
+        </div>
 
         {/* ── Clinician grid ── */}
         {fetchLoading ? (
