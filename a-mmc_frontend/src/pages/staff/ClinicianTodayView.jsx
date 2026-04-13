@@ -7,8 +7,6 @@ import AppointmentDrawer from '../../components/shared/AppointmentDrawer'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const PAGE_SIZE = 5
-
 const STATUS_LABELS = {
   pending:               'Pending',
   accepted:              'Accepted',
@@ -29,29 +27,46 @@ const STATUS_COLORS = {
   cancelled:             'bg-slate-100 text-slate-500',
 }
 
-const STATUS_FILTER_OPTIONS = [
-  { value: 'all',                  label: 'All Statuses' },
-  { value: 'pending',              label: 'Pending' },
-  { value: 'accepted',             label: 'Accepted' },
-  { value: 'reschedule_requested', label: 'Reschedule Requested' },
-  { value: 'done',                 label: 'Done' },
-  { value: 'declined',             label: 'Declined' },
-  { value: 'rejected',             label: 'Rejected' },
-  { value: 'cancelled',            label: 'Cancelled' },
-]
-
 // ── Utilities ──────────────────────────────────────────────────────────────────
 
-function formatDateShort(dateStr) {
-  const [y, mo, d] = dateStr.split('-')
-  return `${d}/${mo}/${y}`
+/** Returns today's date as YYYY-MM-DD in local time. */
+function todayDateString() {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
-function formatTime(t) {
-  return t.slice(0, 5)
+/** Formats today as "Monday, April 13, 2026" */
+function formatTodayLong() {
+  const d = new Date()
+  const dayNames = [
+    'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+  ]
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ]
+  const dayName = dayNames[d.getDay()]
+  const monthName = monthNames[d.getMonth()]
+  const date = d.getDate()
+  const year = d.getFullYear()
+  return `${dayName}, ${monthName} ${date}, ${year}`
 }
 
-// ── StatusBadge ────────────────────────────────────────────────────────────────
+/** Converts "HH:MM" or "HH:MM:SS" to "9:00 AM" */
+function formatTime12(t) {
+  const [hStr, mStr] = t.split(':')
+  let h = parseInt(hStr, 10)
+  const m = mStr
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  if (h === 0) h = 12
+  else if (h > 12) h -= 12
+  return `${h}:${m} ${ampm}`
+}
+
+// ── Sub-components ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }) {
   const cls = STATUS_COLORS[status] ?? 'bg-slate-100 text-slate-600'
@@ -63,9 +78,76 @@ function StatusBadge({ status }) {
   )
 }
 
-// ── ClinicianDashboard ─────────────────────────────────────────────────────────
+// Inline SVG icons — no external dependency beyond lucide-react already in bundle
 
-export default function ClinicianDashboard() {
+function IconCalendar() {
+  return (
+    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  )
+}
+
+function IconCheck() {
+  return (
+    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  )
+}
+
+function IconX() {
+  return (
+    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="15" y1="9" x2="9" y2="15" />
+      <line x1="9" y1="9" x2="15" y2="15" />
+    </svg>
+  )
+}
+
+// ── Stat card ──────────────────────────────────────────────────────────────────
+
+function StatCard({ icon, count, label, borderColor, isActive, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{ borderLeftColor: borderColor }}
+      className={[
+        'flex-1 min-w-0 text-left bg-white rounded-xl border border-slate-100 shadow-sm',
+        'border-l-4 p-5 flex items-center gap-4 transition-all duration-150',
+        'hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1',
+        isActive
+          ? 'ring-2 ring-offset-1 shadow-md'
+          : 'ring-transparent',
+      ].join(' ')}
+      aria-pressed={isActive}
+    >
+      <div
+        className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center"
+        style={{ backgroundColor: `${borderColor}18`, color: borderColor }}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-3xl font-bold text-[var(--color-dark)] leading-none">{count}</p>
+        <p className="text-sm text-slate-500 mt-1">{label}</p>
+      </div>
+    </button>
+  )
+}
+
+// ── ClinicianTodayView ─────────────────────────────────────────────────────────
+
+export default function ClinicianTodayView() {
   const { user, authLoading } = useAuth()
   const navigate = useNavigate()
 
@@ -74,20 +156,19 @@ export default function ClinicianDashboard() {
   const [fetchLoading, setFetchLoading] = useState(false)
   const [fetchError, setFetchError]     = useState('')
 
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [dateFilter, setDateFilter]     = useState('')
-  const [page, setPage]                 = useState(1)
+  // 'queue' | 'done' | 'cancelled' | null (null = show all)
+  const [activeFilter, setActiveFilter] = useState(null)
 
   const [drawerAppt, setDrawerAppt] = useState(null)
 
-  // Auth guard — wait for silent refresh before deciding
+  // ── Auth guard ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/staff/login?redirect=/clinician-dashboard')
+      navigate('/staff/login?redirect=/clinician-dashboard/today')
     }
   }, [authLoading, user, navigate])
 
-  // Resolve clinician_id based on role
+  // ── Resolve clinician_id ───────────────────────────────────────────────────
   useEffect(() => {
     if (!user) return
     if (user.role === 'clinician') {
@@ -99,19 +180,13 @@ export default function ClinicianDashboard() {
     }
   }, [user])
 
-  // Fetch appointments when clinicianId is available
+  // ── Fetch appointments ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!clinicianId) return
     loadAppointments()
   }, [clinicianId])
 
-  // Reset to page 1 whenever filters change
-  useEffect(() => {
-    setPage(1)
-  }, [statusFilter, dateFilter])
-
-  // ── All hooks above this line ──────────────────────────────────────────────
-
+  // All hooks above early returns
   if (authLoading || !user) return null
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -130,14 +205,33 @@ export default function ClinicianDashboard() {
     setDrawerAppt(null)
   }
 
+  function handleCardClick(filter) {
+    setActiveFilter(prev => prev === filter ? null : filter)
+  }
+
   // ── Derived state ──────────────────────────────────────────────────────────
 
-  const filtered = appointments
-    .filter(a => statusFilter === 'all' || a.status === statusFilter)
-    .filter(a => !dateFilter || a.slot.slot_date === dateFilter)
+  const today = todayDateString()
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const todayAppointments = appointments
+    .filter(a => a.slot?.slot_date === today)
+    .sort((a, b) => {
+      const ta = a.slot?.start_time ?? ''
+      const tb = b.slot?.start_time ?? ''
+      return ta.localeCompare(tb)
+    })
+
+  const queueCount     = todayAppointments.filter(a => a.status === 'pending' || a.status === 'accepted').length
+  const doneCount      = todayAppointments.filter(a => a.status === 'done').length
+  const cancelledCount = todayAppointments.filter(a => a.status === 'cancelled' || a.status === 'rejected').length
+
+  const filtered = activeFilter === null
+    ? todayAppointments
+    : activeFilter === 'queue'
+      ? todayAppointments.filter(a => a.status === 'pending' || a.status === 'accepted')
+      : activeFilter === 'done'
+        ? todayAppointments.filter(a => a.status === 'done')
+        : todayAppointments.filter(a => a.status === 'cancelled' || a.status === 'rejected')
 
   // ── Shared styles ──────────────────────────────────────────────────────────
 
@@ -159,10 +253,8 @@ export default function ClinicianDashboard() {
           {/* ── Page header ── */}
           <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-[var(--color-dark)]">Appointment Inbox</h1>
-              <p className="text-lg italic text-slate-500 mt-1">
-                Welcome, {user.first_name} {user.last_name}!
-              </p>
+              <h1 className="text-3xl font-bold text-[var(--color-dark)]">Today's Appointments</h1>
+              <p className="text-base text-slate-500 mt-1">{formatTodayLong()}</p>
             </div>
             <div className="flex gap-2 flex-wrap sm:shrink-0">
               <Link
@@ -180,35 +272,45 @@ export default function ClinicianDashboard() {
             </div>
           </div>
 
-          {/* ── Filter bar ── */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="sm:w-56 px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-[var(--color-dark)] bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent min-h-[44px]"
-            >
-              {STATUS_FILTER_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+          {/* ── Stat cards ── */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-3">
+            <StatCard
+              icon={<IconCalendar />}
+              count={queueCount}
+              label="In Queue"
+              borderColor="var(--color-primary)"
+              isActive={activeFilter === 'queue'}
+              onClick={() => handleCardClick('queue')}
+            />
+            <StatCard
+              icon={<IconCheck />}
+              count={doneCount}
+              label="Done Today"
+              borderColor="#16a34a"
+              isActive={activeFilter === 'done'}
+              onClick={() => handleCardClick('done')}
+            />
+            <StatCard
+              icon={<IconX />}
+              count={cancelledCount}
+              label="Cancelled"
+              borderColor="var(--color-accent)"
+              isActive={activeFilter === 'cancelled'}
+              onClick={() => handleCardClick('cancelled')}
+            />
+          </div>
 
-            <div className="flex gap-2">
-              <input
-                type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-[var(--color-dark)] bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent min-h-[44px]"
-              />
-              {dateFilter && (
-                <button
-                  type="button"
-                  onClick={() => setDateFilter('')}
-                  className="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-500 hover:bg-slate-100 transition-colors min-h-[44px]"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
+          {/* ── Show All / active filter hint ── */}
+          <div className="mb-6 h-6 flex items-center">
+            {activeFilter !== null && (
+              <button
+                type="button"
+                onClick={() => setActiveFilter(null)}
+                className="text-sm text-[var(--color-primary)] hover:underline font-medium"
+              >
+                ← Show All
+              </button>
+            )}
           </div>
 
           {/* ── Appointment list ── */}
@@ -216,8 +318,14 @@ export default function ClinicianDashboard() {
             <p className="text-center text-slate-400 py-16 text-sm">Loading…</p>
           ) : fetchError ? (
             <p className="text-center text-[var(--color-accent)] py-16 text-sm font-medium">{fetchError}</p>
+          ) : todayAppointments.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="text-slate-400 text-base">You have no appointments scheduled for today.</p>
+            </div>
           ) : filtered.length === 0 ? (
-            <p className="text-center text-slate-400 py-16">No appointments match the current filters.</p>
+            <div className="text-center py-20">
+              <p className="text-slate-400 text-base">No appointments for today.</p>
+            </div>
           ) : (
             <>
               {/* Desktop table (md+) */}
@@ -225,7 +333,7 @@ export default function ClinicianDashboard() {
                 <table className="w-full text-sm text-left">
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50">
-                      {['Patient', 'Chief Complaint', 'Date', 'Time', 'Status', 'Actions'].map(col => (
+                      {['Time', 'Patient', 'Chief Complaint', 'Status', 'Actions'].map(col => (
                         <th key={col} className="px-5 py-3.5 font-semibold text-slate-600 whitespace-nowrap">
                           {col}
                         </th>
@@ -233,22 +341,19 @@ export default function ClinicianDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {pageData.map(appt => (
+                    {filtered.map(appt => (
                       <tr
                         key={appt.appointment_id}
                         className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors"
                       >
+                        <td className="px-5 py-4 text-[var(--color-dark)] whitespace-nowrap font-medium">
+                          {formatTime12(appt.slot.start_time)}
+                        </td>
                         <td className="px-5 py-4 font-medium text-[var(--color-dark)] whitespace-nowrap">
                           {appt.patient.last_name}, {appt.patient.first_name}
                         </td>
                         <td className="px-5 py-4 text-[var(--color-dark)] max-w-[200px]">
                           <span className="line-clamp-2">{appt.chief_complaint}</span>
-                        </td>
-                        <td className="px-5 py-4 text-[var(--color-dark)] whitespace-nowrap">
-                          {formatDateShort(appt.slot.slot_date)}
-                        </td>
-                        <td className="px-5 py-4 text-[var(--color-dark)] whitespace-nowrap">
-                          {formatTime(appt.slot.start_time)}
                         </td>
                         <td className="px-5 py-4">
                           <StatusBadge status={appt.status} />
@@ -279,7 +384,7 @@ export default function ClinicianDashboard() {
 
               {/* Mobile cards (below md) */}
               <div className="md:hidden space-y-4">
-                {pageData.map(appt => (
+                {filtered.map(appt => (
                   <div
                     key={appt.appointment_id}
                     className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 space-y-3"
@@ -294,15 +399,9 @@ export default function ClinicianDashboard() {
                       <StatusBadge status={appt.status} />
                     </div>
 
-                    <div className="flex gap-6 text-sm">
-                      <div>
-                        <p className="text-xs text-slate-400 mb-0.5">Date</p>
-                        <p className="text-[var(--color-dark)]">{formatDateShort(appt.slot.slot_date)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-400 mb-0.5">Time</p>
-                        <p className="text-[var(--color-dark)]">{formatTime(appt.slot.start_time)}</p>
-                      </div>
+                    <div className="text-sm">
+                      <p className="text-xs text-slate-400 mb-0.5">Time</p>
+                      <p className="text-[var(--color-dark)] font-medium">{formatTime12(appt.slot.start_time)}</p>
                     </div>
 
                     <div className="flex gap-2 pt-1">
@@ -323,30 +422,6 @@ export default function ClinicianDashboard() {
                     </div>
                   </div>
                 ))}
-              </div>
-
-              {/* ── Pagination ── */}
-              <div className="flex items-center justify-between mt-6">
-                <button
-                  type="button"
-                  disabled={page === 1}
-                  onClick={() => setPage(p => p - 1)}
-                  className="px-4 py-2.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
-                >
-                  ← Prev
-                </button>
-                <span className="text-sm text-slate-500">
-                  Page {page} of {totalPages}
-                  <span className="ml-2 text-slate-400">({filtered.length} appointment{filtered.length !== 1 ? 's' : ''})</span>
-                </span>
-                <button
-                  type="button"
-                  disabled={page === totalPages}
-                  onClick={() => setPage(p => p + 1)}
-                  className="px-4 py-2.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
-                >
-                  Next →
-                </button>
               </div>
             </>
           )}

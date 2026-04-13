@@ -14,8 +14,9 @@ class Appointment(db.Model):
     chief_complaint_description = db.Column(db.Text)
     payment_type = db.Column(db.String(100))
     discount_type = db.Column(db.String(50), nullable=True)   # "Senior Citizen" | "PWD" | None
+    payment_status = db.Column(db.String(20), nullable=True)  # "paid" | "unpaid" | None
     consultation_type = db.Column(db.String, nullable=False, server_default='f2f')  # f2f | teleconsult
-    # pending | accepted | reschedule_requested | rejected | cancelled
+    # pending | accepted | reschedule_requested | rejected | cancelled | done
     status = db.Column(db.String(30), nullable=False, default="pending")
     reschedule_reason = db.Column(db.Text)
     decline_reason    = db.Column(db.Text)
