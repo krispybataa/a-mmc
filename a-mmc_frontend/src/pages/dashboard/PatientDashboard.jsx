@@ -139,52 +139,53 @@ export default function PatientDashboard() {
         </div>
 
         {/* ── Recent Appointments ── */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="section-heading text-xl">
-              Recent Appointments
-            </h2>
-            <Link to="/dashboard/appointments" className="text-sm text-[var(--color-primary)] font-medium hover:underline">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-[var(--color-border)]">
+          {/* Title bar */}
+          <div className="bg-[var(--color-primary)] px-5 py-3.5 flex items-center justify-between">
+            <h2 className="text-base font-bold text-white">Recent Appointments</h2>
+            <Link to="/dashboard/appointments" className="text-white/80 text-sm font-medium hover:text-white transition-colors">
               View all →
             </Link>
           </div>
-
-          {apptLoading ? (
-            <p className="text-center text-[var(--color-muted)] py-12 text-sm">Loading…</p>
-          ) : apptError ? (
-            <p className="text-center text-[var(--color-accent)] py-12 text-sm font-medium">{apptError}</p>
-          ) : recentAppts.length === 0 ? (
-            <p className="text-center text-[var(--color-muted)] py-12">No appointments yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {recentAppts.map(appt => (
-                <div
-                  key={appt.appointment_id}
-                  className="bg-white rounded-2xl border border-[var(--color-border)] shadow-sm p-5 flex flex-col sm:flex-row sm:items-center gap-3"
-                >
-                  <div className="flex-1 space-y-1">
-                    <p className="font-semibold text-[var(--color-text)]">
-                      {appt.clinician.last_name}, {appt.clinician.first_name} · {appt.clinician.specialty}
-                    </p>
-                    <p className="text-sm text-[var(--color-muted)]">
-                      {formatDate(appt.slot.slot_date)} · {formatTime(appt.slot.start_time)}
-                    </p>
-                    <p className="text-sm text-[var(--color-muted)]">{appt.chief_complaint}</p>
+          {/* Content */}
+          <div className="p-5">
+            {apptLoading ? (
+              <p className="text-center text-[var(--color-muted)] py-12 text-sm">Loading…</p>
+            ) : apptError ? (
+              <p className="text-center text-[var(--color-accent)] py-12 text-sm font-medium">{apptError}</p>
+            ) : recentAppts.length === 0 ? (
+              <p className="text-center text-[var(--color-muted)] py-12">No appointments yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {recentAppts.map(appt => (
+                  <div
+                    key={appt.appointment_id}
+                    className="bg-[var(--color-bg)] rounded-xl border border-[var(--color-border)] p-5 flex flex-col sm:flex-row sm:items-center gap-3"
+                  >
+                    <div className="flex-1 space-y-1">
+                      <p className="font-semibold text-[var(--color-text)]">
+                        {appt.clinician.last_name}, {appt.clinician.first_name} · {appt.clinician.specialty}
+                      </p>
+                      <p className="text-sm text-[var(--color-muted)]">
+                        {formatDate(appt.slot.slot_date)} · {formatTime(appt.slot.start_time)}
+                      </p>
+                      <p className="text-sm text-[var(--color-muted)]">{appt.chief_complaint}</p>
+                    </div>
+                    <span className={[
+                      'text-xs font-semibold px-3 py-1.5 rounded-full self-start sm:self-center',
+                      appt.status === 'accepted'             ? 'bg-green-100 text-green-700' :
+                      appt.status === 'pending'              ? 'bg-amber-100 text-amber-700' :
+                      appt.status === 'reschedule_requested' ? 'bg-blue-100 text-blue-700'  :
+                      appt.status === 'rejected'             ? 'bg-red-100 text-red-700'    :
+                      'bg-gray-100 text-gray-600',
+                    ].join(' ')}>
+                      {capitalize(appt.status)}
+                    </span>
                   </div>
-                  <span className={[
-                    'text-xs font-semibold px-3 py-1.5 rounded-full self-start sm:self-center',
-                    appt.status === 'accepted'             ? 'bg-green-100 text-green-700' :
-                    appt.status === 'pending'              ? 'bg-amber-100 text-amber-700' :
-                    appt.status === 'reschedule_requested' ? 'bg-blue-100 text-blue-700'  :
-                    appt.status === 'rejected'             ? 'bg-red-100 text-red-700'    :
-                    'bg-gray-100 text-gray-600',
-                  ].join(' ')}>
-                    {capitalize(appt.status)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
       </div>

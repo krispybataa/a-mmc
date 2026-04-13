@@ -39,7 +39,7 @@ cd /app && python -m app.seed data/clinicians_full.csv
 =======
 cd /app && python -m app.seed data/clinicians_full.csv
 
-docker build .\a-mmc_backend\ -t krispybata/a-mmc-backend:latest ; docker build .\a-mmc_frontend\ -t krispybata/a-mmc-frontend:latest ; docker build .\a-mmc_kiosk\ -t krispybata/a-mmc-frontend:latest
+docker build .\a-mmc_backend\ -t krispybata/a-mmc-backend:latest ; docker build .\a-mmc_frontend\ -t krispybata/a-mmc-frontend:latest ; docker build .\a-mmc_kiosk\ -t krispybata/a-mmc-kiosk:latest
 
 cd .\a-mmc_infra\ ; docker compose up -d
 >>>>>>> Stashed changes
