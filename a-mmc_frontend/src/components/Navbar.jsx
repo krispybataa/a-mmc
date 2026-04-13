@@ -29,13 +29,13 @@ export default function Navbar() {
     : ''
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-slate-100 h-16 flex items-center">
+    <header className="sticky top-0 z-50 navbar-gradient h-16 flex items-center">
       <div className="max-w-5xl mx-auto px-6 w-full flex items-center justify-between">
 
         {/* Wordmark */}
         <Link
           to="/"
-          className="text-[var(--color-primary)] font-bold text-lg tracking-tight hover:opacity-80 transition-opacity"
+          className="text-white font-bold text-lg tracking-tight hover:opacity-80 transition-opacity"
         >
           Unicorn
         </Link>
@@ -49,10 +49,10 @@ export default function Navbar() {
               className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
               aria-label="Account menu"
             >
-              <span className="text-sm font-medium text-[var(--color-dark)] hidden sm:block">
+              <span className="text-sm font-medium text-white hidden sm:block">
                 {user.first_name}
               </span>
-              <div className="w-9 h-9 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-white text-xs font-bold select-none">
+              <div className="w-9 h-9 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center text-white text-xs font-bold select-none">
                 {initials}
               </div>
             </button>
@@ -88,13 +88,13 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
             <Link
               to="/login"
-              className="text-sm font-medium text-[var(--color-dark)] hover:text-[var(--color-primary)] transition-colors px-1 py-2"
+              className="text-sm font-medium text-white/90 hover:text-white transition-colors px-1 py-2"
             >
               Sign In
             </Link>
             <Link
               to="/register"
-              className="text-sm font-semibold text-white bg-[var(--color-primary)] px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+              className="text-sm font-semibold text-[var(--color-primary)] bg-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
             >
               Register
             </Link>

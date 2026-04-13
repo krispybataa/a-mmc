@@ -28,7 +28,7 @@ function staffDisplayName(user) {
 
 function SidebarNav({ user, onLogout, onNavClick }) {
   return (
-    <div className="flex flex-col h-full bg-[var(--color-primary)]">
+    <div className="flex flex-col h-full navbar-gradient">
 
       {/* Wordmark + badge */}
       <div className="px-6 py-5 border-b border-white/10 shrink-0">
@@ -109,7 +109,7 @@ export default function StaffLayout() {
       </aside>
 
       {/* ── Mobile: sticky top bar ── */}
-      <header className="md:hidden fixed top-0 inset-x-0 z-40 bg-[var(--color-primary)] h-16 flex items-center px-4 gap-3">
+      <header className="md:hidden fixed top-0 inset-x-0 z-40 navbar-gradient h-16 flex items-center px-4 gap-3">
         <button
           type="button"
           aria-label="Open navigation"
