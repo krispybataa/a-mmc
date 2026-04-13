@@ -9,6 +9,7 @@ import BookAppointment from './pages/public/BookAppointment'
 import PatientDashboard from './pages/dashboard/PatientDashboard'
 import PatientAppointments from './pages/dashboard/PatientAppointments'
 import ClinicianDashboard from './pages/dashboard/ClinicianDashboard'
+import ClinicianTodayView from './pages/staff/ClinicianTodayView'
 import ClinicianProfileManager from './pages/dashboard/ClinicianProfileManager'
 import ScheduleManager from './pages/dashboard/ScheduleManager'
 import UpdateProfile from './pages/dashboard/UpdateProfile'
@@ -54,7 +55,8 @@ export default function App() {
 
         {/* ── Staff shell — auth-guarded, own topbar, no patient navbar ── */}
         <Route element={<StaffLayout />}>
-          <Route path="/clinician-dashboard"          element={<ClinicianDashboard />} />
+          <Route path="/clinician-dashboard/today"            element={<ClinicianTodayView />} />
+          <Route path="/clinician-dashboard"                  element={<ClinicianDashboard />} />
           <Route path="/clinician-dashboard/profile"          element={<ClinicianProfileManager />} />
           <Route path="/clinician-dashboard/schedule"         element={<ScheduleManager />} />
           <Route path="/clinician-dashboard/change-password"  element={<ChangePassword />} />

@@ -97,8 +97,9 @@ def _maybe_auto_block_slot(slot: ClinicianTimeslot) -> None:
 
 VALID_TRANSITIONS = {
     "pending":               {"accepted", "rejected", "declined", "cancelled"},
-    "accepted":              {"reschedule_requested", "cancelled"},
+    "accepted":              {"reschedule_requested", "cancelled", "done"},
     "reschedule_requested":  {"accepted", "cancelled"},
+    "done":                  set(),
     "rejected":              set(),
     "declined":              set(),
     "cancelled":             set(),
@@ -213,6 +214,11 @@ def update_appointment(appointment_id: int):
 
     new_status = data.get("status")
     original_status = a.status  # capture before any mutation for email routing
+    role = (data.get("role") or "").lower()  # "patient" | "clinician" | "secretary"
+
+    # Completed appointments are immutable
+    if a.status == "done":
+        return jsonify({"error": "This appointment has already been completed."}), 400
 
     # B1-B-patch: transaction boundary added
     # All validation early-returns above this point write nothing to the session.
@@ -228,9 +234,18 @@ def update_appointment(appointment_id: int):
                 }), 409
 
             # ----------------------------------------------------------------
+            # Done — C/S marks appointment as completed after patient is seen
+            # ----------------------------------------------------------------
+            if new_status == "done":
+                if role not in ("clinician", "secretary"):
+                    return jsonify({
+                        "error": "Only clinicians or secretaries can mark an appointment as done."
+                    }), 403
+
+            # ----------------------------------------------------------------
             # Decline — C/S declines a pending appointment
             # ----------------------------------------------------------------
-            if new_status == "declined":
+            elif new_status == "declined":
                 decline_reason = (data.get("decline_reason") or "").strip()
                 if not decline_reason:
                     return jsonify({"error": "decline_reason is required when declining an appointment"}), 422
@@ -277,10 +292,19 @@ def update_appointment(appointment_id: int):
 
             a.status = new_status
 
-        # Non-status field updates
+        # Non-status field updates (any role)
         for field in ["chief_complaint", "chief_complaint_description", "payment_type", "discount_type"]:
             if field in data:
                 setattr(a, field, data[field])
+
+        # payment_status — C/S only
+        if "payment_status" in data:
+            if role == "patient":
+                return jsonify({"error": "Patients cannot update payment status."}), 403
+            ps = data["payment_status"]
+            if ps is not None and ps not in ("paid", "unpaid"):
+                return jsonify({"error": "payment_status must be 'paid', 'unpaid', or null."}), 422
+            a.payment_status = ps
 
         db.session.commit()
     except Exception:
@@ -319,6 +343,9 @@ def cancel_appointment(appointment_id: int):
     """
     a = db.get_or_404(Appointment, appointment_id)
     data = request.get_json(force=True) or {}
+
+    if a.status == "done":
+        return jsonify({"error": "This appointment has already been completed."}), 400
 
     if a.status == "cancelled":
         return jsonify({"error": "Appointment is already cancelled"}), 409
@@ -402,6 +429,7 @@ def _serialize(a: Appointment) -> dict:
         "chief_complaint_description": a.chief_complaint_description,
         "payment_type": _format_payment_type(a.payment_type),
         "discount_type": a.discount_type,
+        "payment_status": a.payment_status,
         "consultation_type": a.consultation_type,
         "status": a.status,
         "reschedule_reason": a.reschedule_reason,
