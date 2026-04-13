@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { Navigate, Outlet, NavLink } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, CalendarDays, Inbox } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const NAV_LINKS = [
-  { to: '/clinician-dashboard',                  label: 'Inbox',           end: true  },
-  { to: '/clinician-dashboard/profile',          label: 'Profile',         end: false },
-  { to: '/clinician-dashboard/schedule',         label: 'Schedule',        end: false },
-  { to: '/clinician-dashboard/change-password',  label: 'Change Password', end: false },
+  { to: '/clinician-dashboard/today',            label: 'Today',           end: true,  Icon: CalendarDays },
+  { to: '/clinician-dashboard',                  label: 'Appointment Inbox', end: true, Icon: Inbox        },
+  { to: '/clinician-dashboard/profile',          label: 'Profile',         end: false, Icon: null },
+  { to: '/clinician-dashboard/schedule',         label: 'Schedule',        end: false, Icon: null },
+  { to: '/clinician-dashboard/change-password',  label: 'Change Password', end: false, Icon: null },
 ]
 
 function roleLabel(role) {
@@ -42,19 +43,20 @@ function SidebarNav({ user, onLogout, onNavClick }) {
 
       {/* Nav links */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {NAV_LINKS.map(({ to, label, end }) => (
+        {NAV_LINKS.map(({ to, label, end, Icon }) => (
           <NavLink
             key={to}
             to={to}
             end={end}
             onClick={onNavClick}
             className={({ isActive }) => [
-              'flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors min-h-[48px]',
+              'flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium transition-colors min-h-[48px]',
               isActive
                 ? 'bg-white/20 text-white'
                 : 'text-white/70 hover:text-white hover:bg-white/10',
             ].join(' ')}
           >
+            {Icon && <Icon size={16} className="shrink-0" />}
             {label}
           </NavLink>
         ))}

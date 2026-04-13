@@ -57,7 +57,7 @@ export default function StaffLogin() {
       setToken(data.access_token)
       setUser(data.user)
       const redirect = searchParams.get('redirect')
-      const defaultTarget = role === 'admin' ? '/admin' : '/clinician-dashboard'
+      const defaultTarget = role === 'admin' ? '/admin' : '/clinician-dashboard/today'
       navigate(redirect || defaultTarget, { replace: true })
     } catch (err) {
       setServerError(
