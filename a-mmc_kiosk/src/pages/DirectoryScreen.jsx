@@ -12,38 +12,35 @@ function ClinicianKioskCard({ clinician, onSelect }) {
   return (
     <button
       onClick={() => onSelect(clinician)}
-      className="flex flex-col rounded-2xl shadow-md bg-white text-left transition-colors duration-150 overflow-hidden w-full"
+      className="flex flex-col rounded-2xl shadow-md bg-white text-left transition-all duration-150 overflow-hidden w-full hover:shadow-lg"
       style={{ minHeight: '280px', cursor: 'pointer' }}
     >
-      {/* Top band — photo left, name/specialty right */}
-      <div
-        className="flex flex-row items-center gap-4 px-5 py-4"
-        style={{ backgroundColor: PRIMARY }}
-      >
-        {/* Profile picture */}
+      {/* Title bar — gradient, centered avatar + name + specialty */}
+      <div className="navbar-gradient flex flex-col items-center text-center px-5 pt-6 pb-5">
         {clinician.profile_picture ? (
           <img
             src={clinician.profile_picture}
             alt=""
-            style={{ width: '120px', height: '120px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(255,255,255,0.35)' }}
+            className="rounded-full object-cover border-4 border-white mb-3 shrink-0"
+            style={{ width: '88px', height: '88px' }}
             onError={e => { e.target.style.display = 'none' }}
           />
         ) : (
-          <div style={{ width: '120px', height: '120px', borderRadius: '12px', flexShrink: 0, backgroundColor: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: '28px', fontWeight: '700', color: '#fff' }}>{initials || '?'}</span>
+          <div
+            className="rounded-full border-4 border-white flex items-center justify-center mb-3 shrink-0"
+            style={{ width: '88px', height: '88px', backgroundColor: 'rgba(255,255,255,0.18)' }}
+          >
+            <span style={{ fontSize: '26px', fontWeight: '700', color: '#fff' }}>{initials || '?'}</span>
           </div>
         )}
-        {/* Name + specialty */}
-        <div>
-          <p className="text-white font-semibold" style={{ fontSize: '24px' }}>
-            {name}
-          </p>
-          <p className="text-blue-200" style={{ fontSize: '18px' }}>
-            {clinician.specialty}
-          </p>
-        </div>
+        <p className="font-bold text-white leading-snug" style={{ fontSize: '20px' }}>
+          {name}
+        </p>
+        <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.75)', marginTop: '2px' }}>
+          {clinician.specialty}
+        </p>
       </div>
-      {/* Bottom section */}
+      {/* Card body */}
       <div className="flex flex-col justify-between flex-1 px-6 py-5 gap-2">
         <div>
           <p className="text-gray-700" style={{ fontSize: '18px' }}>
@@ -91,10 +88,7 @@ export default function DirectoryScreen({ onNavigate, onSelectClinician }) {
   return (
     <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
       {/* Header */}
-      <div
-        className="flex items-center px-6 py-4 gap-4 shrink-0"
-        style={{ backgroundColor: PRIMARY }}
-      >
+      <div className="navbar-gradient flex items-center px-6 py-4 gap-4 shrink-0">
         <button
           onClick={() => onNavigate('home')}
           className="flex items-center justify-center rounded-xl bg-white font-bold transition-colors duration-150 hover:bg-blue-50 shrink-0"

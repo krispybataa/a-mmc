@@ -5,6 +5,8 @@ logs/
 CLAUDE.md
 .claude
 
+misc/
+
 a-mmc_frontend/node_modules/
 a-mmc_frontend/dist/
 a-mmc_frontend/build/

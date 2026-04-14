@@ -2,6 +2,7 @@ import re
 from datetime import date
 
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt, verify_jwt_in_request
 from app import db, limiter
 from app.models.patient import Patient
 from app.utils.validators import require_fields
@@ -30,7 +31,13 @@ def list_patients():
 @patient_bp.get("/<int:patient_id>")
 def get_patient(patient_id: int):
     p = db.get_or_404(Patient, patient_id)
-    return jsonify({
+
+    # Determine caller role — optional JWT so unauthenticated and patient callers work unchanged
+    verify_jwt_in_request(optional=True)
+    claims = get_jwt()
+    caller_role = claims.get("role", "") if claims else ""
+
+    data = {
         "patient_id": p.patient_id,
         "last_name": p.last_name,
         "first_name": p.first_name,
@@ -55,7 +62,13 @@ def get_patient(patient_id: int):
         "culture": p.culture,
         "educational_attainment": p.educational_attainment,
         "disability_type": p.disability_type,
-    })
+    }
+
+    # Expose login_email only to staff and admin — never to patients or unauthenticated callers
+    if caller_role in ("clinician", "secretary", "admin"):
+        data["login_email"] = p.login_email
+
+    return jsonify(data)
 
 
 @patient_bp.post("/")

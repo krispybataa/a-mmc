@@ -85,10 +85,7 @@ export default function HomeScreen({ onNavigate }) {
   return (
     <div className="flex flex-col h-screen" style={{ backgroundColor: '#F8F7FF' }}>
       {/* Header */}
-      <div
-        className="flex items-center justify-between py-5 px-8 shrink-0"
-        style={{ backgroundColor: PRIMARY }}
-      >
+      <div className="navbar-gradient flex items-center justify-between py-5 px-8 shrink-0">
         <h1 className="text-white font-bold tracking-wide" style={{ fontSize: '36px' }}>
           Unicorn
         </h1>

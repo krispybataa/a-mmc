@@ -63,6 +63,15 @@ function validateRows(rows) {
   })
 }
 
+/** Returns an amber warning message if a PM time value is before noon, else null. */
+function pmWarning(value) {
+  if (!value) return null
+  const h = parseInt(value.slice(0, 2), 10)
+  if (h >= 12) return null
+  const suggested = `${String(h + 12).padStart(2, '0')}:${value.slice(3)}`
+  return `PM hours should be after 12:00 noon. Did you mean ${suggested}?`
+}
+
 // ── TimeInput ──────────────────────────────────────────────────────────────────
 
 function TimeInput({ value, onChange, disabled }) {
@@ -411,18 +420,26 @@ export default function ScheduleManager() {
                 </div>
 
                 {/* PM window */}
-                <div className="flex-1 flex items-center gap-2">
-                  <TimeInput
-                    value={row.pmStart}
-                    onChange={(v) => updateRow(i, 'pmStart', v)}
-                    disabled={!row.active}
-                  />
-                  <span className={`text-sm select-none ${row.active ? 'text-slate-400' : 'text-slate-200'}`}>–</span>
-                  <TimeInput
-                    value={row.pmEnd}
-                    onChange={(v) => updateRow(i, 'pmEnd', v)}
-                    disabled={!row.active}
-                  />
+                <div className="flex-1 flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <TimeInput
+                      value={row.pmStart}
+                      onChange={(v) => updateRow(i, 'pmStart', v)}
+                      disabled={!row.active}
+                    />
+                    <span className={`text-sm select-none ${row.active ? 'text-slate-400' : 'text-slate-200'}`}>–</span>
+                    <TimeInput
+                      value={row.pmEnd}
+                      onChange={(v) => updateRow(i, 'pmEnd', v)}
+                      disabled={!row.active}
+                    />
+                  </div>
+                  {row.active && pmWarning(row.pmStart) && (
+                    <p className="text-xs text-amber-600">{pmWarning(row.pmStart)}</p>
+                  )}
+                  {row.active && pmWarning(row.pmEnd) && (
+                    <p className="text-xs text-amber-600">{pmWarning(row.pmEnd)}</p>
+                  )}
                 </div>
 
               </div>
@@ -498,6 +515,12 @@ export default function ScheduleManager() {
                       disabled={!row.active}
                     />
                   </div>
+                  {row.active && pmWarning(row.pmStart) && (
+                    <p className="text-xs text-amber-600">{pmWarning(row.pmStart)}</p>
+                  )}
+                  {row.active && pmWarning(row.pmEnd) && (
+                    <p className="text-xs text-amber-600">{pmWarning(row.pmEnd)}</p>
+                  )}
                 </div>
               </div>
 
