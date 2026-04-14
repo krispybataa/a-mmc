@@ -1,16 +1,16 @@
 import { useState } from 'react'
 import { Navigate, Outlet, NavLink } from 'react-router-dom'
-import { Menu, X, CalendarDays, Inbox } from 'lucide-react'
+import { Menu, X, CalendarDays, Inbox, User, Clock, KeyRound, LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const NAV_LINKS = [
-  { to: '/clinician-dashboard/today',            label: 'Today',           end: true,  Icon: CalendarDays },
-  { to: '/clinician-dashboard',                  label: 'Appointment Inbox', end: true, Icon: Inbox        },
-  { to: '/clinician-dashboard/profile',          label: 'Profile',         end: false, Icon: null },
-  { to: '/clinician-dashboard/schedule',         label: 'Schedule',        end: false, Icon: null },
-  { to: '/clinician-dashboard/change-password',  label: 'Change Password', end: false, Icon: null },
+  { to: '/clinician-dashboard/today',            label: 'Today',             end: true,  Icon: CalendarDays },
+  { to: '/clinician-dashboard',                  label: 'Appointment Inbox', end: true,  Icon: Inbox        },
+  { to: '/clinician-dashboard/profile',          label: 'Profile',           end: false, Icon: User         },
+  { to: '/clinician-dashboard/schedule',         label: 'Schedule',          end: false, Icon: Clock        },
+  { to: '/clinician-dashboard/change-password',  label: 'Change Password',   end: false, Icon: KeyRound     },
 ]
 
 function roleLabel(role) {
@@ -73,8 +73,9 @@ function SidebarNav({ user, onLogout, onNavClick }) {
         <button
           type="button"
           onClick={onLogout}
-          className="w-full text-sm font-medium text-white bg-white/20 hover:bg-white/30 transition-colors px-4 py-2.5 rounded-lg min-h-[44px]"
+          className="w-full text-sm font-medium text-white bg-white/20 hover:bg-white/30 transition-colors px-4 py-2.5 rounded-lg min-h-[44px] flex items-center justify-center gap-2"
         >
+          <LogOut size={16} className="shrink-0" />
           Logout
         </button>
       </div>
