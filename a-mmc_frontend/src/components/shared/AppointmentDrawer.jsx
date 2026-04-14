@@ -497,9 +497,9 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
             'fixed z-50 bg-white shadow-xl flex flex-col',
             'transition-transform duration-200',
             // Mobile (all roles): slides up from bottom
-            'bottom-0 left-0 right-0 max-h-[90vh] rounded-t-2xl',
+            'bottom-0 left-0 right-0 max-h-[90dvh] rounded-t-2xl',
             // Patient only on desktop: right-side panel, full height
-            !isCS && 'md:bottom-auto md:left-auto md:right-0 md:top-0 md:h-full md:w-full md:max-w-md md:rounded-none',
+            !isCS && 'md:bottom-auto md:left-auto md:right-0 md:top-0 md:h-dvh md:w-full md:max-w-md md:rounded-none',
             open
               ? (!isCS ? 'translate-y-0 md:translate-x-0' : 'translate-y-0')
               : (!isCS ? 'translate-y-full md:translate-y-0 md:translate-x-full' : 'translate-y-full'),
@@ -626,6 +626,7 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
         )}
 
       </div>
+      )}
     </>
   )
 }
