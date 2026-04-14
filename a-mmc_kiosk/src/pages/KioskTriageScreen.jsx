@@ -173,8 +173,8 @@ export default function KioskTriageScreen({ onNavigate, onSelectClinician }) {
   // ── Shared header ───────────────────────────────────────────────────────────
   const header = (
     <div
+      className="navbar-gradient"
       style={{
-        backgroundColor: PRIMARY,
         display: 'flex',
         alignItems: 'center',
         padding: '16px 24px',

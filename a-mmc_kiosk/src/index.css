@@ -21,3 +21,23 @@ body {
   background-color: var(--color-bg);
   font-size: 20px;
 }
+
+.site-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: url('/assets/images/site-bg.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  opacity: 0.10;
+  pointer-events: none;
+}
+
+@supports not (background-attachment: fixed) {
+  .site-bg { background-attachment: scroll; }
+}
+
+.navbar-gradient {
+  background: linear-gradient(135deg, #1D409C 0%, #162f75 100%);
+}

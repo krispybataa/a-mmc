@@ -99,10 +99,7 @@ export default function ClinicianDetailScreen({ clinician: stub, onBack }) {
   return (
     <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
       {/* Header */}
-      <div
-        className="flex items-center px-6 py-4 shrink-0"
-        style={{ backgroundColor: PRIMARY }}
-      >
+      <div className="navbar-gradient flex items-center px-6 py-4 shrink-0">
         <div style={{ minWidth: '120px' }} />
         <h2 className="text-white font-bold flex-1 text-center" style={{ fontSize: '28px' }}>
           Doctor Profile

@@ -405,6 +405,17 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
   const { user } = useAuth()
   const [open,    setOpen]    = useState(false)
   const closingRef            = useRef(false)
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth >= 768
+  )
+
+  // Track viewport width for modal vs drawer layout decision
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)')
+    const handler = e => setIsDesktop(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   // Animate in when component mounts (appointment just became non-null)
   useEffect(() => {
@@ -451,34 +462,58 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
         onClick={close}
       />
 
-      {/* Drawer panel */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Appointment details"
-        className={[
-          'fixed z-50 bg-white shadow-xl flex flex-col',
-          'transition-transform duration-200',
-          // Mobile: slides up from bottom, capped height, rounded top
-          'bottom-0 left-0 right-0 max-h-[90vh] rounded-t-2xl',
-          // Desktop: right-side panel, full height, no rounded corners
-          'md:bottom-auto md:left-auto md:right-0 md:top-0 md:h-full md:w-full md:rounded-none',
-          isCS ? 'md:max-w-2xl' : 'md:max-w-md',
-          // Slide-in/out
-          open
-            ? 'translate-y-0 md:translate-x-0'
-            : 'translate-y-full md:translate-y-0 md:translate-x-full',
-        ].join(' ')}
-      >
+      {isCS && isDesktop ? (
+        /* ── C/S desktop: centered modal ── */
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Appointment details"
+          className={[
+            'fixed inset-0 z-50 flex items-center justify-center p-6',
+            'transition-opacity duration-200',
+            open ? 'opacity-100' : 'opacity-0 pointer-events-none',
+          ].join(' ')}
+          onClick={close}
+        >
+          <div
+            className="w-full max-w-4xl max-h-[90vh] flex flex-col bg-white rounded-xl shadow-2xl overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <CSDrawerContent
+              appointment={appt}
+              close={close}
+              user={user}
+              onSave={onSave}
+            />
+          </div>
+        </div>
+      ) : (
+        /* ── Drawer panel: C/S mobile OR patient (all sizes) ── */
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Appointment details"
+          className={[
+            'fixed z-50 bg-white shadow-xl flex flex-col',
+            'transition-transform duration-200',
+            // Mobile (all roles): slides up from bottom
+            'bottom-0 left-0 right-0 max-h-[90dvh] rounded-t-2xl',
+            // Patient only on desktop: right-side panel, full height
+            !isCS && 'md:bottom-auto md:left-auto md:right-0 md:top-0 md:h-dvh md:w-full md:max-w-md md:rounded-none',
+            open
+              ? (!isCS ? 'translate-y-0 md:translate-x-0' : 'translate-y-0')
+              : (!isCS ? 'translate-y-full md:translate-y-0 md:translate-x-full' : 'translate-y-full'),
+          ].filter(Boolean).join(' ')}
+        >
 
-        {isCS ? (
-          <CSDrawerContent
-            appointment={appt}
-            close={close}
-            user={user}
-            onSave={onSave}
-          />
-        ) : (
+          {isCS ? (
+            <CSDrawerContent
+              appointment={appt}
+              close={close}
+              user={user}
+              onSave={onSave}
+            />
+          ) : (
           <>
             {/* ── Patient: Header ── */}
             <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-slate-100 shrink-0">
@@ -591,6 +626,7 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
         )}
 
       </div>
+      )}
     </>
   )
 }
