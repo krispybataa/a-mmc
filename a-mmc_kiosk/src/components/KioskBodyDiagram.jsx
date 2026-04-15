@@ -65,7 +65,7 @@ const MUSCLE_REGION = {
 
 const TAPPABLE_MUSCLES = Object.keys(MUSCLE_REGION)
 
-// ── Component ──────────────────────────────────────────────────────────────────
+// -- Component --------------------------------------------------------------------------------
 export default function KioskBodyDiagram({ onSelect, onFallback }) {
   const [highlighted, setHighlighted] = useState(null)
   const [substep,     setSubstep]     = useState(null)
