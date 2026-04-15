@@ -95,14 +95,14 @@ export default function HomeScreen({ onNavigate }) {
       {/* Main content */}
       <div className="flex flex-1 items-center justify-center" style={{ gap: '64px' }}>
         <ModeButton
-          icon="🩺"
+          icon="[stethoscope]"
           label="Find a Doctor"
           subtext="Browse our list of clinicians"
           onClick={() => onNavigate('directory')}
           borderColor={PRIMARY}
         />
         <ModeButton
-          icon="📋"
+          icon="[clipboard]"
           label="Find the Right Doctor for You"
           subtext="Answer a few questions to get matched"
           onClick={() => onNavigate('triage')}

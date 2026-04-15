@@ -95,7 +95,7 @@ function KioskResultCard({ clinician, onSelect }) {
         <p style={{ fontSize: '30px', fontWeight: '700', color: '#1e293b', lineHeight: 1.2, marginBottom: '2px' }}>{name}</p>
         <p style={{ fontSize: '20px', color: '#6B7280' }}>{clinician.specialty}</p>
         {clinician.room_number && (
-          <p style={{ fontSize: '18px', color: '#6B7280' }}>📍 {clinician.room_number}</p>
+          <p style={{ fontSize: '18px', color: '#6B7280' }}>[pin] {clinician.room_number}</p>
         )}
         <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <QRCodeSVG value={qrUrl} size={190} />
