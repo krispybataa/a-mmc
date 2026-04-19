@@ -6,9 +6,11 @@ const api = axios.create({
 })
 
 // Read the CSRF double-submit cookie set by the login / refresh endpoints.
-function getCsrfToken() {
-  const match = document.cookie.split('; ').find(row => row.startsWith('csrf_token='))
-  return match ? match.split('=')[1] : ''
+// Returns null when the cookie is absent (caller must send '' in that case).
+// Exported so AuthContext.jsx can include it in the mount-time refresh call.
+export function getCsrfCookie() {
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/)
+  return match ? decodeURIComponent(match[1]) : null
 }
 
 // ---------------------------------------------------------------------------
@@ -22,6 +24,13 @@ let _token = null
 let _setToken = null
 let _logout = null
 let _isRefreshing = false
+// True from module load until AuthContext's mount refresh attempt completes.
+// Guards the interceptor from calling logout() before session restore finishes.
+let _isMounting = true
+
+export function setMountingState(mounting) {
+  _isMounting = mounting
+}
 
 export function configureApiAuth(token, setToken, logout) {
   _token = token
@@ -71,7 +80,7 @@ api.interceptors.response.use(
 
       try {
         const { data } = await api.post('/auth/refresh', null, {
-          headers: { 'X-CSRF-Token': getCsrfToken() },
+          headers: { 'X-CSRF-Token': getCsrfCookie() ?? '' },
         })
         const newToken = data.access_token
 
@@ -85,7 +94,9 @@ api.interceptors.response.use(
         return api(original)
       } catch {
         _isRefreshing = false
-        _logout?.()
+        if (!_isMounting) {
+          _logout?.()
+        }
         return Promise.reject(error)
       }
     }
