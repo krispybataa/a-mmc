@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { SlidersHorizontal, X } from 'lucide-react'
 import api from '../../services/api'
@@ -62,6 +62,11 @@ export default function Doctors() {
   const [filtersOpen,     setFiltersOpen]     = useState(!!(paramSpec || paramHMO))
   const [showBanner,      setShowBanner]      = useState(!!(paramSpec || paramHMO))
 
+  const resultsRef       = useRef(null)
+  // Captured once on mount — true when user arrived via triage with pre-applied filters.
+  // We scroll to results when loading completes; useRef avoids triggering on later filter changes.
+  const hadTriageParams  = useRef(!!(paramSpec || paramHMO))
+
   useEffect(() => {
     async function load() {
       try {
@@ -75,6 +80,17 @@ export default function Doctors() {
     }
     load()
   }, [])
+
+  // Scroll to results once after triage arrival (query params present on mount).
+  // Fires when fetchLoading clears; the 100 ms delay lets the grid paint first.
+  useEffect(() => {
+    if (!fetchLoading && hadTriageParams.current) {
+      const t = setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
+      return () => clearTimeout(t)
+    }
+  }, [fetchLoading])
 
   // ── Derived data ───────────────────────────────────────────────────────────
 
@@ -307,7 +323,7 @@ export default function Doctors() {
         })()}
 
         {/* ── Directory header band ── */}
-        <div className="navbar-gradient rounded-xl h-14 flex items-center mb-6 px-6">
+        <div ref={resultsRef} className="navbar-gradient rounded-xl h-14 flex items-center mb-6 px-6">
           <h1 className="text-lg font-bold text-white">Clinician Directory</h1>
         </div>
 

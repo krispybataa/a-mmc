@@ -144,7 +144,7 @@ export default function ClinicianDetailScreen({ clinician: stub, onBack }) {
               <p className="text-gray-500" style={{ fontSize: '20px' }}>{data.department}</p>
               {data.room_number && (
                 <p className="text-gray-500" style={{ fontSize: '20px' }}>
-                  📍 {data.room_number}
+                  [pin] {data.room_number}
                 </p>
               )}
             </div>

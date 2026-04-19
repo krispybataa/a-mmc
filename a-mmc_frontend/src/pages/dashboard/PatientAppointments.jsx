@@ -115,9 +115,12 @@ export default function PatientAppointments() {
   const today   = toDateStr(new Date())
   const maxDate = toDateStr(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000))
 
-  const filtered   = filterDate
-    ? appointments.filter(a => a.slot.slot_date === filterDate)
-    : appointments
+  const sorted = [...appointments].sort((a, b) =>
+    b.slot.slot_date.localeCompare(a.slot.slot_date)
+  )
+  const filtered = filterDate
+    ? sorted.filter(a => a.slot.slot_date === filterDate)
+    : sorted
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage   = Math.min(currentPage, totalPages)

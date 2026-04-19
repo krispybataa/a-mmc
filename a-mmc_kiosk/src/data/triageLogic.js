@@ -1,4 +1,4 @@
-// ⚠️ SYNC REQUIRED
+// [WARNING] SYNC REQUIRED
 // This file is maintained in two locations:
 //   a-mmc_frontend/src/data/triageLogic.js  (source of truth)
 //   a-mmc_kiosk/src/data/triageLogic.js     (mirror)
@@ -6,7 +6,7 @@
 // to the other. Do not allow these files to diverge.
 
 /*
- * ⚠️  PLACEHOLDER — PENDING DOMAIN EXPERT REVIEW
+ * [WARNING]  PLACEHOLDER — PENDING DOMAIN EXPERT REVIEW
  *
  * This file contains the symptom-to-specialty mapping used by the unaware
  * patient triage flow. The symptom categories, their descriptions, and the
