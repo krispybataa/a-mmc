@@ -67,7 +67,7 @@ const TAPPABLE_MUSCLES = Object.keys(MUSCLE_REGION)
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function BodyDiagram({ onSelect }) {
+export default function BodyDiagram({ onSelect, excludeSpecialties = [] }) {
   const [highlighted, setHighlighted] = useState(null)
   const [substep,     setSubstep]     = useState(null)  // null or substep definition object
 
@@ -136,7 +136,7 @@ export default function BodyDiagram({ onSelect }) {
             {substep.question}
           </p>
           <div className="flex flex-col gap-3">
-            {substep.options.map(opt => (
+            {substep.options.filter(opt => !excludeSpecialties.includes(opt.specialty)).map(opt => (
               <button
                 key={opt.specialty}
                 onClick={() => handleSubstepSelect(opt.specialty)}

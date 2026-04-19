@@ -252,7 +252,10 @@ export default function GuidedSearch() {
               Tap the area of your body that concerns you.
             </p>
 
-            <BodyDiagram onSelect={handleBodyDiagramSelect} />
+            <BodyDiagram
+              onSelect={handleBodyDiagramSelect}
+              excludeSpecialties={selectedSex === 'male' ? ['Obstetrics & Gynecology'] : []}
+            />
 
             <button
               onClick={() => setShowFallback(true)}

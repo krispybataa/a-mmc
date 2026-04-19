@@ -66,7 +66,7 @@ const MUSCLE_REGION = {
 const TAPPABLE_MUSCLES = Object.keys(MUSCLE_REGION)
 
 // -- Component --------------------------------------------------------------------------------
-export default function KioskBodyDiagram({ onSelect, onFallback }) {
+export default function KioskBodyDiagram({ onSelect, onFallback, excludeSpecialties = [] }) {
   const [highlighted, setHighlighted] = useState(null)
   const [substep,     setSubstep]     = useState(null)
 
@@ -175,7 +175,7 @@ export default function KioskBodyDiagram({ onSelect, onFallback }) {
             {substep.question}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {substep.options.map(opt => (
+            {substep.options.filter(opt => !excludeSpecialties.includes(opt.specialty)).map(opt => (
               <button
                 key={opt.specialty}
                 onClick={() => handleSubstepSelect(opt.specialty)}
