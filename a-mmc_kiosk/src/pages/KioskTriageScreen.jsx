@@ -1,42 +1,75 @@
 import { useState, useEffect } from 'react'
 import { MapPin } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
-import { TRIAGE_STEPS, SYMPTOM_SPECIALTY_MAP, HMO_LABEL_MAP } from '@triage'
+import { TRIAGE_STEPS, HMO_LABEL_MAP, computeTriageScores } from '@triage'
 import api from '../services/api'
 import KioskClock from '../components/KioskClock'
 import KioskBodyDiagram from '../components/KioskBodyDiagram'
 
 const PRIMARY   = '#1D409C'
 const ACCENT    = '#CE1117'
-const MAIN_URL  = import.meta.env.VITE_MAIN_APP_URL 
+const MAIN_URL  = import.meta.env.VITE_MAIN_APP_URL
 
 const HMO_STEP     = TRIAGE_STEPS.find(s => s.id === 'hmo')
 const noHmoOption  = HMO_STEP.options.find(o => o.emphasized)
 const hmoList      = HMO_STEP.options.filter(o => !o.emphasized)
 
-// ── Body region options ───────────────────────────────────────────────────────
-const BODY_REGIONS = [
-  { label: 'Head & Brain',          subtext: 'Headaches, dizziness, seizures',               specialty: 'Neurology' },
-  { label: 'Eyes',                  subtext: 'Vision problems, eye pain, irritation',         specialty: 'Ophthalmology' },
-  { label: 'Ears, Nose & Throat',   subtext: 'Hearing, sinus, or throat issues',              specialty: 'Otorhinolaryngology' },
-  { label: 'Teeth & Jaw',           subtext: 'Tooth pain, jaw problems',                     specialty: 'Dental Medicine' },
-  { label: 'Heart & Chest',         subtext: 'Chest pain, palpitations',                     specialty: 'Cardiology' },
-  { label: 'Lungs & Breathing',     subtext: 'Shortness of breath, cough',                   specialty: 'Pulmonary Medicine' },
-  { label: 'Stomach & Digestion',   subtext: 'Pain, reflux, bowel issues',                   specialty: 'Gastroenterology' },
-  { label: 'Bones & Joints',        subtext: 'Joint pain, swelling, stiffness, arthritis',   specialty: 'Rheumatology' },
-  { label: 'Bone Injury',           subtext: 'Fractures, injuries, structural bone issues',  specialty: 'Orthopedic Surgery' },
-  { label: "Women's Health",        subtext: 'Menstrual, pregnancy, pelvic pain',            specialty: 'Obstetrics & Gynecology' },
-  { label: 'Skin',                  subtext: 'Rashes, itching, or skin changes',             specialty: 'Dermatology' },
-  { label: "Children's Health",     subtext: 'Pediatric concerns, child development',         specialty: 'Pediatrics' },
-  { label: 'Hormones & Metabolism', subtext: 'Thyroid, diabetes, metabolic conditions',      specialty: 'Endocrinology' },
-  { label: 'Others',                subtext: 'Other concerns not listed above',              specialty: null },
+// ── Age band and sex options ──────────────────────────────────────────────────
+const AGE_BANDS = [
+  { id: 'u18',   label: 'Under 18' },
+  { id: '18_35', label: '18 to 35' },
+  { id: '36_55', label: '36 to 55' },
+  { id: '56p',   label: '56 and above' },
 ]
+
+const SEX_OPTIONS = [
+  { id: 'male',   label: 'Male' },
+  { id: 'female', label: 'Female' },
+  { id: 'none',   label: 'Prefer not to say' },
+]
+
+// ── Body region options ───────────────────────────────────────────────────────
+// symptomId maps to computeTriageScores keys; null = pass specialty directly
+const BODY_REGIONS = [
+  { label: 'Head & Brain',          subtext: 'Headaches, dizziness, seizures',               specialty: 'Neurology',              symptomId: 'brain'    },
+  { label: 'Eyes',                  subtext: 'Vision problems, eye pain, irritation',         specialty: 'Ophthalmology',           symptomId: 'eyes'     },
+  { label: 'Ears, Nose & Throat',   subtext: 'Hearing, sinus, or throat issues',              specialty: 'Otorhinolaryngology',     symptomId: 'ent'      },
+  { label: 'Teeth & Jaw',           subtext: 'Tooth pain, jaw problems',                      specialty: 'Dental Medicine',         symptomId: null       },
+  { label: 'Heart & Chest',         subtext: 'Chest pain, palpitations',                      specialty: 'Cardiology',              symptomId: 'heart'    },
+  { label: 'Lungs & Breathing',     subtext: 'Shortness of breath, cough',                    specialty: 'Pulmonary Medicine',      symptomId: null       },
+  { label: 'Stomach & Digestion',   subtext: 'Pain, reflux, bowel issues',                    specialty: 'Gastroenterology',        symptomId: 'stomach'  },
+  { label: 'Bones & Joints',        subtext: 'Joint pain, swelling, stiffness, arthritis',   specialty: 'Rheumatology',            symptomId: 'joints'   },
+  { label: 'Bone Injury',           subtext: 'Fractures, injuries, structural bone issues',   specialty: 'Orthopedic Surgery',      symptomId: null       },
+  { label: "Women's Health",        subtext: 'Menstrual, pregnancy, pelvic pain',             specialty: 'Obstetrics & Gynecology', symptomId: 'womens'   },
+  { label: 'Skin',                  subtext: 'Rashes, itching, or skin changes',              specialty: 'Dermatology',             symptomId: 'skin'     },
+  { label: "Children's Health",     subtext: 'Pediatric concerns, child development',          specialty: 'Pediatrics',              symptomId: 'child'    },
+  { label: 'Hormones & Metabolism', subtext: 'Thyroid, diabetes, metabolic conditions',       specialty: 'Endocrinology',           symptomId: 'hormones' },
+  { label: 'Others',                subtext: 'Other concerns not listed above',               specialty: null,                      symptomId: 'others'   },
+]
+
+// KioskBodyDiagram emits specialty strings; reverse-map to symptomId for scoring
+const SPECIALTY_TO_SYMPTOM_ID = {
+  'Neurology':               'brain',
+  'Ophthalmology':           'eyes',
+  'Otorhinolaryngology':     'ent',
+  'Cardiology':              'heart',
+  'Gastroenterology':        'stomach',
+  'Rheumatology':            'joints',
+  'Obstetrics & Gynecology': 'womens',
+  'Dermatology':             'skin',
+  'Pediatrics':              'child',
+  'Endocrinology':           'hormones',
+  'Psychiatry':              'mental',
+  'Nephrology':              'kidneys',
+}
 
 // ── Step metadata ─────────────────────────────────────────────────────────────
 const STEP_LABEL = {
-  hmo:      'Step 1 of 2',
-  symptoms: 'Step 2 of 2',
-  results:  'Results',
+  hmo:     'Step 1 of 4',
+  age:     'Step 2 of 4',
+  sex:     'Step 3 of 4',
+  symptom: 'Step 4 of 4',
+  results: 'Results',
 }
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
@@ -111,6 +144,8 @@ function KioskResultCard({ clinician, onSelect }) {
 export default function KioskTriageScreen({ onNavigate, onSelectClinician }) {
   const [step,              setStep]             = useState('hmo')
   const [selectedHmo,       setSelectedHmo]      = useState(null)
+  const [selectedAgeBand,   setSelectedAgeBand]  = useState(null)
+  const [selectedSex,       setSelectedSex]      = useState('none')
   const [selectedSpecialty, setSelectedSpecialty] = useState(null)
   const [clinicians,        setClinicians]        = useState([])
   const [loading,           setLoading]           = useState(false)
@@ -136,22 +171,43 @@ export default function KioskTriageScreen({ onNavigate, onSelectClinician }) {
   // ── Navigation ──────────────────────────────────────────────────────────────
   function handleBack() {
     if (step === 'hmo')      onNavigate('home')
-    else if (step === 'symptoms') setStep('hmo')
-    else if (step === 'results')  setStep('symptoms')
+    else if (step === 'age')     { setSelectedAgeBand(null); setStep('hmo') }
+    else if (step === 'sex')     { setSelectedSex('none'); setStep('age') }
+    else if (step === 'symptom') setStep('sex')
+    else if (step === 'results') setStep('symptom')
   }
 
   function handleHmoSelect(hmoId) {
     setSelectedHmo(hmoId)
-    setStep('symptoms')
+    setStep('age')
   }
 
-  function handleRegionSelect(specialty) {
-    setSelectedSpecialty(specialty)
+  function handleAgeBandSelect(bandId) {
+    setSelectedAgeBand(bandId)
+    setStep('sex')
+  }
+
+  function handleSexSelect(sexId) {
+    setSelectedSex(sexId)
+    setStep('symptom')
+  }
+
+  // Runs scoring engine when a symptomId is available; otherwise uses specialty directly.
+  // Empty scores (others, womens+male) → null specialty → unfiltered results.
+  function navigateToResults(specialty, symptomId) {
+    if (symptomId) {
+      const scores = computeTriageScores({ ageBandId: selectedAgeBand, sexId: selectedSex, symptomId })
+      setSelectedSpecialty(scores.length > 0 ? scores[0].specialty : null)
+    } else {
+      setSelectedSpecialty(specialty)
+    }
     setStep('results')
   }
 
   function handleReset() {
     setSelectedHmo(null)
+    setSelectedAgeBand(null)
+    setSelectedSex('none')
     setSelectedSpecialty(null)
     setClinicians([])
     setStep('hmo')
@@ -202,7 +258,7 @@ export default function KioskTriageScreen({ onNavigate, onSelectClinician }) {
         }}
       >
         ←
-      </button>  {/* arrow-only, matches directory back button */}
+      </button>
       <p style={{ color: '#fff', fontSize: '20px', fontWeight: '600', flex: 1, textAlign: 'center' }}>
         {STEP_LABEL[step]}
       </p>
@@ -283,8 +339,90 @@ export default function KioskTriageScreen({ onNavigate, onSelectClinician }) {
     )
   }
 
-  // ── Step: symptoms ───────────────────────────────────────────────────────────
-  if (step === 'symptoms') {
+  // ── Step: age ────────────────────────────────────────────────────────────────
+  if (step === 'age') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#F8F7FF' }}>
+        {header}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '32px 48px' }}>
+          <p style={{ fontSize: '28px', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>
+            What is your age group?
+          </p>
+          <p style={{ fontSize: '20px', color: '#6B7280', marginBottom: '32px' }}>
+            This helps us suggest the right specialist.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            {AGE_BANDS.map(band => (
+              <button
+                key={band.id}
+                onClick={() => handleAgeBandSelect(band.id)}
+                style={{
+                  ...cardBase,
+                  minHeight: '120px',
+                  fontSize: '26px',
+                  fontWeight: '700',
+                  color: '#1e293b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '20px',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = PRIMARY; e.currentTarget.style.backgroundColor = `rgba(29,64,156,0.06)` }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.backgroundColor = '#fff' }}
+              >
+                {band.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Step: sex ────────────────────────────────────────────────────────────────
+  if (step === 'sex') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#F8F7FF' }}>
+        {header}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '32px 48px' }}>
+          <p style={{ fontSize: '28px', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>
+            Which best describes you?
+          </p>
+          <p style={{ fontSize: '20px', color: '#6B7280', marginBottom: '32px' }}>
+            Helps us suggest the right specialist. Not saved or stored.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+            {SEX_OPTIONS.map(sex => (
+              <button
+                key={sex.id}
+                onClick={() => handleSexSelect(sex.id)}
+                style={{
+                  ...cardBase,
+                  minHeight: '120px',
+                  fontSize: '26px',
+                  fontWeight: '700',
+                  color: '#1e293b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '20px',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = PRIMARY; e.currentTarget.style.backgroundColor = `rgba(29,64,156,0.06)` }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.backgroundColor = '#fff' }}
+              >
+                {sex.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Step: symptom ─────────────────────────────────────────────────────────────
+  if (step === 'symptom') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#F8F7FF' }}>
         {header}
@@ -298,10 +436,11 @@ export default function KioskTriageScreen({ onNavigate, onSelectClinician }) {
 
           <KioskBodyDiagram
             onSelect={(specialty) => {
-              setSelectedSpecialty(specialty)
-              setStep('results')
+              const symId = SPECIALTY_TO_SYMPTOM_ID[specialty] ?? null
+              navigateToResults(specialty, symId)
             }}
             onFallback={() => setShowFallback(true)}
+            excludeSpecialties={selectedSex === 'male' ? ['Obstetrics & Gynecology'] : []}
           />
 
           {showFallback && (
@@ -310,42 +449,44 @@ export default function KioskTriageScreen({ onNavigate, onSelectClinician }) {
                 Select the option that best matches your concern:
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                {BODY_REGIONS.map(region => (
-                  <button
-                    key={region.label}
-                    onClick={() => handleRegionSelect(region.specialty)}
-                    style={{
-                      ...cardBase,
-                      minHeight: '100px',
-                      padding: '20px 24px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'center',
-                      textAlign: 'left',
-                      borderLeft: `4px solid ${PRIMARY}`,
-                      borderRadius: '12px',
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = PRIMARY
-                      e.currentTarget.style.borderLeftColor = PRIMARY
-                      e.currentTarget.querySelector('.rl').style.color = '#fff'
-                      e.currentTarget.querySelector('.rs').style.color = 'rgba(255,255,255,0.75)'
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = '#fff'
-                      e.currentTarget.style.borderLeftColor = PRIMARY
-                      e.currentTarget.querySelector('.rl').style.color = '#1e293b'
-                      e.currentTarget.querySelector('.rs').style.color = '#6B7280'
-                    }}
-                  >
-                    <span className="rl" style={{ fontSize: '22px', fontWeight: '700', color: '#1e293b', lineHeight: 1.25 }}>
-                      {region.label}
-                    </span>
-                    <span className="rs" style={{ fontSize: '18px', color: '#6B7280', marginTop: '6px', lineHeight: 1.4 }}>
-                      {region.subtext}
-                    </span>
-                  </button>
-                ))}
+                {BODY_REGIONS
+                  .filter(r => !(r.symptomId === 'womens' && selectedSex === 'male'))
+                  .map(region => (
+                    <button
+                      key={region.label}
+                      onClick={() => navigateToResults(region.specialty, region.symptomId)}
+                      style={{
+                        ...cardBase,
+                        minHeight: '100px',
+                        padding: '20px 24px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        textAlign: 'left',
+                        borderLeft: `4px solid ${PRIMARY}`,
+                        borderRadius: '12px',
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor = PRIMARY
+                        e.currentTarget.style.borderLeftColor = PRIMARY
+                        e.currentTarget.querySelector('.rl').style.color = '#fff'
+                        e.currentTarget.querySelector('.rs').style.color = 'rgba(255,255,255,0.75)'
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = '#fff'
+                        e.currentTarget.style.borderLeftColor = PRIMARY
+                        e.currentTarget.querySelector('.rl').style.color = '#1e293b'
+                        e.currentTarget.querySelector('.rs').style.color = '#6B7280'
+                      }}
+                    >
+                      <span className="rl" style={{ fontSize: '22px', fontWeight: '700', color: '#1e293b', lineHeight: 1.25 }}>
+                        {region.label}
+                      </span>
+                      <span className="rs" style={{ fontSize: '18px', color: '#6B7280', marginTop: '6px', lineHeight: 1.4 }}>
+                        {region.subtext}
+                      </span>
+                    </button>
+                  ))}
               </div>
             </div>
           )}
@@ -354,7 +495,7 @@ export default function KioskTriageScreen({ onNavigate, onSelectClinician }) {
     )
   }
 
-  // ── Step: results ────────────────────────────────────────────────────────────
+  // ── Step: results ─────────────────────────────────────────────────────────────
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#F8F7FF' }}>
       {header}
@@ -385,7 +526,7 @@ export default function KioskTriageScreen({ onNavigate, onSelectClinician }) {
             </p>
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
               <button
-                onClick={() => setStep('symptoms')}
+                onClick={() => setStep('symptom')}
                 style={{ backgroundColor: PRIMARY, color: '#fff', fontSize: '22px', minHeight: '72px', padding: '0 32px', borderRadius: '12px', border: 'none', cursor: 'pointer' }}
               >
                 Try a Different Specialty
