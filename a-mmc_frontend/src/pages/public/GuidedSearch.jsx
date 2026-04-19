@@ -286,7 +286,9 @@ export default function GuidedSearch() {
                     </button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {SYMPTOM_STEP.options.map(opt => (
+                    {SYMPTOM_STEP.options.filter(opt =>
+                      !(opt.id === 'womens' && selectedSex === 'male')
+                    ).map(opt => (
                       <button
                         key={opt.id}
                         onClick={() => { setShowFallback(false); handleSymptomSelect(opt.id) }}

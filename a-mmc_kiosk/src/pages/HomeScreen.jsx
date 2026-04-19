@@ -1,9 +1,10 @@
+import { Stethoscope, ClipboardList } from 'lucide-react'
 import KioskClock from '../components/KioskClock'
 
 const PRIMARY = '#1D409C'
 const ACCENT  = '#CE1117'
 
-function ModeButton({ icon, label, subtext, onClick, disabled, badge, borderColor }) {
+function ModeButton({ Icon, label, subtext, onClick, disabled, badge, borderColor }) {
   return (
     <div className="relative">
       <button
@@ -11,10 +12,10 @@ function ModeButton({ icon, label, subtext, onClick, disabled, badge, borderColo
         disabled={disabled}
         style={{
           display: 'flex',
-          flexDirection: 'column',
+          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '16px',
+          gap: '20px',
           borderRadius: '16px',
           backgroundColor: '#fff',
           border: `4px solid ${borderColor}`,
@@ -43,13 +44,11 @@ function ModeButton({ icon, label, subtext, onClick, disabled, badge, borderColo
           }
         }}
       >
-        <span style={{ fontSize: '64px', lineHeight: 1 }}>{icon}</span>
-        <span style={{ fontSize: '24px', fontWeight: '700', textAlign: 'center' }}>
-          {label}
-        </span>
-        <span style={{ fontSize: '20px', color: '#6B7280', textAlign: 'center' }}>
-          {subtext}
-        </span>
+        <Icon size={32} color={borderColor} style={{ flexShrink: 0 }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', textAlign: 'left' }}>
+          <span style={{ fontSize: '24px', fontWeight: '700' }}>{label}</span>
+          <span style={{ fontSize: '20px', color: '#6B7280' }}>{subtext}</span>
+        </div>
       </button>
       {badge && (
         <div
@@ -95,14 +94,14 @@ export default function HomeScreen({ onNavigate }) {
       {/* Main content */}
       <div className="flex flex-1 items-center justify-center" style={{ gap: '64px' }}>
         <ModeButton
-          icon="[stethoscope]"
+          Icon={Stethoscope}
           label="Find a Doctor"
           subtext="Browse our list of clinicians"
           onClick={() => onNavigate('directory')}
           borderColor={PRIMARY}
         />
         <ModeButton
-          icon="[clipboard]"
+          Icon={ClipboardList}
           label="Find the Right Doctor for You"
           subtext="Answer a few questions to get matched"
           onClick={() => onNavigate('triage')}
