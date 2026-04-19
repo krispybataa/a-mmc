@@ -3,7 +3,7 @@ admin_routes.py
 ---------------
 System administrator endpoints.
 
-Scope (per proposal §7):
+Scope (per proposal (s)7):
   - Account management: view clinician/secretary/patient lists, create admin accounts
   - System monitoring: aggregate counts
   - NOT in scope: appointment details, patient health data, clinical actions

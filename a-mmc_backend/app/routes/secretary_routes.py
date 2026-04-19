@@ -124,7 +124,7 @@ def delete_secretary(secretary_id: int):
 
 
 # ---------------------------------------------------------------------------
-# Secretary ↔ Clinician linking
+# Secretary <-> Clinician linking
 # ---------------------------------------------------------------------------
 
 @secretary_bp.post("/<int:secretary_id>/clinicians/<int:clinician_id>")

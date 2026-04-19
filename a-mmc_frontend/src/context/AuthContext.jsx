@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
-import api, { configureApiAuth } from '../services/api'
+import api, { configureApiAuth, setMountingState, getCsrfCookie } from '../services/api'
 
 const AuthContext = createContext(null)
 
@@ -46,12 +46,19 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     async function tryRestore() {
       try {
-        const { data } = await api.post('/auth/refresh')
+        const { data } = await api.post('/auth/refresh', null, {
+          headers: { 'X-CSRF-Token': getCsrfCookie() ?? '' },
+        })
         setToken(data.access_token)
         setUser(data.user)
       } catch {
-        // No valid session — start unauthenticated
+        // No valid session — treat as unauthenticated visitor. Do NOT call
+        // logout() here: that would redirect the user before they've done
+        // anything. ProtectedRoute handles redirects when auth is required.
+        setToken(null)
+        setUser(null)
       } finally {
+        setMountingState(false)
         setAuthLoading(false)
       }
     }
