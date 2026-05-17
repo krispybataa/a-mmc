@@ -6,7 +6,7 @@ import ClinicianCard from '../../components/ClinicianCard'
 
 const HERO_IMAGE = '/assets/images/hero.jpg'
 
-// ── Trust bar ──────────────────────────────────────────────────────────────────
+// -- Trust bar ------------------------------------------------------------------
 
 function TrustItem({ icon: Icon, label }) {
   return (
@@ -17,7 +17,7 @@ function TrustItem({ icon: Icon, label }) {
   )
 }
 
-// ── Home ───────────────────────────────────────────────────────────────────────
+// -- Home -----------------------------------------------------------------------
 
 export default function Home() {
   const [clinicians, setClinicians]       = useState([])
@@ -49,7 +49,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[var(--color-bg)]">
 
-      {/* ── Hero ── */}
+      {/* -- Hero -- */}
       <header
         className="relative flex items-center min-h-[520px] md:min-h-[520px] min-h-[360px] overflow-hidden"
         style={{
@@ -97,7 +97,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ── Trust bar ── */}
+      {/* -- Trust bar -- */}
       <div className="bg-white border-b border-[var(--color-border)] py-6">
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-0">
           <TrustItem icon={ShieldCheck} label="Trusted Specialists" />
@@ -108,7 +108,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── Search bar ── */}
+      {/* -- Search bar -- */}
       <div className="max-w-5xl mx-auto px-6">
         <div className="bg-white rounded-2xl shadow-md border border-[var(--color-border)] p-4 mt-6 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -118,7 +118,7 @@ export default function Home() {
             />
             <input
               type="text"
-              placeholder="Search by name…"
+              placeholder="Search by name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-3 rounded-xl border border-[var(--color-border)] text-base text-[var(--color-text)] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] min-h-[48px]"
@@ -143,10 +143,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── Clinician grid ── */}
+      {/* -- Clinician grid -- */}
       <main className="max-w-5xl mx-auto px-6 pt-8 pb-16">
         {loading ? (
-          <p className="text-gray-400 text-sm text-center py-24">Loading…</p>
+          <p className="text-gray-400 text-sm text-center py-24">Loading...</p>
         ) : filtered.length > 0 ? (
           <>
             <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-5">

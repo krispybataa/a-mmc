@@ -4,8 +4,8 @@ auth_routes.py
 Authentication endpoints for all four user roles.
 
 Token strategy:
-  - Access token  — 60 min, returned in response body as { "access_token": "..." }
-  - Refresh token — 7 days, set as an httpOnly cookie named "refresh_token"
+  - Access token  - 60 min, returned in response body as { "access_token": "..." }
+  - Refresh token - 7 days, set as an httpOnly cookie named "refresh_token"
   - Logout blocklists the access token JTI for immediate revocation
 
 Security: rate limiting via Flask-Limiter, account lockout
@@ -44,7 +44,7 @@ auth_bp = Blueprint("auth", __name__)
 _INVALID_CREDENTIALS = {"error": "Invalid credentials"}
 
 # ---------------------------------------------------------------------------
-# Account lockout — in-memory, resets on server restart.
+# Account lockout - in-memory, resets on server restart.
 # 5 consecutive failures locks the account for 15 minutes.
 # ---------------------------------------------------------------------------
 
@@ -73,7 +73,7 @@ def _check_lockout(email: str):
                 "Please try again in 15 minutes."
             )
         }), 429
-    # Lock window has expired — auto-clear and allow the attempt
+    # Lock window has expired - auto-clear and allow the attempt
     _failed_attempts.pop(key, None)
     return None
 
@@ -103,13 +103,13 @@ def _set_csrf_cookie(response, token: str) -> None:
         "csrf_token",
         token,
         secure=secure,
-        httponly=False,   # intentional — JS must read this value
+        httponly=False,   # intentional - JS must read this value
         samesite="Lax",
     )
 
 
 # ---------------------------------------------------------------------------
-# Internal helper — shared login logic for all four roles
+# Internal helper - shared login logic for all four roles
 # ---------------------------------------------------------------------------
 
 def _login(get_by_email_fn, role: str):
@@ -135,7 +135,7 @@ def _login(get_by_email_fn, role: str):
 
     user = get_by_email_fn(email)
 
-    # Same 401 for "not found" and "wrong password" — no user enumeration
+    # Same 401 for "not found" and "wrong password" - no user enumeration
     if user is None or not verify_password(data["password"], user.login_password_hash):
         _record_failure(email)
         return jsonify(_INVALID_CREDENTIALS), 401
@@ -325,7 +325,7 @@ def me():
     """
     Return the identity of the currently authenticated user from the token.
 
-    No DB query — identity is read directly from the JWT payload as set at
+    No DB query - identity is read directly from the JWT payload as set at
     login time via build_identity() and stored in the "user" additional claim.
     """
     claims = get_jwt()

@@ -3,7 +3,7 @@ import { Navigate, Outlet, NavLink } from 'react-router-dom'
 import { Menu, X, CalendarDays, Inbox, User, Clock, KeyRound, LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
-// ── Constants ──────────────────────────────────────────────────────────────────
+// -- Constants ------------------------------------------------------------------
 
 const NAV_LINKS = [
   { to: '/clinician-dashboard/today',            label: 'Today',             end: true,  Icon: CalendarDays },
@@ -25,7 +25,7 @@ function staffDisplayName(user) {
   return `${user.first_name} ${user.last_name}`
 }
 
-// ── Sidebar content (shared between desktop and mobile drawer) ─────────────────
+// -- Sidebar content (shared between desktop and mobile drawer) -----------------
 
 function SidebarNav({ user, onLogout, onNavClick }) {
   return (
@@ -37,7 +37,7 @@ function SidebarNav({ user, onLogout, onNavClick }) {
           Unicorn
         </p>
         <span className="mt-1.5 inline-block bg-white/20 text-white text-xs font-semibold px-2 py-0.5 rounded-full select-none">
-          Staff · {roleLabel(user.role)}
+          Staff . {roleLabel(user.role)}
         </span>
       </div>
 
@@ -84,7 +84,7 @@ function SidebarNav({ user, onLogout, onNavClick }) {
   )
 }
 
-// ── StaffLayout ────────────────────────────────────────────────────────────────
+// -- StaffLayout ----------------------------------------------------------------
 
 export default function StaffLayout() {
   const { user, authLoading, logout } = useAuth()
@@ -102,7 +102,7 @@ export default function StaffLayout() {
   return (
     <div className="min-h-screen flex bg-[var(--color-bg)]">
 
-      {/* ── Desktop sidebar (md+) ── */}
+      {/* -- Desktop sidebar (md+) -- */}
       <aside className="hidden md:flex md:flex-col md:w-56 md:fixed md:inset-y-0 z-30 shrink-0">
         <SidebarNav
           user={user}
@@ -111,7 +111,7 @@ export default function StaffLayout() {
         />
       </aside>
 
-      {/* ── Mobile: sticky top bar ── */}
+      {/* -- Mobile: sticky top bar -- */}
       <header className="md:hidden fixed top-0 inset-x-0 z-40 navbar-gradient h-16 flex items-center px-4 gap-3">
         <button
           type="button"
@@ -125,11 +125,11 @@ export default function StaffLayout() {
           Unicorn
         </span>
         <span className="bg-white/20 text-white text-xs font-semibold px-2 py-0.5 rounded-full select-none">
-          Staff · {roleLabel(user.role)}
+          Staff . {roleLabel(user.role)}
         </span>
       </header>
 
-      {/* ── Mobile drawer ── */}
+      {/* -- Mobile drawer -- */}
       {drawerOpen && (
         <div
           className="md:hidden fixed inset-0 z-50 bg-black/50"
@@ -160,7 +160,7 @@ export default function StaffLayout() {
         </div>
       )}
 
-      {/* ── Main content area ── */}
+      {/* -- Main content area -- */}
       <div className="flex-1 md:ml-56 flex flex-col min-h-screen">
         <main className="flex-1 pt-16 md:pt-0">
           <Outlet />

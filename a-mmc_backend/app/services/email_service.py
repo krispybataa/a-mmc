@@ -3,7 +3,7 @@ email_service.py
 ----------------
 Transactional email notifications for appointment lifecycle events.
 
-All public functions catch send errors internally — a failed email never causes
+All public functions catch send errors internally - a failed email never causes
 an appointment operation to fail or roll back. Errors are logged to stderr via
 the Flask app logger.
 
@@ -18,7 +18,7 @@ Console preview mode:
 Production:
   Set MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM,
   MAIL_USE_TLS, and SYSTEM_URL in the environment / .env file.
-  Switching providers (Mailtrap → SendGrid) is a .env change only.
+  Switching providers (Mailtrap -> SendGrid) is a .env change only.
 """
 
 import os
@@ -51,7 +51,7 @@ def _send(to: str, subject: str, html: str) -> None:
     """
     Send an HTML email via SMTP, or log it to the console if SMTP is unconfigured.
 
-    "Unconfigured" is determined by MAIL_USERNAME being absent or empty — every
+    "Unconfigured" is determined by MAIL_USERNAME being absent or empty - every
     supported SMTP provider (Mailtrap, SendGrid) requires credentials, so an
     empty username is a reliable sentinel. When unconfigured, the full rendered
     HTML is printed to stdout so usability testing can proceed without a live
@@ -60,13 +60,13 @@ def _send(to: str, subject: str, html: str) -> None:
     cfg = current_app.config
 
     if not cfg.get("MAIL_USERNAME", ""):
-        # ── Console preview mode ──────────────────────────────────────────────
+        # -- Console preview mode ----------------------------------------------
         print(f"[EMAIL PREVIEW - not sent] Subject: {subject}")
         print(html)
         logger.info("[EMAIL PREVIEW - not sent] Subject: %s | To: %s", subject, to)
         return
 
-    # ── Live SMTP send ────────────────────────────────────────────────────────
+    # -- Live SMTP send --------------------------------------------------------
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"]    = cfg.get("MAIL_FROM", "noreply@alagang-mmc.local")
@@ -260,7 +260,7 @@ def send_noshow_confirmation_prompt(appointment) -> None:
     accepted appointment's start time.
 
     # TODO(scheduler): Wire into a Railway scheduled task. Do NOT call this inline
-    # from a request handler — it is meant for background execution only.
+    # from a request handler - it is meant for background execution only.
     """
     try:
         patient   = appointment.patient
@@ -339,7 +339,7 @@ def send_reschedule_confirmation_to_patient(appointment) -> None:
     """
     Notify the patient that their rescheduled appointment has been confirmed.
 
-    Called by appointment_routes after C/S moves reschedule_requested → accepted
+    Called by appointment_routes after C/S moves reschedule_requested -> accepted
     with a new_slot_id.
     appointment: Appointment ORM object (slot_id already updated to the new slot)
     """

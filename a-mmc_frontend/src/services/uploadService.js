@@ -20,7 +20,7 @@ export async function uploadFile(file, context) {
       context,
     })
 
-    // 2. Upload directly to S3 — backend never touches the file bytes
+    // 2. Upload directly to S3 - backend never touches the file bytes
     const s3Response = await fetch(data.upload_url, {
       method: 'PUT',
       body: file,
@@ -36,7 +36,7 @@ export async function uploadFile(file, context) {
     return data.public_url
 
   } catch (err) {
-    // 503 = backend not configured (env vars missing) — degrade gracefully
+    // 503 = backend not configured (env vars missing) - degrade gracefully
     if (err?.response?.status === 503) {
       console.warn('[uploadService] Storage not configured on this environment.')
     } else {

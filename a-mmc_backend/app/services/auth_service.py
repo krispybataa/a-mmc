@@ -4,7 +4,7 @@ auth_service.py
 Password hashing, verification, user-lookup helpers, and token blocklist
 for all four roles.
 
-Pure functions only — no route handling. DB-accessing functions require an
+Pure functions only - no route handling. DB-accessing functions require an
 active Flask application context (i.e. they must be called from within a
 request or app.app_context()).
 """
@@ -14,7 +14,7 @@ from sqlalchemy import func
 
 
 # ---------------------------------------------------------------------------
-# JWT blocklist — in-memory set, clears on server restart.
+# JWT blocklist - in-memory set, clears on server restart.
 # Production should replace with a Redis-backed or DB-backed store.
 # ---------------------------------------------------------------------------
 
@@ -103,7 +103,7 @@ def build_identity(user, role: str) -> dict:
     role must be one of: "patient" | "clinician" | "secretary" | "admin"
 
     The returned dict is stored as the JWT identity and also returned to the
-    client in the login response body — do not include sensitive fields here.
+    client in the login response body - do not include sensitive fields here.
     """
     return {
         "id": getattr(user, f"{role}_id"),

@@ -46,7 +46,7 @@ def create_app(config_name: str = "development") -> Flask:
     jwt.init_app(app)
     limiter.init_app(app)
 
-    # JWT blocklist — revoke tokens on logout immediately
+    # JWT blocklist - revoke tokens on logout immediately
     @jwt.token_in_blocklist_loader
     def check_if_token_revoked(jwt_header, jwt_payload):
         from app.services.auth_service import is_token_blocked
@@ -66,7 +66,7 @@ def create_app(config_name: str = "development") -> Flask:
         return {"status": "ok"}
 
     # ------------------------------------------------------------------
-    # Centralized error handlers — all errors return { "error": "..." }
+    # Centralized error handlers - all errors return { "error": "..." }
     # ------------------------------------------------------------------
 
     @app.errorhandler(400)
@@ -75,11 +75,11 @@ def create_app(config_name: str = "development") -> Flask:
 
     @app.errorhandler(401)
     def unauthorized(e):
-        return {"error": "Unauthorized — valid credentials required"}, 401
+        return {"error": "Unauthorized - valid credentials required"}, 401
 
     @app.errorhandler(403)
     def forbidden(e):
-        return {"error": "Forbidden — you do not have permission to perform this action"}, 403
+        return {"error": "Forbidden - you do not have permission to perform this action"}, 403
 
     @app.errorhandler(404)
     def not_found(e):

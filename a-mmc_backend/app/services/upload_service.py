@@ -2,7 +2,7 @@
 upload_service.py
 -----------------
 Generates presigned S3 PUT URLs for direct browser-to-bucket uploads.
-Reads all config from environment variables — no credentials in code.
+Reads all config from environment variables - no credentials in code.
 
 Required env vars (set in Railway backend service Variables):
     ENDPOINT_URL    https://t3.storageapi.dev
@@ -11,7 +11,7 @@ Required env vars (set in Railway backend service Variables):
     ACCESS_KEY_ID   tid_...
     SECRET_ACCESS_KEY  <secret>
     PUBLIC_BASE_URL https://t3.storageapi.dev/a-mmcbucket-ytqemjyosgjea
-                        (path-style public read URL base — verify against Railway bucket settings)
+                        (path-style public read URL base - verify against Railway bucket settings)
 """
 
 import os
@@ -33,7 +33,7 @@ def _get_client():
 
 def generate_presigned_upload(filename: str, context: str = "general", expires_in: int = 300):
     """
-    Generate a presigned PUT URL for direct browser → S3 upload.
+    Generate a presigned PUT URL for direct browser -> S3 upload.
 
     Args:
         filename:   Original filename from the browser (used for extension only).
@@ -42,8 +42,8 @@ def generate_presigned_upload(filename: str, context: str = "general", expires_i
 
     Returns:
         (upload_url, public_url)
-        upload_url  — presigned PUT URL; browser PUTs the file body here directly.
-        public_url  — permanent public URL to store in the DB.
+        upload_url  - presigned PUT URL; browser PUTs the file body here directly.
+        public_url  - permanent public URL to store in the DB.
 
     Raises:
         Exception if AWS env vars are missing or boto3 call fails.

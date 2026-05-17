@@ -6,7 +6,7 @@ def require_fields(data: dict, *fields: str):
     Check that all required field names are present and non-empty in `data`.
 
     Returns (None, None) if all fields are present.
-    Returns (response, 422) if any field is missing — ready to return from a route.
+    Returns (response, 422) if any field is missing - ready to return from a route.
 
     Usage:
         err = require_fields(data, "patient_id", "slot_id", "consultation_date")

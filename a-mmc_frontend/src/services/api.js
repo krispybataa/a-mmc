@@ -15,7 +15,7 @@ export function getCsrfCookie() {
 
 // ---------------------------------------------------------------------------
 // Auth state bridge
-// api.js is a plain module — it cannot use React hooks. AuthContext calls
+// api.js is a plain module - it cannot use React hooks. AuthContext calls
 // configureApiAuth() whenever token or logout changes, keeping these refs
 // in sync with React state without coupling the module to the component tree.
 // ---------------------------------------------------------------------------
@@ -39,7 +39,7 @@ export function configureApiAuth(token, setToken, logout) {
 }
 
 // ---------------------------------------------------------------------------
-// Request interceptor — attach Bearer token if present
+// Request interceptor - attach Bearer token if present
 // ---------------------------------------------------------------------------
 
 api.interceptors.request.use((config) => {
@@ -50,7 +50,7 @@ api.interceptors.request.use((config) => {
 })
 
 // ---------------------------------------------------------------------------
-// Response interceptor — silent refresh on 401
+// Response interceptor - silent refresh on 401
 //
 // On a 401 from any endpoint except /auth/refresh itself:
 //   1. Attempt POST /api/auth/refresh (uses httpOnly cookie)
@@ -71,7 +71,7 @@ api.interceptors.response.use(
 
     if (is401 && !isRefreshEndpoint && !alreadyRetried) {
       if (_isRefreshing) {
-        // Another refresh is in flight — don't stack; surface the error
+        // Another refresh is in flight - don't stack; surface the error
         return Promise.reject(error)
       }
 

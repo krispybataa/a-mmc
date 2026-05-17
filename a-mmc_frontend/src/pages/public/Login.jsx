@@ -67,7 +67,7 @@ export default function Login() {
     <div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center px-4 py-14">
       <div className="w-full max-w-4xl flex rounded-2xl overflow-hidden shadow-lg">
 
-        {/* ── Left panel (desktop only) ── */}
+        {/* -- Left panel (desktop only) -- */}
         <div
           className="hidden md:flex flex-col justify-center px-10 py-12 w-5/12 relative"
           style={{
@@ -91,7 +91,7 @@ export default function Login() {
           </div>
         </div>
 
-        {/* ── Right panel — form ── */}
+        {/* -- Right panel - form -- */}
         <div className="flex-1 bg-white px-8 py-10">
           <div className="mb-8">
             <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-primary-light)] mb-2">
@@ -162,7 +162,7 @@ export default function Login() {
                 disabled={loading}
                 className="w-full py-3 px-6 rounded-xl text-base font-semibold text-white bg-[var(--color-accent)] hover:brightness-110 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed min-h-[48px]"
               >
-                {loading ? 'Signing in…' : 'Sign In'}
+                {loading ? 'Signing in...' : 'Sign In'}
               </button>
               {errors.submit && (
                 <p className="mt-3 text-xs text-[var(--color-accent)] text-center">{errors.submit}</p>

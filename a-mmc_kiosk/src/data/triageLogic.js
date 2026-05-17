@@ -6,7 +6,7 @@
 // to the other. Do not allow these files to diverge.
 
 /*
- * ⚠️  CLINICAL ROUTING — DOMAIN EXPERT REVIEW REQUIRED
+ * CLINICAL ROUTING — DOMAIN EXPERT REVIEW REQUIRED
  *
  * The weight values in this file represent clinical referral
  * logic. Initial values are derived from Friedman's Problem

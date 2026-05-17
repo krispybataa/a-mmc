@@ -265,7 +265,7 @@ def list_patients():
     if err:
         return err
     patients = Patient.query.all()
-    # Non-sensitive fields only — no birthday, address, health, sc/pwd data
+    # Non-sensitive fields only - no birthday, address, health, sc/pwd data
     return jsonify([
         {
             "patient_id":    p.patient_id,
@@ -534,16 +534,16 @@ def analytics():
 @admin_bp.post("/seed-first-admin")
 def seed_first_admin():
     """
-    Bootstrap endpoint — creates the first admin account.
+    Bootstrap endpoint - creates the first admin account.
 
     Hard guard: returns 403 immediately if any admin already exists.
-    No auth required (bootstrap problem — there is no admin to authenticate as yet).
+    No auth required (bootstrap problem - there is no admin to authenticate as yet).
 
     REMOVE BEFORE PRODUCTION.
     """
     # Hard guard: only works when zero admin accounts exist
     if Admin.query.count() > 0:
-        return jsonify({"error": "Forbidden — admin account already exists"}), 403
+        return jsonify({"error": "Forbidden - admin account already exists"}), 403
 
     first_name = "Admin"
     last_name  = "User"

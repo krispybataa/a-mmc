@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import ClinicianCard from '../../components/ClinicianCard'
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// -- helpers ------------------------------------------------------------------
 
 const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const DAY_ABBREV = {
@@ -42,8 +42,8 @@ function buildScheduleRows(schedule) {
     return {
       day,
       abbrev: DAY_ABBREV[day],
-      am: showAM ? `${formatTime(s.am_start)} – ${formatTime(s.am_end)}` : '—',
-      pm: showPM ? `${formatTime(s.pm_start)} – ${formatTime(s.pm_end)}` : '—',
+      am: showAM ? `${formatTime(s.am_start)} - ${formatTime(s.am_end)}` : '-',
+      pm: showPM ? `${formatTime(s.pm_start)} - ${formatTime(s.pm_end)}` : '-',
       active: !!s,
     }
   })
@@ -91,7 +91,7 @@ function ScheduleTable({ rows }) {
   )
 }
 
-// ── component ─────────────────────────────────────────────────────────────────
+// -- component -----------------------------------------------------------------
 
 export default function ClinicianProfile() {
   const { id: clinician_id } = useParams()
@@ -129,7 +129,7 @@ export default function ClinicianProfile() {
     load()
   }, [clinician_id])
 
-  // Similar doctors fetch — runs once specialty is known, silently hides on error
+  // Similar doctors fetch - runs once specialty is known, silently hides on error
   useEffect(() => {
     if (!clinician?.specialty) return
     setSimilarLoading(true)
@@ -157,7 +157,7 @@ export default function ClinicianProfile() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-slate-400 text-sm">Loading…</p>
+        <p className="text-slate-400 text-sm">Loading...</p>
       </div>
     )
   }
@@ -224,7 +224,7 @@ export default function ClinicianProfile() {
       {/* Two-column layout */}
       <div className="max-w-5xl mx-auto px-6 py-6 grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
 
-        {/* ── LEFT: identity + CTA ── */}
+        {/* -- LEFT: identity + CTA -- */}
         <aside className="md:col-span-1 flex flex-col gap-4">
 
           {/* Profile card */}
@@ -281,7 +281,7 @@ export default function ClinicianProfile() {
           </div>
         </aside>
 
-        {/* ── RIGHT: schedule + HMOs + info ── */}
+        {/* -- RIGHT: schedule + HMOs + info -- */}
         <div className="md:col-span-2 flex flex-col gap-5">
 
           {/* Clinic Schedule (F2F) */}
@@ -351,7 +351,7 @@ export default function ClinicianProfile() {
         </div>
       </div>
 
-      {/* ── Similar Doctors ── */}
+      {/* -- Similar Doctors -- */}
       {(similarLoading || similar.length > 0) && (
         <div className="max-w-5xl mx-auto px-6 pb-12">
           <div className="mb-4">

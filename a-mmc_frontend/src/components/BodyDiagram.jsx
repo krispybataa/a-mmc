@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Model from 'react-body-highlighter'
 
-// ── Region substep definitions ────────────────────────────────────────────────
+// -- Region substep definitions ------------------------------------------------
 
 const SUBSTEPS = {
   head: {
@@ -38,7 +38,7 @@ const SUBSTEPS = {
   },
 }
 
-// ── Muscle → region key (verified react-body-highlighter v2 muscle names) ─────
+// -- Muscle -> region key (verified react-body-highlighter v2 muscle names) -----
 // Prefix 'direct:' means skip substep, call onSelect immediately.
 
 const MUSCLE_REGION = {
@@ -65,7 +65,7 @@ const MUSCLE_REGION = {
 
 const TAPPABLE_MUSCLES = Object.keys(MUSCLE_REGION)
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// -- Component -----------------------------------------------------------------
 
 export default function BodyDiagram({ onSelect, excludeSpecialties = [] }) {
   const [highlighted, setHighlighted] = useState(null)
@@ -111,7 +111,7 @@ export default function BodyDiagram({ onSelect, excludeSpecialties = [] }) {
     /* Mobile: stack vertically. sm+: side-by-side when substep open */
     <div className="flex flex-col sm:flex-row items-start gap-5 w-full">
 
-      {/* Body diagram — pure Tailwind so sm: breakpoints aren't overridden by inline style */}
+      {/* Body diagram - pure Tailwind so sm: breakpoints aren't overridden by inline style */}
       <div
         className={
           substep
@@ -129,7 +129,7 @@ export default function BodyDiagram({ onSelect, excludeSpecialties = [] }) {
         />
       </div>
 
-      {/* Substep narrowing card — below on mobile, right-of-diagram on sm+ */}
+      {/* Substep narrowing card - below on mobile, right-of-diagram on sm+ */}
       {substep && (
         <div className="flex-1 w-full bg-white rounded-xl border border-[var(--color-border)] shadow-sm p-5 self-start">
           <p className="font-semibold text-base text-[var(--color-text)] mb-4">
@@ -155,7 +155,7 @@ export default function BodyDiagram({ onSelect, excludeSpecialties = [] }) {
             onClick={dismissSubstep}
             className="mt-4 text-sm text-[var(--color-muted)] hover:text-[var(--color-primary)] transition-colors"
           >
-            ← Back
+            <- Back
           </button>
         </div>
       )}

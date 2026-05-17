@@ -1,12 +1,12 @@
 import { jsPDF } from 'jspdf'
 
-// ── Layout constants ───────────────────────────────────────────────────────────
+// -- Layout constants -----------------------------------------------------------
 
 const PAGE_W       = 210   // A4 width mm
 const PAGE_H       = 297   // A4 height mm
 const MARGIN       = 20    // left/right margin mm
 
-// Two-column grid: left col 20–104, gap, right col 112–190
+// Two-column grid: left col 20-104, gap, right col 112-190
 const COL1_X       = 20
 const COL2_X       = 112
 const COL1_LABEL_X = 55    // col 1 label right-aligned to x=55
@@ -23,16 +23,16 @@ const DARK    = [48, 48, 48]    // #303030
 const MUTED   = [102, 102, 102] // #666666
 const RULE    = [180, 180, 180] // divider line
 
-// ── Data helpers ──────────────────────────────────────────────────────────────
+// -- Data helpers --------------------------------------------------------------
 
 function consultType(raw) {
   if (raw === 'f2f')         return 'Face-to-Face'
   if (raw === 'teleconsult') return 'Telemedicine'
-  return raw ?? '—'
+  return raw ?? '-'
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return '—'
+  if (!dateStr) return '-'
   const MONTHS = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
@@ -42,7 +42,7 @@ function formatDate(dateStr) {
 }
 
 function formatTime(timeStr) {
-  if (!timeStr) return '—'
+  if (!timeStr) return '-'
   const [h, m] = timeStr.split(':')
   const hour   = parseInt(h, 10)
   const period = hour >= 12 ? 'PM' : 'AM'
@@ -51,7 +51,7 @@ function formatTime(timeStr) {
 }
 
 function capitalize(s) {
-  if (!s) return '—'
+  if (!s) return '-'
   return s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ')
 }
 
@@ -68,14 +68,14 @@ function today() {
   )
 }
 
-// ── PDF primitives ─────────────────────────────────────────────────────────────
+// -- PDF primitives -------------------------------------------------------------
 
 function makeDoc() {
   return new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 }
 
 /**
- * Minimal header — institution name in primary blue, thin rule, no filled block.
+ * Minimal header - institution name in primary blue, thin rule, no filled block.
  * Returns the y coordinate of the first content line.
  */
 function drawHeader(doc, title, refId) {
@@ -85,7 +85,7 @@ function drawHeader(doc, title, refId) {
   doc.setTextColor(...PRIMARY)
   doc.text('Unicorn', MARGIN, 17)
 
-  // Document title — muted, right-aligned
+  // Document title - muted, right-aligned
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
   doc.setTextColor(...MUTED)
@@ -152,7 +152,7 @@ function drawRow(doc, label, value, y, col = 1) {
   const labelX = col === 1 ? COL1_LABEL_X : COL2_LABEL_X
   const valueX = col === 1 ? COL1_VALUE_X : COL2_VALUE_X
   const valueW = col === 1 ? COL1_VALUE_W : COL2_VALUE_W
-  const safe   = value != null && value !== '' ? String(value) : '—'
+  const safe   = value != null && value !== '' ? String(value) : '-'
   const lines  = doc.splitTextToSize(safe, valueW)
 
   doc.setFont('helvetica', 'normal')
@@ -174,7 +174,7 @@ function drawKeyRow(doc, label, value, y, col = 1) {
   const labelX = col === 1 ? COL1_LABEL_X : COL2_LABEL_X
   const valueX = col === 1 ? COL1_VALUE_X : COL2_VALUE_X
   const valueW = col === 1 ? COL1_VALUE_W : COL2_VALUE_W
-  const safe   = value != null && value !== '' ? String(value) : '—'
+  const safe   = value != null && value !== '' ? String(value) : '-'
 
   doc.setFontSize(13)
   const lines = doc.splitTextToSize(safe, valueW)
@@ -192,12 +192,12 @@ function drawKeyRow(doc, label, value, y, col = 1) {
   return y + Math.max(1, lines.length) * (ROW_H + 1)
 }
 
-// ── Public API ─────────────────────────────────────────────────────────────────
+// -- Public API -----------------------------------------------------------------
 
 /**
  * Generates and downloads a patient-facing appointment PDF.
  * Layout: Appointment details (left col) | Clinician (right col)
- * @param {object} appointment — full appointment object from the API (_serialize shape)
+ * @param {object} appointment - full appointment object from the API (_serialize shape)
  */
 export function generatePatientAppointmentPDF(appointment) {
   const doc  = makeDoc()
@@ -209,7 +209,7 @@ export function generatePatientAppointmentPDF(appointment) {
   let yL = y   // left column y-cursor
   let yR = y   // right column y-cursor
 
-  // ── Left: Appointment ─────────────────────────────────────────────────────
+  // -- Left: Appointment -----------------------------------------------------
   yL = sectionHeading(doc, 'Appointment', yL, 1)
   yL = drawRow(doc, 'Date',    formatDate(slot.slot_date),          yL, 1)
   yL = drawRow(doc, 'Time',    formatTime(slot.start_time),         yL, 1)
@@ -239,7 +239,7 @@ export function generatePatientAppointmentPDF(appointment) {
     yL = drawRow(doc, 'Reason', appt.reschedule_reason, yL, 1)
   }
 
-  // ── Right: Clinician ──────────────────────────────────────────────────────
+  // -- Right: Clinician ------------------------------------------------------
   yR = sectionHeading(doc, 'Clinician', yR, 2)
   const docName = [clinician.title, clinician.first_name, clinician.last_name]
     .filter(Boolean).join(' ')
@@ -254,7 +254,7 @@ export function generatePatientAppointmentPDF(appointment) {
 /**
  * Generates and downloads a staff-facing appointment PDF.
  * Layout: Appointment (left col) | Patient + Clinician stacked (right col)
- * @param {object} appointment — full appointment object from the API (_serialize shape)
+ * @param {object} appointment - full appointment object from the API (_serialize shape)
  */
 export function generateStaffAppointmentPDF(appointment) {
   const doc     = makeDoc()
@@ -262,12 +262,12 @@ export function generateStaffAppointmentPDF(appointment) {
   const { clinician, slot } = appt
   const patient = appt.patient ?? {}
 
-  let y = drawHeader(doc, 'Appointment Record — Staff View', appt.appointment_id)
+  let y = drawHeader(doc, 'Appointment Record - Staff View', appt.appointment_id)
 
   let yL = y
   let yR = y
 
-  // ── Left: Appointment ─────────────────────────────────────────────────────
+  // -- Left: Appointment -----------------------------------------------------
   yL = sectionHeading(doc, 'Appointment', yL, 1)
   yL = drawRow(doc, 'Date',    formatDate(slot.slot_date),          yL, 1)
   yL = drawRow(doc, 'Time',    formatTime(slot.start_time),         yL, 1)
@@ -301,15 +301,15 @@ export function generateStaffAppointmentPDF(appointment) {
     yL = drawRow(doc, 'Reason', appt.reschedule_reason, yL, 1)
   }
 
-  // ── Right: Patient ────────────────────────────────────────────────────────
+  // -- Right: Patient --------------------------------------------------------
   yR = sectionHeading(doc, 'Patient', yR, 2)
   const patientName = patient.last_name && patient.first_name
     ? `${patient.last_name}, ${patient.first_name}`
-    : `${patient.first_name ?? ''} ${patient.last_name ?? ''}`.trim() || '—'
+    : `${patient.first_name ?? ''} ${patient.last_name ?? ''}`.trim() || '-'
   yR = drawKeyRow(doc, 'Name', patientName, yR, 2)
   yR += 8
 
-  // ── Right: Clinician ──────────────────────────────────────────────────────
+  // -- Right: Clinician ------------------------------------------------------
   yR = sectionHeading(doc, 'Clinician', yR, 2)
   const docName = [clinician.title, clinician.first_name, clinician.last_name]
     .filter(Boolean).join(' ')

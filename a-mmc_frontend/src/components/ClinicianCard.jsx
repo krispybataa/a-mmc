@@ -35,7 +35,7 @@ export default function ClinicianCard({ clinician, displayName }) {
       onKeyDown={e => e.key === 'Enter' && handleCardClick()}
     >
 
-      {/* ── Title bar — primary bg with avatar, name, specialty ── */}
+      {/* -- Title bar - primary bg with avatar, name, specialty -- */}
       <div className="bg-[var(--color-primary)] px-5 pt-6 pb-5 flex flex-col items-center text-center">
         {/* Avatar with white ring border */}
         <div className="w-20 h-20 rounded-full border-4 border-white overflow-hidden mb-3 shrink-0 bg-white">
@@ -57,7 +57,7 @@ export default function ClinicianCard({ clinician, displayName }) {
         <p className="text-sm text-white/70 mt-0.5">{specialty}</p>
       </div>
 
-      {/* ── Card body — white background with details ── */}
+      {/* -- Card body - white background with details -- */}
       <div className="px-5 py-4 flex-1 flex flex-col gap-3">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2 text-sm text-[var(--color-muted)]">

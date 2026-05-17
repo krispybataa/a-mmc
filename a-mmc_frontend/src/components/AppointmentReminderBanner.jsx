@@ -1,10 +1,10 @@
 import { Clock } from 'lucide-react'
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 
 /**
  * Convert a 24hr time string to 12hr display.
- * "09:00:00" → "9:00 AM"   "13:30:00" → "1:30 PM"
+ * "09:00:00" -> "9:00 AM"   "13:30:00" -> "1:30 PM"
  */
 function formatTime12(timeStr) {
   const [hourStr, min] = timeStr.split(':')
@@ -14,7 +14,7 @@ function formatTime12(timeStr) {
   return `${h12}:${min} ${suffix}`
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// -- Component -----------------------------------------------------------------
 
 /**
  * Shows a non-dismissible amber reminder banner for every accepted appointment
@@ -22,7 +22,7 @@ function formatTime12(timeStr) {
  *
  * Props
  * -----
- * appointments  Array of appointment objects (defaults to [] — never crashes on
+ * appointments  Array of appointment objects (defaults to [] - never crashes on
  *               null or undefined input).
  */
 export default function AppointmentReminderBanner({ appointments = [] }) {

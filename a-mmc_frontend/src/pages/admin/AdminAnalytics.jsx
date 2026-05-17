@@ -7,7 +7,7 @@ import {
 } from 'recharts'
 import api from '../../services/api'
 
-// ── Constants ──────────────────────────────────────────────────────────────────
+// -- Constants ------------------------------------------------------------------
 
 const PERIOD_OPTIONS = [
   { value: 'week',  label: 'Last 7 Days'  },
@@ -15,7 +15,7 @@ const PERIOD_OPTIONS = [
   { value: 'all',   label: 'All Time'     },
 ]
 
-// Hex colors are required inside recharts props — CSS variables are not
+// Hex colors are required inside recharts props - CSS variables are not
 // supported there. These match the brand token values.
 const PRIMARY = '#1D409C'
 const ACCENT  = '#CE1117'
@@ -29,7 +29,7 @@ const STATUS_META = {
   reschedule_requested: { label: 'Reschedule Requested', color: '#F97316' },
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
+// -- Sub-components -------------------------------------------------------------
 
 function SkeletonCard() {
   return (
@@ -48,7 +48,7 @@ function EmptyState({ message }) {
   )
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
+// -- Main component -------------------------------------------------------------
 
 export default function AdminAnalytics() {
   const [period, setPeriod]   = useState('month')
@@ -77,7 +77,7 @@ export default function AdminAnalytics() {
     return () => { cancelled = true }
   }, [period])
 
-  // ── Derived chart data (computed from data, safe when data is null) ──────────
+  // -- Derived chart data (computed from data, safe when data is null) ----------
 
   const statusChartData = data
     ? Object.entries(data.appointments_by_status)
@@ -102,7 +102,7 @@ export default function AdminAnalytics() {
   const bookingData    = data?.appointments_by_day ?? []
   const clinicianData  = data?.top_clinicians      ?? []
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // -- Render ------------------------------------------------------------------
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8 max-w-6xl mx-auto">
@@ -139,10 +139,10 @@ export default function AdminAnalytics() {
         </div>
       )}
 
-      {/* 2×2 chart grid */}
+      {/* 2x2 chart grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* ── Card 1: Appointments by Status ── */}
+        {/* -- Card 1: Appointments by Status -- */}
         {loading ? <SkeletonCard /> : (
           <div className="bg-white rounded-xl border border-slate-200 p-6">
             <h2 className="text-base font-semibold text-[var(--color-dark)] mb-5">
@@ -182,7 +182,7 @@ export default function AdminAnalytics() {
           </div>
         )}
 
-        {/* ── Card 2: Consultation Type Split ── */}
+        {/* -- Card 2: Consultation Type Split -- */}
         {loading ? <SkeletonCard /> : (
           <div className="bg-white rounded-xl border border-slate-200 p-6">
             <h2 className="text-base font-semibold text-[var(--color-dark)] mb-5">
@@ -218,7 +218,7 @@ export default function AdminAnalytics() {
           </div>
         )}
 
-        {/* ── Card 3: Bookings Over Time ── */}
+        {/* -- Card 3: Bookings Over Time -- */}
         {loading ? <SkeletonCard /> : (
           <div className="bg-white rounded-xl border border-slate-200 p-6">
             <h2 className="text-base font-semibold text-[var(--color-dark)] mb-5">
@@ -266,7 +266,7 @@ export default function AdminAnalytics() {
           </div>
         )}
 
-        {/* ── Card 4: Top 5 Clinicians by Bookings ── */}
+        {/* -- Card 4: Top 5 Clinicians by Bookings -- */}
         {loading ? <SkeletonCard /> : (
           <div className="bg-white rounded-xl border border-slate-200 p-6">
             <h2 className="text-base font-semibold text-[var(--color-dark)] mb-5">

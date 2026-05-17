@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import AppointmentReminderBanner from '../../components/AppointmentReminderBanner'
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
+// -- Utilities -----------------------------------------------------------------
 
 const MONTHS   = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
@@ -20,7 +20,7 @@ function formatTime(t) {
   return t.slice(0, 5)
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
+// -- Sub-components -------------------------------------------------------------
 
 function CardRow({ label, value }) {
   return (
@@ -31,7 +31,7 @@ function CardRow({ label, value }) {
   )
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
+// -- Main component -------------------------------------------------------------
 
 const NON_TERMINAL = new Set(['pending', 'accepted', 'reschedule_requested'])
 
@@ -88,7 +88,7 @@ export default function PatientDashboard() {
 
         <AppointmentReminderBanner appointments={appointments} />
 
-        {/* ── Booking success banner ── */}
+        {/* -- Booking success banner -- */}
         {showBanner && (
           <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-xl px-5 py-4 mb-8">
             <CheckCircle size={18} className="text-green-600 mt-0.5 shrink-0" />
@@ -106,14 +106,14 @@ export default function PatientDashboard() {
           </div>
         )}
 
-        {/* ── Page header ── */}
+        {/* -- Page header -- */}
         <div className="mb-8">
           <p className="text-sm text-[var(--color-muted)]">{dateLabel}</p>
           <h1 className="text-2xl font-bold text-[var(--color-text)] mt-1">Welcome back, {user.first_name}!</h1>
           <p className="text-[var(--color-muted)] mt-1">Here's an overview of your health appointments.</p>
         </div>
 
-        {/* ── Quick action cards ── */}
+        {/* -- Quick action cards -- */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
           <Link
             to="/doctors"
@@ -138,19 +138,19 @@ export default function PatientDashboard() {
           </Link>
         </div>
 
-        {/* ── Recent Appointments ── */}
+        {/* -- Recent Appointments -- */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-[var(--color-border)]">
           {/* Title bar */}
           <div className="bg-[var(--color-primary)] px-5 py-3.5 flex items-center justify-between">
             <h2 className="text-base font-bold text-white">Recent Appointments</h2>
             <Link to="/dashboard/appointments" className="text-white/80 text-sm font-medium hover:text-white transition-colors">
-              View all →
+              View all ->
             </Link>
           </div>
           {/* Content */}
           <div className="p-5">
             {apptLoading ? (
-              <p className="text-center text-[var(--color-muted)] py-12 text-sm">Loading…</p>
+              <p className="text-center text-[var(--color-muted)] py-12 text-sm">Loading...</p>
             ) : apptError ? (
               <p className="text-center text-[var(--color-accent)] py-12 text-sm font-medium">{apptError}</p>
             ) : recentAppts.length === 0 ? (
@@ -164,10 +164,10 @@ export default function PatientDashboard() {
                   >
                     <div className="flex-1 space-y-1">
                       <p className="font-semibold text-[var(--color-text)]">
-                        {appt.clinician.last_name}, {appt.clinician.first_name} · {appt.clinician.specialty}
+                        {appt.clinician.last_name}, {appt.clinician.first_name} . {appt.clinician.specialty}
                       </p>
                       <p className="text-sm text-[var(--color-muted)]">
-                        {formatDate(appt.slot.slot_date)} · {formatTime(appt.slot.start_time)}
+                        {formatDate(appt.slot.slot_date)} . {formatTime(appt.slot.start_time)}
                       </p>
                       <p className="text-sm text-[var(--color-muted)]">{appt.chief_complaint}</p>
                     </div>

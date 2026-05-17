@@ -4,12 +4,12 @@ import { SlidersHorizontal, X } from 'lucide-react'
 import api from '../../services/api'
 import ClinicianCard from '../../components/ClinicianCard'
 
-// ── Constants ──────────────────────────────────────────────────────────────────
+// -- Constants ------------------------------------------------------------------
 
 const DAYS    = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const PERIODS = ['AM', 'PM']
 
-// ── Filter logic ───────────────────────────────────────────────────────────────
+// -- Filter logic ---------------------------------------------------------------
 
 function applyFilters(clinicians, { name, spec, days, periods, hmo }) {
   return clinicians.filter(c => {
@@ -34,14 +34,14 @@ function applyFilters(clinicians, { name, spec, days, periods, hmo }) {
       })
       if (!match) return false
     }
-    // HMO — hmos from list endpoint are flat name strings
+    // HMO - hmos from list endpoint are flat name strings
     if (hmo && !c.hmos.includes(hmo)) return false
 
     return true
   })
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
+// -- Main component -------------------------------------------------------------
 
 export default function Doctors() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -63,7 +63,7 @@ export default function Doctors() {
   const [showBanner,      setShowBanner]      = useState(!!(paramSpec || paramHMO))
 
   const resultsRef       = useRef(null)
-  // Captured once on mount — true when user arrived via triage with pre-applied filters.
+  // Captured once on mount - true when user arrived via triage with pre-applied filters.
   // We scroll to results when loading completes; useRef avoids triggering on later filter changes.
   const hadTriageParams  = useRef(!!(paramSpec || paramHMO))
 
@@ -92,7 +92,7 @@ export default function Doctors() {
     }
   }, [fetchLoading])
 
-  // ── Derived data ───────────────────────────────────────────────────────────
+  // -- Derived data -----------------------------------------------------------
 
   const allHmos = useMemo(
     () => [...new Set(clinicians.flatMap(c => c.hmos))].sort(),
@@ -112,7 +112,7 @@ export default function Doctors() {
     hmo:     selectedHMO,
   }), [clinicians, nameQuery, specQuery, selectedDays, selectedPeriods, selectedHMO])
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  // -- Handlers --------------------------------------------------------------
 
   function toggleDay(d) {
     setSelectedDays(prev => {
@@ -147,17 +147,17 @@ export default function Doctors() {
     setSearchParams({})
   }
 
-  // ── Shared input class ─────────────────────────────────────────────────────
+  // -- Shared input class -----------------------------------------------------
 
   const inputCls = 'w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm text-[var(--color-dark)] bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent'
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // -- Render -----------------------------------------------------------------
 
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-5xl mx-auto px-6 py-10">
 
-        {/* ── Triage results banner ── */}
+        {/* -- Triage results banner -- */}
         {showBanner && (
           <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 mb-6">
             <div className="flex-1 text-sm text-blue-800">
@@ -180,7 +180,7 @@ export default function Doctors() {
           </div>
         )}
 
-        {/* ── Filter panel ── */}
+        {/* -- Filter panel -- */}
         {(() => {
           const activeCount = [
             specQuery.trim() !== '',
@@ -192,7 +192,7 @@ export default function Doctors() {
           return (
             <div className="bg-white rounded-xl border border-slate-100 shadow-sm mb-8">
 
-              {/* ── Search row (always visible) ── */}
+              {/* -- Search row (always visible) -- */}
               <div className="flex items-center gap-3 px-5 py-4">
                 <input
                   type="text"
@@ -211,7 +211,7 @@ export default function Doctors() {
                   ].join(' ')}
                 >
                   <SlidersHorizontal size={15} className="text-slate-400" />
-                  <span>Filters{activeCount > 0 ? ` · ${activeCount}` : ''}</span>
+                  <span>Filters{activeCount > 0 ? ` . ${activeCount}` : ''}</span>
                   {activeCount > 0 && (
                     <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--color-primary)] text-white text-xs font-bold">
                       {activeCount}
@@ -220,7 +220,7 @@ export default function Doctors() {
                 </button>
               </div>
 
-              {/* ── Expandable filter body ── */}
+              {/* -- Expandable filter body -- */}
               <div
                 className={[
                   'overflow-hidden transition-all duration-200',
@@ -322,15 +322,15 @@ export default function Doctors() {
           )
         })()}
 
-        {/* ── Directory header band ── */}
+        {/* -- Directory header band -- */}
         <div ref={resultsRef} className="navbar-gradient rounded-xl h-14 flex items-center mb-6 px-6">
           <h1 className="text-lg font-bold text-white">Clinician Directory</h1>
         </div>
 
-        {/* ── Clinician grid ── */}
+        {/* -- Clinician grid -- */}
         {fetchLoading ? (
           <div className="text-center py-20">
-            <p className="text-slate-400 text-sm">Loading clinicians…</p>
+            <p className="text-slate-400 text-sm">Loading clinicians...</p>
           </div>
         ) : fetchError ? (
           <div className="text-center py-20">

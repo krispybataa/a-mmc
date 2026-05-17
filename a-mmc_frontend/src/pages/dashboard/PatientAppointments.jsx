@@ -8,7 +8,7 @@ import AppointmentDrawer from '../../components/shared/AppointmentDrawer'
 import { generatePatientAppointmentPDF } from '../../services/pdfService'
 import AppointmentReminderBanner from '../../components/AppointmentReminderBanner'
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
+// -- Utilities -----------------------------------------------------------------
 
 const MONTHS   = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
@@ -43,17 +43,17 @@ function formatTime(t) {
 
 function formatTimeRange(start, end) {
   if (!end) return formatTime(start)
-  return `${formatTime(start)} – ${formatTime(end)}`
+  return `${formatTime(start)} - ${formatTime(end)}`
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// -- Constants -----------------------------------------------------------------
 
 const PAGE_SIZE = 5
 const ELIGIBLE  = new Set(['pending', 'accepted', 'reschedule_requested'])
 
 const capitalize = s => s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ')
 
-// ── Main component ─────────────────────────────────────────────────────────────
+// -- Main component -------------------------------------------------------------
 
 export default function PatientAppointments() {
   const { user }  = useAuth()
@@ -110,7 +110,7 @@ export default function PatientAppointments() {
 
   if (!user) return null
 
-  // ── Derived data ──────────────────────────────────────────────────────────
+  // -- Derived data ----------------------------------------------------------
 
   const today   = toDateStr(new Date())
   const maxDate = toDateStr(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000))
@@ -126,14 +126,14 @@ export default function PatientAppointments() {
   const safePage   = Math.min(currentPage, totalPages)
   const paged      = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  // -- Handlers --------------------------------------------------------------
 
   function handleFilterChange(val) {
     setFilterDate(val)
     setCurrentPage(1)
   }
 
-  // Show inline confirm row — actual DELETE fires in confirmCancel
+  // Show inline confirm row - actual DELETE fires in confirmCancel
   function handleCancel(id) {
     setCancelConfirmId(id)
     setCancelError(null)
@@ -170,7 +170,7 @@ export default function PatientAppointments() {
         const { data } = await api.get(`/clinicians/${appt.clinician_id}`)
         setModalClinician(data)
       } catch {
-        // Leave modalClinician null — modal shows "Clinician schedule unavailable."
+        // Leave modalClinician null - modal shows "Clinician schedule unavailable."
       }
     }
   }
@@ -219,12 +219,12 @@ export default function PatientAppointments() {
     }
   }
 
-  // ── Shared styles ──────────────────────────────────────────────────────────
+  // -- Shared styles ----------------------------------------------------------
 
   const inputCls = 'w-full px-4 py-3 rounded-lg border border-slate-200 text-sm text-[var(--color-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent'
   const errCls   = 'mt-1.5 text-xs text-[var(--color-accent)]'
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // -- Render -----------------------------------------------------------------
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -232,7 +232,7 @@ export default function PatientAppointments() {
 
         <AppointmentReminderBanner appointments={appointments} />
 
-        {/* ── Page title row ── */}
+        {/* -- Page title row -- */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
           <h1 className="text-2xl font-bold text-[var(--color-dark)]">My Appointments</h1>
 
@@ -263,9 +263,9 @@ export default function PatientAppointments() {
           </div>
         </div>
 
-        {/* ── Appointment list ── */}
+        {/* -- Appointment list -- */}
         {fetchLoading ? (
-          <p className="text-center text-slate-400 py-16 text-sm">Loading…</p>
+          <p className="text-center text-slate-400 py-16 text-sm">Loading...</p>
         ) : fetchError ? (
           <p className="text-center text-[var(--color-accent)] py-16 text-sm font-medium">{fetchError}</p>
         ) : paged.length === 0 ? (
@@ -273,7 +273,7 @@ export default function PatientAppointments() {
         ) : (
           <div className="space-y-3">
             {paged.map(appt => {
-              const docName  = `${appt.clinician.last_name}, ${appt.clinician.first_name} · ${appt.clinician.specialty}`
+              const docName  = `${appt.clinician.last_name}, ${appt.clinician.first_name} . ${appt.clinician.specialty}`
               const eligible = ELIGIBLE.has(appt.status)
               const showCancelConfirm = cancelConfirmId === appt.appointment_id
 
@@ -300,7 +300,7 @@ export default function PatientAppointments() {
                           </span>
                         </div>
                         <p className="text-sm text-slate-400">
-                          {formatDateFull(appt.slot.slot_date)} · {formatTimeRange(appt.slot.start_time, appt.slot.end_time)}
+                          {formatDateFull(appt.slot.slot_date)} . {formatTimeRange(appt.slot.start_time, appt.slot.end_time)}
                         </p>
                         {appt.status === 'declined' && appt.decline_reason && (
                           <p className="text-xs text-slate-500 mt-1">
@@ -368,7 +368,7 @@ export default function PatientAppointments() {
           </div>
         )}
 
-        {/* ── Pagination ── */}
+        {/* -- Pagination -- */}
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-4 mt-8">
             <button
@@ -391,7 +391,7 @@ export default function PatientAppointments() {
 
       </div>
 
-      {/* ── Appointment Detail Drawer ── */}
+      {/* -- Appointment Detail Drawer -- */}
       <AppointmentDrawer
         appointment={drawerAppointment}
         onClose={() => setDrawerAppointment(null)}
@@ -399,7 +399,7 @@ export default function PatientAppointments() {
         onReschedule={(id) => { setDrawerAppointment(null); openModal(id) }}
       />
 
-      {/* ── Reschedule Modal ── */}
+      {/* -- Reschedule Modal -- */}
       {modalOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
@@ -407,7 +407,7 @@ export default function PatientAppointments() {
         >
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
 
-            {/* Header — fixed */}
+            {/* Header - fixed */}
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100 shrink-0">
               <h2 className="text-lg font-semibold text-[var(--color-dark)]">Request for Reschedule</h2>
               <button
@@ -419,7 +419,7 @@ export default function PatientAppointments() {
               </button>
             </div>
 
-            {/* Body — scrollable */}
+            {/* Body - scrollable */}
             <div className="px-6 py-5 space-y-6 overflow-y-auto flex-1">
 
               {/* Slot picker */}
@@ -467,7 +467,7 @@ export default function PatientAppointments() {
 
             </div>
 
-            {/* Footer — fixed */}
+            {/* Footer - fixed */}
             <div className="px-6 pb-6 pt-4 border-t border-slate-100 shrink-0 space-y-3">
               {reschedErrors.submit && (
                 <p className="text-xs text-[var(--color-accent)] text-center">{reschedErrors.submit}</p>
@@ -477,7 +477,7 @@ export default function PatientAppointments() {
                 disabled={reschedLoading}
                 className="w-full min-h-[48px] rounded-lg bg-[var(--color-primary)] text-white font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {reschedLoading ? 'Sending…' : 'Request'}
+                {reschedLoading ? 'Sending...' : 'Request'}
               </button>
             </div>
 

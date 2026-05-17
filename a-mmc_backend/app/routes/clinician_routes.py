@@ -148,7 +148,7 @@ def delete_clinician(clinician_id: int):
         return {"error": "Admin access required"}, 403
     c = db.get_or_404(Clinician, clinician_id)
     # B1-A-patch-2: cascade deletes child rows (schedules, hmos, infos, timeslots,
-    # secretary_links) — multi-table write requires transaction boundary
+    # secretary_links) - multi-table write requires transaction boundary
     try:
         db.session.delete(c)
         db.session.commit()
@@ -225,7 +225,7 @@ def update_schedule(clinician_id: int, schedule_id: int):
 
     Requires a valid JWT with role "clinician" or "secretary".
 
-    Body (JSON, all fields optional — only present fields are updated):
+    Body (JSON, all fields optional - only present fields are updated):
         day_of_week  (str)
         am_start     (str, "HH:MM")
         am_end       (str, "HH:MM")
@@ -244,12 +244,12 @@ def update_schedule(clinician_id: int, schedule_id: int):
 
     The slot_regeneration.stuck list contains slots that C/S must manually
     resolve (cancel or reschedule each appointment) before the old slot can be
-    removed from the system. The schedule update is NOT blocked by stuck slots —
+    removed from the system. The schedule update is NOT blocked by stuck slots -
     the information is surfaced so C/S can act on it.
     """
     claims = get_jwt()
     if claims.get("role") not in ("clinician", "secretary"):
-        return jsonify({"error": "Forbidden — clinician or secretary role required"}), 403
+        return jsonify({"error": "Forbidden - clinician or secretary role required"}), 403
 
     db.get_or_404(Clinician, clinician_id)
     schedule = db.get_or_404(ClinicianSchedule, schedule_id)

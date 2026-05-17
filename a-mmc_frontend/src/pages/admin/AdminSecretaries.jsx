@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../../services/api'
 
-// ── Constants ──────────────────────────────────────────────────────────────────
+// -- Constants ------------------------------------------------------------------
 
 const PAGE_SIZE = 10
 
@@ -10,7 +10,7 @@ const EMPTY_FORM = {
   contact_phone: '', contact_email: '', login_email: '', password: '',
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+// -- Helpers --------------------------------------------------------------------
 
 function formatName({ title, first_name, last_name }) {
   return [title, first_name, last_name].filter(Boolean).join(' ')
@@ -29,7 +29,7 @@ function getLinkedNames(secretary) {
   return null
 }
 
-// ── Shared field component ─────────────────────────────────────────────────────
+// -- Shared field component -----------------------------------------------------
 
 function Field({ label, value, onChange, error, type = 'text' }) {
   return (
@@ -52,7 +52,7 @@ function Field({ label, value, onChange, error, type = 'text' }) {
   )
 }
 
-// ── Add Secretary modal ────────────────────────────────────────────────────────
+// -- Add Secretary modal --------------------------------------------------------
 
 function AddSecretaryModal({ onClose, onCreated }) {
   const [form, setForm]       = useState(EMPTY_FORM)
@@ -107,7 +107,7 @@ function AddSecretaryModal({ onClose, onCreated }) {
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 text-xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
-            ×
+            x
           </button>
         </div>
 
@@ -140,7 +140,7 @@ function AddSecretaryModal({ onClose, onCreated }) {
               disabled={saving}
               className="flex-1 py-3 rounded-lg bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 min-h-[44px]"
             >
-              {saving ? 'Creating…' : 'Create Secretary'}
+              {saving ? 'Creating...' : 'Create Secretary'}
             </button>
             <button
               type="button"
@@ -156,7 +156,7 @@ function AddSecretaryModal({ onClose, onCreated }) {
   )
 }
 
-// ── Link Clinician modal ───────────────────────────────────────────────────────
+// -- Link Clinician modal -------------------------------------------------------
 
 function LinkClinicianModal({ secretary, onClose, onLinked }) {
   const [clinicians, setClinicians]   = useState([])
@@ -201,13 +201,13 @@ function LinkClinicianModal({ secretary, onClose, onLinked }) {
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 text-xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
-            ×
+            x
           </button>
         </div>
 
         <div className="px-6 py-5 space-y-4">
           {fetchLoading ? (
-            <p className="text-sm text-slate-400">Loading clinicians…</p>
+            <p className="text-sm text-slate-400">Loading clinicians...</p>
           ) : (
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">
@@ -218,10 +218,10 @@ function LinkClinicianModal({ secretary, onClose, onLinked }) {
                 onChange={e => setSelectedId(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm text-[var(--color-dark)] bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent min-h-[44px]"
               >
-                <option value="">Select…</option>
+                <option value="">Select...</option>
                 {clinicians.map(c => (
                   <option key={c.clinician_id} value={c.clinician_id}>
-                    {formatName(c)} — {c.specialty}
+                    {formatName(c)} - {c.specialty}
                   </option>
                 ))}
               </select>
@@ -239,7 +239,7 @@ function LinkClinicianModal({ secretary, onClose, onLinked }) {
               disabled={!selectedId || saving || fetchLoading}
               className="flex-1 py-3 rounded-lg bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 min-h-[44px]"
             >
-              {saving ? 'Linking…' : 'Confirm Link'}
+              {saving ? 'Linking...' : 'Confirm Link'}
             </button>
             <button
               type="button"
@@ -255,7 +255,7 @@ function LinkClinicianModal({ secretary, onClose, onLinked }) {
   )
 }
 
-// ── AdminSecretaries ───────────────────────────────────────────────────────────
+// -- AdminSecretaries -----------------------------------------------------------
 
 export default function AdminSecretaries() {
   const [secretaries, setSecretaries] = useState([])
@@ -308,7 +308,7 @@ export default function AdminSecretaries() {
       {fetchError && <p className="text-sm text-[var(--color-accent)] mb-4">{fetchError}</p>}
 
       {loading ? (
-        <p className="text-slate-400 text-sm py-10 text-center">Loading…</p>
+        <p className="text-slate-400 text-sm py-10 text-center">Loading...</p>
       ) : secretaries.length === 0 ? (
         <p className="text-slate-400 text-sm py-10 text-center">No secretaries found.</p>
       ) : (
@@ -334,7 +334,7 @@ export default function AdminSecretaries() {
                       </td>
                       <td className="px-4 py-3 text-slate-500 text-xs">{s.login_email}</td>
                       <td className="px-4 py-3 text-slate-600">
-                        {linked ?? <span className="text-slate-300">—</span>}
+                        {linked ?? <span className="text-slate-300">-</span>}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
@@ -370,7 +370,7 @@ export default function AdminSecretaries() {
                 disabled={page === 1}
                 className="px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px] transition-colors"
               >
-                ← Prev
+                <- Prev
               </button>
               <span>Page {page} of {totalPages}</span>
               <button
@@ -379,7 +379,7 @@ export default function AdminSecretaries() {
                 disabled={page === totalPages}
                 className="px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px] transition-colors"
               >
-                Next →
+                Next ->
               </button>
             </div>
           )}

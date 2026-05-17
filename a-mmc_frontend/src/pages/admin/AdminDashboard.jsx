@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../../services/api'
 
-// ── Stat card ──────────────────────────────────────────────────────────────────
+// -- Stat card ------------------------------------------------------------------
 
 function StatCard({ label, value, loading }) {
   return (
@@ -11,13 +11,13 @@ function StatCard({ label, value, loading }) {
         'text-4xl font-bold',
         loading ? 'text-slate-200 animate-pulse' : 'text-[var(--color-primary)]',
       ].join(' ')}>
-        {loading ? '—' : (value ?? 0).toLocaleString()}
+        {loading ? '-' : (value ?? 0).toLocaleString()}
       </p>
     </div>
   )
 }
 
-// ── AdminDashboard ─────────────────────────────────────────────────────────────
+// -- AdminDashboard -------------------------------------------------------------
 
 export default function AdminDashboard() {
   const [counts, setCounts]   = useState(null)

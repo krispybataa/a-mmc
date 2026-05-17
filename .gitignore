@@ -35,6 +35,7 @@ a-mmc_backend/*.egg-info/
 a-mmc_backend/__pycache__/
 a-mmc_backend/.pytest_cache/
 
+fix_nonascii.py
 a-mmc_infra/certs/
 
 a-mmc_backend/data/*.csv
