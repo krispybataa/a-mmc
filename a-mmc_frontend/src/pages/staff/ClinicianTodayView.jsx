@@ -308,7 +308,7 @@ export default function ClinicianTodayView() {
                 onClick={() => setActiveFilter(null)}
                 className="text-sm text-[var(--color-primary)] hover:underline font-medium"
               >
-                <- Show All
+                &larr; Show All
               </button>
             )}
           </div>

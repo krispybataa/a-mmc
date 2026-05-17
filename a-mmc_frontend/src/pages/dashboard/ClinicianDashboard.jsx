@@ -333,7 +333,7 @@ export default function ClinicianDashboard() {
                   onClick={() => setPage(p => p - 1)}
                   className="px-4 py-2.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
                 >
-                  <- Prev
+                  &larr; Prev
                 </button>
                 <span className="text-sm text-slate-500">
                   Page {page} of {totalPages}
@@ -345,7 +345,7 @@ export default function ClinicianDashboard() {
                   onClick={() => setPage(p => p + 1)}
                   className="px-4 py-2.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
                 >
-                  Next ->
+                  Next &rarr;
                 </button>
               </div>
             </>

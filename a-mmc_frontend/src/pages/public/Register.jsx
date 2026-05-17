@@ -703,7 +703,7 @@ export default function Register() {
                 onClick={handleBack}
                 className="px-6 py-3 rounded-xl text-base font-semibold text-[var(--color-primary)] border-2 border-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white min-h-[48px]"
               >
-                <- Back
+                &larr; Back
               </button>
             )}
             <button
@@ -713,7 +713,7 @@ export default function Register() {
               className="flex-1 py-3 px-6 rounded-xl text-base font-semibold text-white bg-[var(--color-accent)] hover:brightness-110 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed min-h-[48px]"
             >
               {step < 3
-                ? 'Continue ->'
+                ? 'Continue →'
                 : loading ? 'Creating account...' : 'Create Account'}
             </button>
           </div>

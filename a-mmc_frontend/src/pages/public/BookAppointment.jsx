@@ -809,7 +809,7 @@ export default function BookAppointment() {
                 onClick={handleBack}
                 className="px-5 py-3 rounded-lg text-sm font-medium text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
               >
-                <- Back
+                &larr; Back
               </button>
             )}
 
@@ -820,7 +820,7 @@ export default function BookAppointment() {
                 disabled={continueDisabled}
                 className="flex-1 py-3 px-6 rounded-lg text-sm font-semibold text-white bg-[var(--color-primary)] hover:opacity-90 transition-opacity duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Continue ->
+                Continue &rarr;
               </button>
             ) : (
               <button

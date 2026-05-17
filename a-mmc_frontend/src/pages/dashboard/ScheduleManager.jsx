@@ -303,7 +303,7 @@ export default function ScheduleManager() {
           to="/clinician-dashboard"
           className="text-sm text-[var(--color-primary)] hover:underline"
         >
-          <- Back to Inbox
+          &larr; Back to Inbox
         </Link>
       </div>
     )

@@ -155,7 +155,7 @@ export default function BodyDiagram({ onSelect, excludeSpecialties = [] }) {
             onClick={dismissSubstep}
             className="mt-4 text-sm text-[var(--color-muted)] hover:text-[var(--color-primary)] transition-colors"
           >
-            <- Back
+            &larr; Back
           </button>
         </div>
       )}
