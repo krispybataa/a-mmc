@@ -35,7 +35,7 @@ def has_overlap(patient_id: int, candidate_slot, exclude_appointment_id=None) ->
         True  - an overlap exists; the booking should be rejected.
         False - no overlap; safe to proceed.
 
-    Overlap definition (from CLAUDE.md)
+    Overlap definition
     ------------------------------------
     Two slots overlap when NOT (A.end <= B.start OR B.end <= A.start).
     Touching boundaries are NOT considered overlapping:

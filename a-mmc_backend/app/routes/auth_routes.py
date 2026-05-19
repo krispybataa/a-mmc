@@ -10,7 +10,7 @@ Token strategy:
 
 Security: rate limiting via Flask-Limiter, account lockout
 (in-memory), JWT blocklist (in-memory), CSRF double-submit
-on refresh endpoint. See CLAUDE.md for details.
+on refresh endpoint. 
 """
 
 import secrets
