@@ -7,7 +7,7 @@
 
 /*
  * CLINICAL ROUTING — DOMAIN EXPERT REVIEW REQUIRED
- *
+ * Gen 2, based on POMD, based on clincian comments. 
  * The weight values in this file represent clinical referral
  * logic. Initial values are derived from Friedman's Problem
  * Oriented Medical Diagnosis (POMD) as recommended by the

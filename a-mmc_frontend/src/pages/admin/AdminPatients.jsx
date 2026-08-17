@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import api from '../../services/api'
 
-// ── Constants ──────────────────────────────────────────────────────────────────
+// -- Constants ------------------------------------------------------------------
 
 const PAGE_SIZE = 10
 
-// ── AdminPatients ──────────────────────────────────────────────────────────────
+// -- AdminPatients --------------------------------------------------------------
 
 export default function AdminPatients() {
   const [patients, setPatients]     = useState([])
@@ -35,7 +35,7 @@ export default function AdminPatients() {
     <div className="max-w-5xl mx-auto px-6 py-10">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-[var(--color-dark)]">Patients</h1>
-        <p className="text-sm text-slate-500 mt-1">{patients.length} total — read only</p>
+        <p className="text-sm text-slate-500 mt-1">{patients.length} total - read only</p>
       </div>
 
       {/* Search */}
@@ -44,7 +44,7 @@ export default function AdminPatients() {
           type="search"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search by name…"
+          placeholder="Search by name..."
           className="w-full max-w-sm px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-[var(--color-dark)] bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent min-h-[44px]"
         />
       </div>
@@ -52,7 +52,7 @@ export default function AdminPatients() {
       {fetchError && <p className="text-sm text-[var(--color-accent)] mb-4">{fetchError}</p>}
 
       {loading ? (
-        <p className="text-slate-400 text-sm py-10 text-center">Loading…</p>
+        <p className="text-slate-400 text-sm py-10 text-center">Loading...</p>
       ) : filtered.length === 0 ? (
         <p className="text-slate-400 text-sm py-10 text-center">
           {search ? 'No patients match your search.' : 'No patients found.'}
@@ -93,7 +93,7 @@ export default function AdminPatients() {
                 disabled={page === 1}
                 className="px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px] transition-colors"
               >
-                ← Prev
+                &larr; Prev
               </button>
               <span>Page {page} of {totalPages}</span>
               <button
@@ -102,7 +102,7 @@ export default function AdminPatients() {
                 disabled={page === totalPages}
                 className="px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px] transition-colors"
               >
-                Next →
+                Next &rarr;
               </button>
             </div>
           )}

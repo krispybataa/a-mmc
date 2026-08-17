@@ -31,7 +31,7 @@ from app.services.timeslot_service import generate_slots
 # Login emails for the 12 real Rheumatology test clinicians (from clinicians_real.csv)
 RHEUM_CLINICIAN_EMAILS = [f'testclinician{i}@ammc.com' for i in range(1, 13)]
 
-# Admin default credentials — change after first login
+# Admin default credentials - change after first login
 _ADMIN_EMAIL    = 'admin@alagang-mmc.local'
 _ADMIN_PASSWORD = 'ChangeMe123!'
 
@@ -322,7 +322,7 @@ def _parse_time(value):
 def run_seed_csv(csv_path):
     """
     Bulk import clinicians from a CSV file.
-    Idempotent — skips rows where login_email already exists.
+    Idempotent - skips rows where login_email already exists.
     Outputs credentials_manifest.txt for Rheumatology clinicians.
 
     One row per clinician. F2F and teleconsult schedules are expressed as
@@ -336,7 +336,7 @@ def run_seed_csv(csv_path):
     skipped = 0
     rheum_entries = []
 
-    # Build short-day → full-day-name lookup from the module-level _DAYS constant
+    # Build short-day -> full-day-name lookup from the module-level _DAYS constant
     _DAY_FULL = {short: full for short, full in _DAYS}
     _DAY_KEYS = [short for short, _ in _DAYS]   # ['mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
@@ -354,7 +354,7 @@ def run_seed_csv(csv_path):
             try:
                 existing = Clinician.query.filter_by(login_email=login_email).first()
                 if existing:
-                    print(f"Skipping {login_email} — already exists")
+                    print(f"Skipping {login_email} - already exists")
                     if existing.profile_picture is None:
                         existing.profile_picture = _random.choice(_AVATAR_POOL)
                         db.session.commit()
@@ -415,7 +415,7 @@ def run_seed_csv(csv_path):
 
                 db.session.commit()
 
-                # Schedules — one pass per consultation type
+                # Schedules - one pass per consultation type
                 for col_prefix, ctype in _CONSULT_TYPES:
                     has_any = False
                     for day in _DAY_KEYS:
@@ -515,7 +515,7 @@ def run_seed_rheum_secretaries():
     for i, clin_email in enumerate(RHEUM_CLINICIAN_EMAILS, 1):
         clinician = Clinician.query.filter_by(login_email=clin_email).first()
         if not clinician:
-            print(f"  WARNING: clinician {clin_email} not found — run CSV seed first.")
+            print(f"  WARNING: clinician {clin_email} not found - run CSV seed first.")
             continue
 
         sec_email = f'testsecretary{i}@ammc.com'
@@ -533,9 +533,9 @@ def run_seed_rheum_secretaries():
                     clinician_id=clinician.clinician_id,
                 ))
                 db.session.commit()
-                print(f"  Linked existing secretary {sec_email} → {clin_email}")
+                print(f"  Linked existing secretary {sec_email} -> {clin_email}")
             else:
-                print(f"  Already linked: {sec_email} → {clin_email}")
+                print(f"  Already linked: {sec_email} -> {clin_email}")
             continue
 
         password = ''.join(secrets.choice(alphabet) for _ in range(14))
@@ -557,7 +557,7 @@ def run_seed_rheum_secretaries():
         db.session.commit()
 
         clin_name = f'{clinician.first_name} {clinician.last_name}'.title()
-        print(f"  Created {sec_email} (pw: {password}) → {clin_email}")
+        print(f"  Created {sec_email} (pw: {password}) -> {clin_email}")
         entries.append({
             'sec_email':  sec_email,
             'password':   password,
@@ -608,34 +608,34 @@ def _write_production_manifest(csv_path, admin_password, secretary_entries):
     W = 62
     lines = [
         '=' * W,
-        '  UNICORN — TESTER CREDENTIALS MANIFEST',
+        '  UNICORN - TESTER CREDENTIALS MANIFEST',
         '  Keep this file offline. Do not commit.',
         '=' * W,
         '',
     ]
 
-    # ── Admin ──────────────────────────────────────────────────
+    # -- Admin --------------------------------------------------
     lines += [
         'ADMIN ACCOUNT',
         '-' * W,
         f'  Email   : {_ADMIN_EMAIL}',
-        f'  Password: {admin_password if admin_password else "(pre-existing — see prior manifest)"}',
-        '  Login at: /staff/login  →  select "Admin" role',
+        f'  Password: {admin_password if admin_password else "(pre-existing - see prior manifest)"}',
+        '  Login at: /staff/login  ->  select "Admin" role',
         '',
     ]
 
-    # ── Rheumatology clinicians ───────────────────────────────────────
+    # -- Rheumatology clinicians ---------------------------------------
     lines += [
-        'RHEUMATOLOGY CLINICIANS  (login at /staff/login → Clinician)',
+        'RHEUMATOLOGY CLINICIANS  (login at /staff/login -> Clinician)',
         '-' * W,
     ]
     for i, clin_email in enumerate(RHEUM_CLINICIAN_EMAILS, 1):
         clin = Clinician.query.filter_by(login_email=clin_email).first()
         if not clin:
-            lines.append(f'  {i:2}. {clin_email}  — NOT FOUND (CSV import may have failed)')
+            lines.append(f'  {i:2}. {clin_email}  - NOT FOUND (CSV import may have failed)')
             continue
         name = f'{clin.first_name} {clin.last_name}'.title()
-        pw   = rheum_passwords.get(clin_email, '(auto-generated — see original manifest)')
+        pw   = rheum_passwords.get(clin_email, '(auto-generated - see original manifest)')
         lines += [
             f'  {i:2}. {name}',
             f'      Email   : {clin_email}',
@@ -644,13 +644,13 @@ def _write_production_manifest(csv_path, admin_password, secretary_entries):
             '',
         ]
 
-    # ── Secretaries ────────────────────────────────────────────────
+    # -- Secretaries ------------------------------------------------
     lines += [
-        'RHEUMATOLOGY SECRETARIES  (login at /staff/login → Secretary)',
+        'RHEUMATOLOGY SECRETARIES  (login at /staff/login -> Secretary)',
         '-' * W,
     ]
     if not secretary_entries:
-        lines.append('  (all secretaries were pre-existing — passwords not available here)')
+        lines.append('  (all secretaries were pre-existing - passwords not available here)')
         lines.append('')
     for e in secretary_entries:
         lines += [
@@ -664,9 +664,9 @@ def _write_production_manifest(csv_path, admin_password, secretary_entries):
     lines += [
         '=' * W,
         '  NOTES',
-        '  • Admin password should be changed after first login.',
-        '  • Secretary accounts share the same dashboard as clinicians.',
-        '  • Synthetic clinicians (non-Rheumatology) have no dedicated testers.',
+        '  * Admin password should be changed after first login.',
+        '  * Secretary accounts share the same dashboard as clinicians.',
+        '  * Synthetic clinicians (non-Rheumatology) have no dedicated testers.',
         '=' * W,
         '',
     ]
@@ -678,7 +678,7 @@ def _write_production_manifest(csv_path, admin_password, secretary_entries):
 
 def run_seed_production(csv_path):
     """
-    Full production seed — run once on Railway after first deploy.
+    Full production seed - run once on Railway after first deploy.
 
     Steps:
       1. Bulk-import all clinicians from CSV (idempotent)
@@ -690,22 +690,22 @@ def run_seed_production(csv_path):
       python seed.py data/clinicians_full.csv --production
     """
     print("\n" + "=" * 50)
-    print("STEP 1 — CSV clinician import")
+    print("STEP 1 - CSV clinician import")
     print("=" * 50)
     run_seed_csv(csv_path)
 
     print("\n" + "=" * 50)
-    print("STEP 2 — Admin account")
+    print("STEP 2 - Admin account")
     print("=" * 50)
     admin_password = run_seed_admin()
 
     print("\n" + "=" * 50)
-    print("STEP 3 — Rheumatology secretaries")
+    print("STEP 3 - Rheumatology secretaries")
     print("=" * 50)
     secretary_entries = run_seed_rheum_secretaries()
 
     print("\n" + "=" * 50)
-    print("STEP 4 — Credentials manifest")
+    print("STEP 4 - Credentials manifest")
     print("=" * 50)
     _write_production_manifest(csv_path, admin_password, secretary_entries)
 
@@ -731,9 +731,9 @@ if __name__ == "__main__":
             run_seed_production(sys.argv[1])
         else:
             print("Usage:")
-            print("  python seed.py                                — dev seed (part1 + part2)")
-            print("  python seed.py data.csv                       — CSV bulk import only")
+            print("  python seed.py                                - dev seed (part1 + part2)")
+            print("  python seed.py data.csv                       - CSV bulk import only")
             print("  python seed.py data/clinicians_full.csv --production")
-            print("                                                — full production seed")
+            print("                                                - full production seed")
             print("                                                  (CSV + admin + secretaries + manifest)")
             sys.exit(1)

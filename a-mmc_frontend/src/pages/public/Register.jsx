@@ -4,7 +4,7 @@ import { Eye, EyeOff, Check } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api, { configureApiAuth } from '../../services/api'
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// -- Constants -----------------------------------------------------------------
 
 const STEPS = ['Personal', 'Address', 'Account & Details']
 
@@ -28,7 +28,7 @@ const CIVIL_OPTS  = ['Single', 'Married', 'Widowed', 'Separated', 'Divorced']
 const LANG_OPTS   = ['Filipino', 'English', 'Other']
 const EDUC_OPTS   = ['Elementary', 'High School', 'Vocational / Technical', 'College', 'Post-Graduate']
 
-// ── Shared field helpers ──────────────────────────────────────────────────────
+// -- Shared field helpers ------------------------------------------------------
 
 function inputCls(hasError) {
   return [
@@ -69,7 +69,7 @@ function Field({ label, htmlFor, required = false, hint, error, children }) {
   )
 }
 
-// ── Validation ────────────────────────────────────────────────────────────────
+// -- Validation ----------------------------------------------------------------
 
 function parseDateLocal(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -94,7 +94,7 @@ function validateStep(step, fd) {
       e.last_name = 'Please enter a valid name (letters only).'
     }
 
-    // middle_name — optional, validate only if non-empty
+    // middle_name - optional, validate only if non-empty
     if (fd.middle_name.trim() && /\d/.test(fd.middle_name)) {
       e.middle_name = 'Please enter a valid name (letters only).'
     }
@@ -152,11 +152,11 @@ function validateStep(step, fd) {
     }
     if (!fd.preferred_language)     e.preferred_language     = 'Please select a language.'
     if (!fd.educational_attainment) e.educational_attainment = 'Please select your educational attainment.'
-    // next_of_kin_name — optional, validate only if non-empty
+    // next_of_kin_name - optional, validate only if non-empty
     if (fd.next_of_kin_name.trim() && /\d/.test(fd.next_of_kin_name)) {
       e.next_of_kin_name = 'Please enter a valid name (letters only).'
     }
-    // next_of_kin_contact — optional, validate only if non-empty
+    // next_of_kin_contact - optional, validate only if non-empty
     const nokContact = (fd.next_of_kin_contact || '').replace(/\s/g, '')
     if (nokContact && !/^09\d{9}$/.test(nokContact)) {
       e.next_of_kin_contact = 'Mobile number must be 11 digits starting with 09.'
@@ -166,7 +166,7 @@ function validateStep(step, fd) {
   return e
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// -- Component -----------------------------------------------------------------
 
 export default function Register() {
   const navigate = useNavigate()
@@ -226,7 +226,7 @@ export default function Register() {
       country:               formData.country,
       preferred_language:    formData.preferred_language,
       educational_attainment: formData.educational_attainment,
-      // optional fields — omit empty strings so backend receives clean nulls
+      // optional fields - omit empty strings so backend receives clean nulls
       ...(formData.middle_name           && { middle_name:              formData.middle_name }),
       ...(formData.suffix                && { suffix:                   formData.suffix }),
       ...(formData.civil_status          && { civil_status:             formData.civil_status }),
@@ -239,7 +239,7 @@ export default function Register() {
       ...(formData.next_of_kin_contact   && { next_of_kin_contact:      formData.next_of_kin_contact }),
       ...(formData.sc_pwd_id_number      && { sc_pwd_id_number:         formData.sc_pwd_id_number }),
       ...(formData.disability_type       && { disability_type:          formData.disability_type }),
-      // pwd_id_front / pwd_id_back are File objects — omitted until file upload endpoint exists
+      // pwd_id_front / pwd_id_back are File objects - omitted until file upload endpoint exists
     }
 
     try {
@@ -259,7 +259,7 @@ export default function Register() {
     }
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // -- Render -----------------------------------------------------------------
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] flex items-start justify-center px-4 py-14">
@@ -321,7 +321,7 @@ export default function Register() {
 
           <div className="border-t border-slate-100 mb-7" />
 
-          {/* ── STEP 1: Personal Information ── */}
+          {/* -- STEP 1: Personal Information -- */}
           {step === 1 && (
             <div className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -363,7 +363,7 @@ export default function Register() {
                     id="suffix" type="text"
                     value={formData.suffix}
                     onChange={(e) => update('suffix', e.target.value)}
-                    placeholder="Jr., Sr., III…"
+                    placeholder="Jr., Sr., III..."
                     className={inputCls(false)}
                   />
                 </Field>
@@ -386,7 +386,7 @@ export default function Register() {
                     onChange={(e) => update('gender', e.target.value)}
                     className={selectCls(!!errors.gender)}
                   >
-                    <option value="">Select…</option>
+                    <option value="">Select...</option>
                     {GENDER_OPTS.map((o) => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </Field>
@@ -411,7 +411,7 @@ export default function Register() {
                     onChange={(e) => update('civil_status', e.target.value)}
                     className={selectCls(false)}
                   >
-                    <option value="">Select…</option>
+                    <option value="">Select...</option>
                     {CIVIL_OPTS.map((o) => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </Field>
@@ -428,7 +428,7 @@ export default function Register() {
             </div>
           )}
 
-          {/* ── STEP 2: Address ── */}
+          {/* -- STEP 2: Address -- */}
           {step === 2 && (
             <div className="space-y-5">
               <Field label="Address Line 1" htmlFor="address_line_1" required error={errors.address_line_1}>
@@ -512,7 +512,7 @@ export default function Register() {
             </div>
           )}
 
-          {/* ── STEP 3: Account & Details ── */}
+          {/* -- STEP 3: Account & Details -- */}
           {step === 3 && (
             <div className="space-y-5">
 
@@ -583,7 +583,7 @@ export default function Register() {
                     onChange={(e) => update('preferred_language', e.target.value)}
                     className={selectCls(!!errors.preferred_language)}
                   >
-                    <option value="">Select…</option>
+                    <option value="">Select...</option>
                     {LANG_OPTS.map((o) => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </Field>
@@ -594,7 +594,7 @@ export default function Register() {
                     onChange={(e) => update('educational_attainment', e.target.value)}
                     className={selectCls(!!errors.educational_attainment)}
                   >
-                    <option value="">Select…</option>
+                    <option value="">Select...</option>
                     {EDUC_OPTS.map((o) => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </Field>
@@ -672,14 +672,14 @@ export default function Register() {
                     </Field>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Field label="PWD ID — Front" htmlFor="pwd_id_front" error={errors.pwd_id_front}>
+                    <Field label="PWD ID - Front" htmlFor="pwd_id_front" error={errors.pwd_id_front}>
                       <input
                         id="pwd_id_front" type="file" accept="image/*"
                         onChange={(e) => update('pwd_id_front', e.target.files[0] || null)}
                         className="w-full text-sm text-slate-600 rounded-lg border border-slate-200 px-3 py-2.5 cursor-pointer file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-[var(--color-primary)] hover:file:opacity-80 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                       />
                     </Field>
-                    <Field label="PWD ID — Back" htmlFor="pwd_id_back" error={errors.pwd_id_back}>
+                    <Field label="PWD ID - Back" htmlFor="pwd_id_back" error={errors.pwd_id_back}>
                       <input
                         id="pwd_id_back" type="file" accept="image/*"
                         onChange={(e) => update('pwd_id_back', e.target.files[0] || null)}
@@ -692,7 +692,7 @@ export default function Register() {
             </div>
           )}
 
-          {/* ── Navigation buttons ── */}
+          {/* -- Navigation buttons -- */}
           {errors.submit && (
             <p className="mt-6 text-xs text-[var(--color-accent)] text-center">{errors.submit}</p>
           )}
@@ -703,7 +703,7 @@ export default function Register() {
                 onClick={handleBack}
                 className="px-6 py-3 rounded-xl text-base font-semibold text-[var(--color-primary)] border-2 border-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white min-h-[48px]"
               >
-                ← Back
+                &larr; Back
               </button>
             )}
             <button
@@ -714,7 +714,7 @@ export default function Register() {
             >
               {step < 3
                 ? 'Continue →'
-                : loading ? 'Creating account…' : 'Create Account'}
+                : loading ? 'Creating account...' : 'Create Account'}
             </button>
           </div>
 

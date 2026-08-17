@@ -5,7 +5,7 @@ import api from '../../services/api'
 import { generateStaffAppointmentPDF } from '../../services/pdfService'
 import AppointmentDrawer from '../../components/shared/AppointmentDrawer'
 
-// ── Constants ──────────────────────────────────────────────────────────────────
+// -- Constants ------------------------------------------------------------------
 
 const PAGE_SIZE = 5
 
@@ -40,7 +40,7 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'cancelled',            label: 'Cancelled' },
 ]
 
-// ── Utilities ──────────────────────────────────────────────────────────────────
+// -- Utilities ------------------------------------------------------------------
 
 function formatDateShort(dateStr) {
   const [y, mo, d] = dateStr.split('-')
@@ -51,7 +51,7 @@ function formatTime(t) {
   return t.slice(0, 5)
 }
 
-// ── StatusBadge ────────────────────────────────────────────────────────────────
+// -- StatusBadge ----------------------------------------------------------------
 
 function StatusBadge({ status }) {
   const cls = STATUS_COLORS[status] ?? 'bg-slate-100 text-slate-600'
@@ -63,7 +63,7 @@ function StatusBadge({ status }) {
   )
 }
 
-// ── ClinicianDashboard ─────────────────────────────────────────────────────────
+// -- ClinicianDashboard ---------------------------------------------------------
 
 export default function ClinicianDashboard() {
   const { user, authLoading } = useAuth()
@@ -80,7 +80,7 @@ export default function ClinicianDashboard() {
 
   const [drawerAppt, setDrawerAppt] = useState(null)
 
-  // Auth guard — wait for silent refresh before deciding
+  // Auth guard - wait for silent refresh before deciding
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/staff/login?redirect=/clinician-dashboard')
@@ -110,11 +110,11 @@ export default function ClinicianDashboard() {
     setPage(1)
   }, [statusFilter, dateFilter])
 
-  // ── All hooks above this line ──────────────────────────────────────────────
+  // -- All hooks above this line ----------------------------------------------
 
   if (authLoading || !user) return null
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
+  // -- Handlers ---------------------------------------------------------------
 
   function loadAppointments() {
     setFetchLoading(true)
@@ -130,7 +130,7 @@ export default function ClinicianDashboard() {
     setDrawerAppt(null)
   }
 
-  // ── Derived state ──────────────────────────────────────────────────────────
+  // -- Derived state ----------------------------------------------------------
 
   const filtered = appointments
     .filter(a => statusFilter === 'all' || a.status === statusFilter)
@@ -139,7 +139,7 @@ export default function ClinicianDashboard() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
-  // ── Shared styles ──────────────────────────────────────────────────────────
+  // -- Shared styles ----------------------------------------------------------
 
   const actionBtnBase = 'min-h-[44px] px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap'
 
@@ -156,7 +156,7 @@ export default function ClinicianDashboard() {
       <div className="min-h-screen bg-slate-50">
         <div className="max-w-5xl mx-auto px-6 py-10">
 
-          {/* ── Page header ── */}
+          {/* -- Page header -- */}
           <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-8">
             <div>
               <h1 className="text-3xl font-bold text-[var(--color-dark)]">Appointment Inbox</h1>
@@ -180,7 +180,7 @@ export default function ClinicianDashboard() {
             </div>
           </div>
 
-          {/* ── Filter bar ── */}
+          {/* -- Filter bar -- */}
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
             <select
               value={statusFilter}
@@ -211,9 +211,9 @@ export default function ClinicianDashboard() {
             </div>
           </div>
 
-          {/* ── Appointment list ── */}
+          {/* -- Appointment list -- */}
           {fetchLoading ? (
-            <p className="text-center text-slate-400 py-16 text-sm">Loading…</p>
+            <p className="text-center text-slate-400 py-16 text-sm">Loading...</p>
           ) : fetchError ? (
             <p className="text-center text-[var(--color-accent)] py-16 text-sm font-medium">{fetchError}</p>
           ) : filtered.length === 0 ? (
@@ -325,7 +325,7 @@ export default function ClinicianDashboard() {
                 ))}
               </div>
 
-              {/* ── Pagination ── */}
+              {/* -- Pagination -- */}
               <div className="flex items-center justify-between mt-6">
                 <button
                   type="button"
@@ -333,7 +333,7 @@ export default function ClinicianDashboard() {
                   onClick={() => setPage(p => p - 1)}
                   className="px-4 py-2.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
                 >
-                  ← Prev
+                  &larr; Prev
                 </button>
                 <span className="text-sm text-slate-500">
                   Page {page} of {totalPages}
@@ -345,7 +345,7 @@ export default function ClinicianDashboard() {
                   onClick={() => setPage(p => p + 1)}
                   className="px-4 py-2.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
                 >
-                  Next →
+                  Next &rarr;
                 </button>
               </div>
             </>

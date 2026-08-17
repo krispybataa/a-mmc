@@ -5,7 +5,7 @@ import api from '../../services/api'
 import { generateStaffAppointmentPDF } from '../../services/pdfService'
 import AppointmentDrawer from '../../components/shared/AppointmentDrawer'
 
-// ── Constants ──────────────────────────────────────────────────────────────────
+// -- Constants ------------------------------------------------------------------
 
 const STATUS_LABELS = {
   pending:               'Pending',
@@ -27,7 +27,7 @@ const STATUS_COLORS = {
   cancelled:             'bg-slate-100 text-slate-500',
 }
 
-// ── Utilities ──────────────────────────────────────────────────────────────────
+// -- Utilities ------------------------------------------------------------------
 
 /** Returns today's date as YYYY-MM-DD in local time. */
 function todayDateString() {
@@ -66,7 +66,7 @@ function formatTime12(t) {
   return `${h}:${m} ${ampm}`
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
+// -- Sub-components -------------------------------------------------------------
 
 function StatusBadge({ status }) {
   const cls = STATUS_COLORS[status] ?? 'bg-slate-100 text-slate-600'
@@ -78,7 +78,7 @@ function StatusBadge({ status }) {
   )
 }
 
-// Inline SVG icons — no external dependency beyond lucide-react already in bundle
+// Inline SVG icons - no external dependency beyond lucide-react already in bundle
 
 function IconCalendar() {
   return (
@@ -113,7 +113,7 @@ function IconX() {
   )
 }
 
-// ── Stat card ──────────────────────────────────────────────────────────────────
+// -- Stat card ------------------------------------------------------------------
 
 function StatCard({ icon, count, label, borderColor, isActive, onClick }) {
   return (
@@ -145,7 +145,7 @@ function StatCard({ icon, count, label, borderColor, isActive, onClick }) {
   )
 }
 
-// ── ClinicianTodayView ─────────────────────────────────────────────────────────
+// -- ClinicianTodayView ---------------------------------------------------------
 
 export default function ClinicianTodayView() {
   const { user, authLoading } = useAuth()
@@ -161,14 +161,14 @@ export default function ClinicianTodayView() {
 
   const [drawerAppt, setDrawerAppt] = useState(null)
 
-  // ── Auth guard ─────────────────────────────────────────────────────────────
+  // -- Auth guard -------------------------------------------------------------
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/staff/login?redirect=/clinician-dashboard/today')
     }
   }, [authLoading, user, navigate])
 
-  // ── Resolve clinician_id ───────────────────────────────────────────────────
+  // -- Resolve clinician_id ---------------------------------------------------
   useEffect(() => {
     if (!user) return
     if (user.role === 'clinician') {
@@ -180,7 +180,7 @@ export default function ClinicianTodayView() {
     }
   }, [user])
 
-  // ── Fetch appointments ─────────────────────────────────────────────────────
+  // -- Fetch appointments -----------------------------------------------------
   useEffect(() => {
     if (!clinicianId) return
     loadAppointments()
@@ -189,7 +189,7 @@ export default function ClinicianTodayView() {
   // All hooks above early returns
   if (authLoading || !user) return null
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
+  // -- Handlers ---------------------------------------------------------------
 
   function loadAppointments() {
     setFetchLoading(true)
@@ -209,7 +209,7 @@ export default function ClinicianTodayView() {
     setActiveFilter(prev => prev === filter ? null : filter)
   }
 
-  // ── Derived state ──────────────────────────────────────────────────────────
+  // -- Derived state ----------------------------------------------------------
 
   const today = todayDateString()
 
@@ -233,7 +233,7 @@ export default function ClinicianTodayView() {
         ? todayAppointments.filter(a => a.status === 'done')
         : todayAppointments.filter(a => a.status === 'cancelled' || a.status === 'rejected')
 
-  // ── Shared styles ──────────────────────────────────────────────────────────
+  // -- Shared styles ----------------------------------------------------------
 
   const actionBtnBase = 'min-h-[44px] px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap'
 
@@ -250,7 +250,7 @@ export default function ClinicianTodayView() {
       <div className="min-h-screen bg-slate-50">
         <div className="max-w-5xl mx-auto px-6 py-10">
 
-          {/* ── Page header ── */}
+          {/* -- Page header -- */}
           <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-8">
             <div>
               <h1 className="text-3xl font-bold text-[var(--color-dark)]">Today's Appointments</h1>
@@ -272,7 +272,7 @@ export default function ClinicianTodayView() {
             </div>
           </div>
 
-          {/* ── Stat cards ── */}
+          {/* -- Stat cards -- */}
           <div className="flex flex-col sm:flex-row gap-4 mb-3">
             <StatCard
               icon={<IconCalendar />}
@@ -300,7 +300,7 @@ export default function ClinicianTodayView() {
             />
           </div>
 
-          {/* ── Show All / active filter hint ── */}
+          {/* -- Show All / active filter hint -- */}
           <div className="mb-6 h-6 flex items-center">
             {activeFilter !== null && (
               <button
@@ -308,14 +308,14 @@ export default function ClinicianTodayView() {
                 onClick={() => setActiveFilter(null)}
                 className="text-sm text-[var(--color-primary)] hover:underline font-medium"
               >
-                ← Show All
+                &larr; Show All
               </button>
             )}
           </div>
 
-          {/* ── Appointment list ── */}
+          {/* -- Appointment list -- */}
           {fetchLoading ? (
-            <p className="text-center text-slate-400 py-16 text-sm">Loading…</p>
+            <p className="text-center text-slate-400 py-16 text-sm">Loading...</p>
           ) : fetchError ? (
             <p className="text-center text-[var(--color-accent)] py-16 text-sm font-medium">{fetchError}</p>
           ) : todayAppointments.length === 0 ? (

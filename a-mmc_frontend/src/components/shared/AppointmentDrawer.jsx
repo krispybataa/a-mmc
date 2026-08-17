@@ -4,7 +4,7 @@ import { generatePatientAppointmentPDF } from '../../services/pdfService'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 
-// ── Utilities ──────────────────────────────────────────────────────────────────
+// -- Utilities ------------------------------------------------------------------
 
 const MONTHS   = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
@@ -32,7 +32,7 @@ function formatTime(t) {
 
 function formatTimeRange(start, end) {
   if (!end) return formatTime(start)
-  return `${formatTime(start)} – ${formatTime(end)}`
+  return `${formatTime(start)} - ${formatTime(end)}`
 }
 
 function mapApiError(err) {
@@ -46,7 +46,7 @@ function mapApiError(err) {
   return apiMsg || 'Failed to submit. Please try again.'
 }
 
-// ── C/S helpers ────────────────────────────────────────────────────────────────
+// -- C/S helpers ----------------------------------------------------------------
 
 function isStatusEnabled(target, currentStatus) {
   if (target === 'pending')   return currentStatus === 'pending'
@@ -66,7 +66,7 @@ function buildSmsMessage(slot, clinician, status) {
   return ''
 }
 
-// ── Status badge config ────────────────────────────────────────────────────────
+// -- Status badge config --------------------------------------------------------
 
 const STATUS_BADGE = {
   pending:              { label: 'Pending',              cls: 'bg-yellow-100 text-yellow-700' },
@@ -78,13 +78,13 @@ const STATUS_BADGE = {
   declined:             { label: 'Declined',              cls: 'bg-slate-100  text-slate-500'  },
 }
 
-// ── Shared sub-components ──────────────────────────────────────────────────────
+// -- Shared sub-components ------------------------------------------------------
 
 function DetailRow({ label, value }) {
   return (
     <div>
       <p className="text-xs text-slate-400 mb-0.5">{label}</p>
-      <p className="text-base font-medium text-[var(--color-dark)] leading-snug">{value || '—'}</p>
+      <p className="text-base font-medium text-[var(--color-dark)] leading-snug">{value || '-'}</p>
     </div>
   )
 }
@@ -97,12 +97,12 @@ function SectionLabel({ children }) {
   )
 }
 
-// ── C/S Drawer Content ─────────────────────────────────────────────────────────
+// -- C/S Drawer Content ---------------------------------------------------------
 
 function CSDrawerContent({ appointment: appt, close, user, onSave }) {
   const { clinician, slot, patient } = appt
 
-  // Patient detail (extended — fetched from API)
+  // Patient detail (extended - fetched from API)
   const [patientDetail, setPatientDetail] = useState(null)
 
   // Editable fields
@@ -182,7 +182,7 @@ function CSDrawerContent({ appointment: appt, close, user, onSave }) {
 
   return (
     <>
-      {/* ── Header ── */}
+      {/* -- Header -- */}
       <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-slate-100 shrink-0">
         <div className="flex-1 min-w-0 pr-4">
           <p className="font-semibold text-base text-[var(--color-dark)] leading-snug truncate">
@@ -201,11 +201,11 @@ function CSDrawerContent({ appointment: appt, close, user, onSave }) {
         </button>
       </div>
 
-      {/* ── Body (scrollable, two columns) ── */}
+      {/* -- Body (scrollable, two columns) -- */}
       <div className="flex-1 overflow-y-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-slate-100">
 
-          {/* ── Left column: patient + appointment info ── */}
+          {/* -- Left column: patient + appointment info -- */}
           <div className="px-6 py-6 space-y-5">
 
             {/* Patient info */}
@@ -240,15 +240,15 @@ function CSDrawerContent({ appointment: appt, close, user, onSave }) {
                 {appt.discount_type && (
                   <DetailRow label="Discount" value={`${appt.discount_type} Discount`} />
                 )}
-                <DetailRow label="Professional Fee"    value="—" />
-                <DetailRow label="Additional Request"  value="—" />
-                <DetailRow label="Other Requests"      value="—" />
+                <DetailRow label="Professional Fee"    value="-" />
+                <DetailRow label="Additional Request"  value="-" />
+                <DetailRow label="Other Requests"      value="-" />
               </div>
             </div>
 
           </div>
 
-          {/* ── Right column: date/time + controls ── */}
+          {/* -- Right column: date/time + controls -- */}
           <div className="px-6 py-6 space-y-6">
 
             {/* Date/time block */}
@@ -309,7 +309,7 @@ function CSDrawerContent({ appointment: appt, close, user, onSave }) {
                     value={cancelReason}
                     onChange={e => setCancelReason(e.target.value)}
                     rows={2}
-                    placeholder="Required…"
+                    placeholder="Required..."
                     className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none"
                   />
                 </div>
@@ -354,7 +354,7 @@ function CSDrawerContent({ appointment: appt, close, user, onSave }) {
                 className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none text-[var(--color-dark)]"
               />
               <p className="text-xs text-slate-400 mt-1">
-                Template only — copy and send manually.
+                Template only - copy and send manually.
               </p>
             </div>
 
@@ -362,7 +362,7 @@ function CSDrawerContent({ appointment: appt, close, user, onSave }) {
         </div>
       </div>
 
-      {/* ── Footer ── */}
+      {/* -- Footer -- */}
       <div className="shrink-0 px-6 py-4 border-t border-slate-100 flex gap-3">
         {saveErr && (
           <p className="flex-1 self-center text-sm text-[var(--color-accent)] font-medium">
@@ -384,7 +384,7 @@ function CSDrawerContent({ appointment: appt, close, user, onSave }) {
             disabled={saving}
             className="px-5 py-2.5 rounded-lg bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 transition-opacity min-h-[44px] disabled:opacity-50"
           >
-            {saving ? 'Saving…' : 'Save Changes'}
+            {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>
@@ -392,14 +392,14 @@ function CSDrawerContent({ appointment: appt, close, user, onSave }) {
   )
 }
 
-// ── AppointmentDrawer ──────────────────────────────────────────────────────────
+// -- AppointmentDrawer ----------------------------------------------------------
 //
 // Props:
-//   appointment   — full appointment object | null (null = closed)
-//   onClose       — () => void
-//   onCancel      — (appointmentId) => void   [patient only]
-//   onReschedule  — (appointmentId) => void   [patient only]
-//   onSave        — () => void                [C/S only]
+//   appointment   - full appointment object | null (null = closed)
+//   onClose       - () => void
+//   onCancel      - (appointmentId) => void   [patient only]
+//   onReschedule  - (appointmentId) => void   [patient only]
+//   onSave        - () => void                [C/S only]
 
 export default function AppointmentDrawer({ appointment, onClose, onCancel, onReschedule, onSave }) {
   const { user } = useAuth()
@@ -425,7 +425,7 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
     return () => cancelAnimationFrame(id)
   }, [appointment])
 
-  // Animated close — slide out first, then notify parent
+  // Animated close - slide out first, then notify parent
   function close() {
     if (closingRef.current) return
     closingRef.current = true
@@ -440,7 +440,7 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
 
   const isCS = user?.role === 'clinician' || user?.role === 'secretary'
 
-  // ── Patient-only derived values ───────────────────────────────────────────
+  // -- Patient-only derived values -------------------------------------------
   const docFull = `${clinician.last_name}, ${clinician.first_name}`
   const capitalize = s => s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ')
   const badge      = STATUS_BADGE[appt.status] ?? { label: capitalize(appt.status), cls: 'bg-slate-100 text-slate-500' }
@@ -463,7 +463,7 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
       />
 
       {isCS && isDesktop ? (
-        /* ── C/S desktop: centered modal ── */
+        /* -- C/S desktop: centered modal -- */
         <div
           role="dialog"
           aria-modal="true"
@@ -488,7 +488,7 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
           </div>
         </div>
       ) : (
-        /* ── Drawer panel: C/S mobile OR patient (all sizes) ── */
+        /* -- Drawer panel: C/S mobile OR patient (all sizes) -- */
         <div
           role="dialog"
           aria-modal="true"
@@ -515,7 +515,7 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
             />
           ) : (
           <>
-            {/* ── Patient: Header ── */}
+            {/* -- Patient: Header -- */}
             <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-slate-100 shrink-0">
               <div className="flex-1 min-w-0 pr-4">
                 <p className="font-semibold text-base text-[var(--color-dark)] leading-snug truncate">
@@ -534,7 +534,7 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
               </button>
             </div>
 
-            {/* ── Patient: Body (scrollable) ── */}
+            {/* -- Patient: Body (scrollable) -- */}
             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
 
               {/* Clinician section */}
@@ -561,7 +561,7 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
                   <DetailRow label="Time"           value={formatTimeRange(slot.start_time, slot.end_time)} />
                   <DetailRow label="Chief Complaint" value={appt.chief_complaint} />
                   <DetailRow label="Booking Type"   value={appt.booking_type} />
-                  <DetailRow label="Payment"        value={appt.payment_type || '—'} />
+                  <DetailRow label="Payment"        value={appt.payment_type || '-'} />
                   {appt.discount_type && (
                     <DetailRow label="Discount" value={`${appt.discount_type} Discount`} />
                   )}
@@ -574,7 +574,7 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
                     </span>
                   </div>
 
-                  {/* Reschedule reason — only when present */}
+                  {/* Reschedule reason - only when present */}
                   {appt.reschedule_reason && (
                     <div className="rounded-lg bg-orange-50 border border-orange-100 px-4 py-3">
                       <p className="text-xs text-slate-400 mb-1">Reschedule Reason</p>
@@ -586,7 +586,7 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
 
             </div>
 
-            {/* ── Patient: Footer (sticky) ── */}
+            {/* -- Patient: Footer (sticky) -- */}
             <div className="shrink-0 px-6 py-5 border-t border-slate-100 space-y-3">
               <button
                 onClick={() => generatePatientAppointmentPDF(appt)}
@@ -598,7 +598,7 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
                 <>
                   {appt.status === 'pending' && (
                     <p className="text-sm text-slate-500 text-center py-1 leading-relaxed">
-                      Your request is still pending. To change your appointment, cancel this request and book again. Cancelling will not remove the slot — you may rebook it immediately.
+                      Your request is still pending. To change your appointment, cancel this request and book again. Cancelling will not remove the slot - you may rebook it immediately.
                     </p>
                   )}
                   {canCancel && (

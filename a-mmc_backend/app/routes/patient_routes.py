@@ -32,7 +32,7 @@ def list_patients():
 def get_patient(patient_id: int):
     p = db.get_or_404(Patient, patient_id)
 
-    # Determine caller role — optional JWT so unauthenticated and patient callers work unchanged
+    # Determine caller role - optional JWT so unauthenticated and patient callers work unchanged
     verify_jwt_in_request(optional=True)
     claims = get_jwt()
     caller_role = claims.get("role", "") if claims else ""
@@ -64,7 +64,7 @@ def get_patient(patient_id: int):
         "disability_type": p.disability_type,
     }
 
-    # Expose login_email only to staff and admin — never to patients or unauthenticated callers
+    # Expose login_email only to staff and admin - never to patients or unauthenticated callers
     if caller_role in ("clinician", "secretary", "admin"):
         data["login_email"] = p.login_email
 

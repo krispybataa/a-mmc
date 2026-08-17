@@ -11,7 +11,7 @@ export function AuthProvider({ children }) {
   const [authLoading, setAuthLoading] = useState(true)
 
   // ---------------------------------------------------------------------------
-  // logout — POST to clear the httpOnly cookie, then wipe local state.
+  // logout - POST to clear the httpOnly cookie, then wipe local state.
   // Redirect destination is role-based: staff roles go to /staff/login,
   // patients go to /login.
   // window.location.href is used instead of useNavigate because AuthProvider
@@ -22,7 +22,7 @@ export function AuthProvider({ children }) {
     try {
       await api.post('/auth/logout')
     } catch {
-      // Ignore — we always clear local state regardless of server response
+      // Ignore - we always clear local state regardless of server response
     }
     setUser(null)
     setToken(null)
@@ -39,7 +39,7 @@ export function AuthProvider({ children }) {
   }, [token, logout])
 
   // ---------------------------------------------------------------------------
-  // Silent refresh on mount — attempt to restore session from the httpOnly
+  // Silent refresh on mount - attempt to restore session from the httpOnly
   // refresh cookie left by a previous login. If the cookie is present and
   // valid, the backend returns a fresh access token and user object.
   // ---------------------------------------------------------------------------
@@ -52,7 +52,7 @@ export function AuthProvider({ children }) {
         setToken(data.access_token)
         setUser(data.user)
       } catch {
-        // No valid session — treat as unauthenticated visitor. Do NOT call
+        // No valid session - treat as unauthenticated visitor. Do NOT call
         // logout() here: that would redirect the user before they've done
         // anything. ProtectedRoute handles redirects when auth is required.
         setToken(null)
@@ -66,7 +66,7 @@ export function AuthProvider({ children }) {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refresh the user's first/last name from the API after a profile update.
-  // Only applicable to patients. Non-critical — errors are silently ignored.
+  // Only applicable to patients. Non-critical - errors are silently ignored.
   const refreshUser = useCallback(async () => {
     if (!user?.id || user?.role !== 'patient') return
     try {

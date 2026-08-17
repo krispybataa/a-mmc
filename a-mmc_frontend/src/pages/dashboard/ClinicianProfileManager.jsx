@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 
-// ── Empty basic info template ──────────────────────────────────────────────────
+// -- Empty basic info template --------------------------------------------------
 
 const EMPTY_BASIC = {
   title:         '',
@@ -42,14 +42,14 @@ function profileToBasic(data) {
   }
 }
 
-// ── Shared input style ─────────────────────────────────────────────────────────
+// -- Shared input style ---------------------------------------------------------
 
 const inputCls =
   'w-full px-4 py-3 rounded-lg border border-slate-200 text-sm text-[var(--color-dark)] ' +
   'placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ' +
   'focus:border-transparent bg-white'
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
+// -- Sub-components -------------------------------------------------------------
 
 function FieldLabel({ htmlFor, children, optional }) {
   return (
@@ -66,31 +66,31 @@ function SaveSuccess() {
   )
 }
 
-// ── ClinicianProfileManager ────────────────────────────────────────────────────
+// -- ClinicianProfileManager ----------------------------------------------------
 
 export default function ClinicianProfileManager() {
   const { user, authLoading } = useAuth()
   const navigate = useNavigate()
 
-  // ── Clinician resolution + fetch ─────────────────────────────────────────────
+  // -- Clinician resolution + fetch ---------------------------------------------
   const [clinicianId, setClinicianId]   = useState(null)
   const [fetchLoading, setFetchLoading] = useState(false)
   const [fetchError, setFetchError]     = useState('')
 
-  // ── Basic Info state ─────────────────────────────────────────────────────────
+  // -- Basic Info state ---------------------------------------------------------
   const [basicInfo, setBasicInfo]         = useState(EMPTY_BASIC)
   const [basicSaving, setBasicSaving]     = useState(false)
   const [basicSaveSuccess, setBasicSuccess] = useState(false)
   const [basicSaveError, setBasicError]   = useState('')
 
-  // ── HMO state ────────────────────────────────────────────────────────────────
+  // -- HMO state ----------------------------------------------------------------
   const [hmos, setHmos]               = useState([])
   const [newHmo, setNewHmo]           = useState('')
   const [hmoAdding, setHmoAdding]     = useState(false)
   const [hmoAddError, setHmoAddError] = useState('')
   const [removingHmoId, setRemovingHmoId] = useState(null)
 
-  // ── Info state ────────────────────────────────────────────────────────────────
+  // -- Info state ----------------------------------------------------------------
   const [infos, setInfos]                   = useState([])
   const [newInfoLabel, setNewInfoLabel]     = useState('')
   const [newInfoContent, setNewInfoContent] = useState('')
@@ -98,11 +98,11 @@ export default function ClinicianProfileManager() {
   const [infoAddError, setInfoAddError]     = useState('')
   const [removingInfoId, setRemovingInfoId] = useState(null)
 
-  // ── Profile picture state ────────────────────────────────────────────────────
+  // -- Profile picture state ----------------------------------------------------
   const [previewUrl, setPreviewUrl] = useState(null)
   const fileInputRef = useRef(null)
 
-  // ── Secretary profile state (role=secretary only) ─────────────────────────────
+  // -- Secretary profile state (role=secretary only) -----------------------------
   const [secInfo,       setSecInfo]    = useState(EMPTY_SEC)
   const [secSaving,     setSecSaving]  = useState(false)
   const [secSaveSuccess, setSecSuccess] = useState(false)
@@ -165,11 +165,11 @@ export default function ClinicianProfileManager() {
       .catch(() => {})
   }, [user])
 
-  // ── All hooks above this line ────────────────────────────────────────────────
+  // -- All hooks above this line ------------------------------------------------
 
   if (authLoading || !user) return null
 
-  // ── Handlers ─────────────────────────────────────────────────────────────────
+  // -- Handlers -----------------------------------------------------------------
 
   function handleBasicChange(field, value) {
     setBasicInfo(prev => ({ ...prev, [field]: value }))
@@ -282,19 +282,19 @@ export default function ClinicianProfileManager() {
     setPreviewUrl(URL.createObjectURL(file))
   }
 
-  // ── Initials avatar ───────────────────────────────────────────────────────────
+  // -- Initials avatar -----------------------------------------------------------
 
   const initials = [basicInfo.first_name?.[0], basicInfo.last_name?.[0]]
     .filter(Boolean)
     .join('')
     .toUpperCase()
 
-  // ── Loading / error states ────────────────────────────────────────────────────
+  // -- Loading / error states ----------------------------------------------------
 
   if (fetchLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-slate-400 text-sm">Loading…</p>
+        <p className="text-slate-400 text-sm">Loading...</p>
       </div>
     )
   }
@@ -307,7 +307,7 @@ export default function ClinicianProfileManager() {
           to="/clinician-dashboard"
           className="text-sm text-[var(--color-primary)] hover:underline"
         >
-          ← Back to Inbox
+          &larr; Back to Inbox
         </Link>
       </div>
     )
@@ -317,7 +317,7 @@ export default function ClinicianProfileManager() {
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-3xl mx-auto px-6 py-10">
 
-        {/* ── Breadcrumb ── */}
+        {/* -- Breadcrumb -- */}
         <div className="mb-6 text-sm text-slate-400">
           <Link to="/clinician-dashboard" className="hover:text-[var(--color-primary)] transition-colors">
             Appointment Inbox
@@ -326,7 +326,7 @@ export default function ClinicianProfileManager() {
           <span className="text-[var(--color-dark)]">Clinician Profile</span>
         </div>
 
-        {/* ── Page header ── */}
+        {/* -- Page header -- */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[var(--color-dark)]">Clinician Profile</h1>
           {basicInfo.last_name && (
@@ -341,7 +341,7 @@ export default function ClinicianProfileManager() {
           <p className="text-sm text-[var(--color-accent)] mb-6">{fetchError}</p>
         )}
 
-        {/* ══ Profile picture ══════════════════════════════════════════════════ */}
+        {/* == Profile picture ================================================== */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-8 py-7 mb-6">
           <h2 className="text-lg font-semibold text-[var(--color-dark)] mb-5">Profile Photo</h2>
           <div className="flex items-center gap-6">
@@ -382,7 +382,7 @@ export default function ClinicianProfileManager() {
           </div>
         </div>
 
-        {/* ══ Section 1 — Basic Info ══════════════════════════════════════════ */}
+        {/* == Section 1 - Basic Info ========================================== */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-8 py-7 mb-6">
           <h2 className="text-lg font-semibold text-[var(--color-dark)] mb-6">Basic Information</h2>
 
@@ -427,7 +427,7 @@ export default function ClinicianProfileManager() {
               />
             </div>
 
-            {/* Last Name — full width */}
+            {/* Last Name - full width */}
             <div className="sm:col-span-2">
               <FieldLabel htmlFor="last_name">Last Name</FieldLabel>
               <input
@@ -528,7 +528,7 @@ export default function ClinicianProfileManager() {
               disabled={basicSaving}
               className="px-6 py-3 rounded-lg bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
             >
-              {basicSaving ? 'Saving…' : 'Save Changes'}
+              {basicSaving ? 'Saving...' : 'Save Changes'}
             </button>
             {basicSaveSuccess && <SaveSuccess />}
             {basicSaveError && (
@@ -537,7 +537,7 @@ export default function ClinicianProfileManager() {
           </div>
         </div>
 
-        {/* ══ Section 2 — HMO Accreditations ══════════════════════════════════ */}
+        {/* == Section 2 - HMO Accreditations ================================== */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-8 py-7 mb-6">
           <h2 className="text-lg font-semibold text-[var(--color-dark)] mb-6">HMO Accreditations</h2>
 
@@ -557,7 +557,7 @@ export default function ClinicianProfileManager() {
                     disabled={removingHmoId === hmo.hmo_id}
                     className="text-xs font-medium text-[var(--color-accent)] hover:opacity-75 transition-opacity disabled:opacity-40 min-h-[44px] min-w-[44px] flex items-center justify-center"
                   >
-                    {removingHmoId === hmo.hmo_id ? '…' : 'Remove'}
+                    {removingHmoId === hmo.hmo_id ? '...' : 'Remove'}
                   </button>
                 </li>
               ))}
@@ -580,7 +580,7 @@ export default function ClinicianProfileManager() {
               disabled={hmoAdding || !newHmo.trim()}
               className="px-5 py-3 rounded-lg bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] whitespace-nowrap"
             >
-              {hmoAdding ? '…' : 'Add'}
+              {hmoAdding ? '...' : 'Add'}
             </button>
           </div>
           {hmoAddError && (
@@ -588,11 +588,11 @@ export default function ClinicianProfileManager() {
           )}
         </div>
 
-        {/* ══ Section 3 — Additional Info Entries ══════════════════════════════ */}
+        {/* == Section 3 - Additional Info Entries ============================== */}
         <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm px-8 py-7${user.role === 'secretary' ? ' mb-6' : ''}`}>
           <h2 className="text-lg font-semibold text-[var(--color-dark)] mb-2">Additional Info</h2>
           <p className="text-xs text-slate-400 mb-6">
-            Background, awards, clinical interests — anything visible on the public profile.
+            Background, awards, clinical interests - anything visible on the public profile.
           </p>
 
           {infos.length === 0 ? (
@@ -621,7 +621,7 @@ export default function ClinicianProfileManager() {
                       disabled={removingInfoId === entry.info_id}
                       className="text-xs font-medium text-[var(--color-accent)] hover:opacity-75 transition-opacity disabled:opacity-40 shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
                     >
-                      {removingInfoId === entry.info_id ? '…' : 'Remove'}
+                      {removingInfoId === entry.info_id ? '...' : 'Remove'}
                     </button>
                   </div>
                 </div>
@@ -652,7 +652,7 @@ export default function ClinicianProfileManager() {
               disabled={infoAdding || !newInfoContent.trim()}
               className="px-5 py-2.5 rounded-lg bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
             >
-              {infoAdding ? 'Adding…' : 'Add Entry'}
+              {infoAdding ? 'Adding...' : 'Add Entry'}
             </button>
             {infoAddError && (
               <p className="text-sm text-[var(--color-accent)]">{infoAddError}</p>
@@ -660,7 +660,7 @@ export default function ClinicianProfileManager() {
           </div>
         </div>
 
-        {/* ══ Section 4 — Secretary Information (role=secretary only) ═════════ */}
+        {/* == Section 4 - Secretary Information (role=secretary only) ========= */}
         {user.role === 'secretary' && (
           <div className="bg-white rounded-2xl border border-[var(--color-border)] shadow-sm p-6 mt-6">
             <h2 className="section-heading mb-4">Secretary Information</h2>
@@ -722,7 +722,7 @@ export default function ClinicianProfileManager() {
                 disabled={secSaving}
                 className="px-6 py-3 rounded-lg bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px]"
               >
-                {secSaving ? 'Saving…' : 'Save Secretary Info'}
+                {secSaving ? 'Saving...' : 'Save Secretary Info'}
               </button>
               {secSaveSuccess && (
                 <p className="text-sm font-medium text-green-700">Secretary information updated.</p>

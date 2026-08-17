@@ -37,7 +37,7 @@ class ClinicianSchedule(db.Model):
 
     schedule_id = db.Column(db.Integer, primary_key=True)
     clinician_id = db.Column(db.Integer, db.ForeignKey("clinician.clinician_id"), nullable=False)
-    day_of_week = db.Column(db.String(10), nullable=False)  # "Monday"–"Saturday"
+    day_of_week = db.Column(db.String(10), nullable=False)  # "Monday"-"Saturday"
     am_start = db.Column(db.Time, nullable=True)
     am_end = db.Column(db.Time, nullable=True)
     pm_start = db.Column(db.Time, nullable=True)
@@ -95,4 +95,4 @@ class ClinicianTimeslot(db.Model):
     appointments = db.relationship("Appointment", back_populates="slot")
 
     def __repr__(self) -> str:
-        return f"<ClinicianTimeslot {self.slot_id}: {self.slot_date} {self.start_time}–{self.end_time} [{self.status}]>"
+        return f"<ClinicianTimeslot {self.slot_id}: {self.slot_date} {self.start_time}-{self.end_time} [{self.status}]>"

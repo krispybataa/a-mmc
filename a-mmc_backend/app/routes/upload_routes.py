@@ -12,8 +12,8 @@ def presign():
     Body: { "filename": "photo.jpg", "context": "profiles" }
 
     Returns: { "upload_url": "...", "public_url": "..." }
-        upload_url  — presigned S3 PUT URL (expires in 5 min); browser PUTs file body here.
-        public_url  — permanent URL to store in the DB / display in UI.
+        upload_url  - presigned S3 PUT URL (expires in 5 min); browser PUTs file body here.
+        public_url  - permanent URL to store in the DB / display in UI.
 
     Auth: any valid JWT (clinician, secretary, patient, admin).
     """
@@ -26,7 +26,7 @@ def presign():
         upload_url, public_url = generate_presigned_upload(filename, context)
         return jsonify({"upload_url": upload_url, "public_url": public_url}), 200
     except RuntimeError as e:
-        # Missing env vars — storage not configured on this environment
+        # Missing env vars - storage not configured on this environment
         return jsonify({"error": str(e)}), 503
     except Exception as e:
         return jsonify({"error": f"Storage error: {str(e)}"}), 500

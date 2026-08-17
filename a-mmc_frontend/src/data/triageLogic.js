@@ -6,7 +6,7 @@
 // to the other. Do not allow these files to diverge.
 
 /*
- * CLINICAL ROUTING — DOMAIN EXPERT REVIEW REQUIRED
+ * CLINICAL ROUTING - DOMAIN EXPERT REVIEW REQUIRED
  *
  * The weight values in this file represent clinical referral
  * logic. Initial values are derived from Friedman's Problem
@@ -20,7 +20,7 @@
  */
 
 export const TRIAGE_STEPS = [
-  // ── Step 1: HMO selection ───────────────────────────────────────────────────
+  // -- Step 1: HMO selection 
   {
     id: 'hmo',
     question: 'Do you have an HMO card?',
@@ -58,7 +58,7 @@ export const TRIAGE_STEPS = [
     ],
   },
 
-  // ── Step 4: Symptom selection ───────────────────────────────────────────────
+  // -- Step 4: Symptom selection 
   {
     id: 'symptoms',
     question: 'What best describes your concern?',
@@ -132,26 +132,26 @@ export const TRIAGE_STEPS = [
   },
 ]
 
-// ── Body diagram alias block ───────────────────────────────────────────────────
-// Body diagram zone keys → specialty strings, passed directly by
+// -- Body diagram alias block 
+// Body diagram zone keys -> specialty strings, passed directly by
 // BodyDiagram / KioskBodyDiagram as specialty strings (not scored).
-//   cardiology    → 'Cardiology'
-//   gastro        → 'Gastroenterology'
-//   neurology     → 'Neurology'
-//   orthopedic    → 'Orthopedic Surgery'
-//   obgyn         → 'Obstetrics & Gynecology'
-//   pulmonary     → 'Pulmonary Medicine'
-//   dental        → 'Dental Medicine'
-//   dermatology   → 'Dermatology'
-//   allergy       → 'Allergology & Immunology'
-//   pediatrics    → 'Pediatrics'
-//   endocrinology → 'Endocrinology'
-//   ophthalmology → 'Ophthalmology'
+//   cardiology    -> 'Cardiology'
+//   gastro        -> 'Gastroenterology'
+//   neurology     -> 'Neurology'
+//   orthopedic    -> 'Orthopedic Surgery'
+//   obgyn         -> 'Obstetrics & Gynecology'
+//   pulmonary     -> 'Pulmonary Medicine'
+//   dental        -> 'Dental Medicine'
+//   dermatology   -> 'Dermatology'
+//   allergy       -> 'Allergology & Immunology'
+//   pediatrics    -> 'Pediatrics'
+//   endocrinology -> 'Endocrinology'
+//   ophthalmology -> 'Ophthalmology'
 
-// ── Weighted scoring tables ───────────────────────────────────────────────────
+// -- Weighted scoring tables 
 //
 // Specialty strings must exactly match the specialty values in the live DB.
-// Scores are additive integers. Base: 0–60. Age/sex modifiers: 0–40.
+// Scores are additive integers. Base: 0-60. Age/sex modifiers: 0-40.
 // The specialty with the highest total score becomes the primary referral.
 
 // DOMAIN EXPERT: review these values
@@ -172,12 +172,12 @@ export const SYMPTOM_BASE_WEIGHTS = {
 
 // DOMAIN EXPERT: review these values
 // Age-band modifiers (POMD-informed):
-//   heart + u18/18_35 — angina uncommon in younger patients (POMD Ch.3);
+//   heart + u18/18_35 - angina uncommon in younger patients (POMD Ch.3);
 //     Gastroenterology competes more strongly
-//   heart + 36_55/56p — strong Cardiology
-//   joints + 18_35    — SLE/CTD dominant → strong Rheumatology (POMD Ch.8)
-//   joints + 56p      — OA dominant → Orthopedic Surgery competes (POMD Ch.8)
-//   brain + 18_35     — migraine peak → strong Neurology (POMD Ch.10)
+//   heart + 36_55/56p - strong Cardiology
+//   joints + 18_35    - SLE/CTD dominant -> strong Rheumatology (POMD Ch.8)
+//   joints + 56p      - OA dominant -> Orthopedic Surgery competes (POMD Ch.8)
+//   brain + 18_35     - migraine peak -> strong Neurology (POMD Ch.10)
 export const AGE_BAND_WEIGHTS = {
   u18: {
     heart:  { 'Cardiology': 0,  'Gastroenterology': 30 },
@@ -203,13 +203,13 @@ export const AGE_BAND_WEIGHTS = {
 
 // DOMAIN EXPERT: review these values
 // Sex modifiers (POMD-informed):
-//   heart + female   — premenopausal angina uncommon; GI competes more (POMD Ch.3)
-//   heart + male     — Cardiology favoured
-//   joints + female  — SLE/CTD more prevalent in women → strong Rheumatology (POMD Ch.8)
-//   brain + female   — migraine higher prevalence in young adult women (POMD Ch.10)
-//   brain + male     — cluster headache almost exclusively male (POMD Ch.10)
-//   hormones + female — thyroid nodules more frequent in women (POMD Ch.9)
-//   womens + male    — handled in computeTriageScores (early return [])
+//   heart + female   - premenopausal angina uncommon; GI competes more (POMD Ch.3)
+//   heart + male     - Cardiology favoured
+//   joints + female  - SLE/CTD more prevalent in women -> strong Rheumatology (POMD Ch.8)
+//   brain + female   - migraine higher prevalence in young adult women (POMD Ch.10)
+//   brain + male     - cluster headache almost exclusively male (POMD Ch.10)
+//   hormones + female - thyroid nodules more frequent in women (POMD Ch.9)
+//   womens + male    - handled in computeTriageScores (early return [])
 export const SEX_WEIGHTS = {
   male: {
     heart: { 'Cardiology': 10 },
@@ -226,7 +226,7 @@ export const SEX_WEIGHTS = {
 
 /**
  * Computes ranked specialty referrals from three additive factors.
- * Pure function — no React, no imports, no side effects.
+ * Pure function - no React, no imports, no side effects.
  *
  * @param {{ ageBandId: string, sexId: string, symptomId: string }}
  * @returns {{ specialty: string, score: number }[]} sorted descending by score
@@ -249,7 +249,7 @@ export function computeTriageScores({ ageBandId, sexId, symptomId }) {
   return scored.sort((a, b) => b.score - a.score)
 }
 
-// Backward compat alias — kiosk imports this by name.
+// Backward compat alias - kiosk imports this by name.
 // Shape changed from { symptomId: string } to { symptomId: object };
 // kiosk components do not read values from this map at runtime.
 export const SYMPTOM_SPECIALTY_MAP = SYMPTOM_BASE_WEIGHTS

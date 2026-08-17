@@ -148,7 +148,7 @@ export default function ChangePassword() {
               disabled={saving}
               className="w-full py-3 rounded-lg bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 min-h-[44px]"
             >
-              {saving ? 'Saving…' : 'Update Password'}
+              {saving ? 'Saving...' : 'Update Password'}
             </button>
           </div>
         </form>

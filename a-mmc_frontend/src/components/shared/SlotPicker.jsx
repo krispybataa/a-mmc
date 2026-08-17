@@ -28,7 +28,7 @@ function generateSlots(dayEntry) {
   if (dayEntry.am_start && dayEntry.am_end) {
     slots.push({
       id: dayEntry.am_start.slice(0, 5),
-      label: `${formatTime(dayEntry.am_start)} – ${formatTime(dayEntry.am_end)}`,
+      label: `${formatTime(dayEntry.am_start)} - ${formatTime(dayEntry.am_end)}`,
       period: parseInt(dayEntry.am_start.slice(0, 2), 10) < 12 ? 'AM' : 'PM',
       start_time: dayEntry.am_start,
       end_time: dayEntry.am_end,
@@ -37,7 +37,7 @@ function generateSlots(dayEntry) {
   if (dayEntry.pm_start && dayEntry.pm_end) {
     slots.push({
       id: dayEntry.pm_start.slice(0, 5),
-      label: `${formatTime(dayEntry.pm_start)} – ${formatTime(dayEntry.pm_end)}`,
+      label: `${formatTime(dayEntry.pm_start)} - ${formatTime(dayEntry.pm_end)}`,
       period: parseInt(dayEntry.pm_start.slice(0, 2), 10) < 12 ? 'AM' : 'PM',
       start_time: dayEntry.pm_start,
       end_time: dayEntry.pm_end,
@@ -46,7 +46,7 @@ function generateSlots(dayEntry) {
   return slots
 }
 
-// ── SlotButton ─────────────────────────────────────────────────────────────────
+// -- SlotButton -----------------------------------------------------------------
 
 function SlotButton({ slot, isSelected, onSelect }) {
   return (
@@ -70,20 +70,20 @@ function SlotButton({ slot, isSelected, onSelect }) {
   )
 }
 
-// ── SlotPicker ─────────────────────────────────────────────────────────────────
+// -- SlotPicker -----------------------------------------------------------------
 //
-// Fully controlled — all state lives in the parent.
+// Fully controlled - all state lives in the parent.
 //
 // Props:
-//   schedule       — clinician schedule array ({ day_of_week, am_start, am_end, pm_start, pm_end })
-//   clinicianName  — string used in the unavailability warning message
-//   selectedDate   — string YYYY-MM-DD (controlled)
-//   onDateChange   — (dateStr) => void  ← parent should also reset selectedSlot to null
-//   selectedSlot   — slot object | null (controlled)
-//   onSlotSelect   — (slot) => void
-//   minDate        — string YYYY-MM-DD (optional, defaults to today)
-//   maxDate        — string YYYY-MM-DD (optional, defaults to today + 60 days)
-//   dateInputId    — string (optional, for label htmlFor association)
+//   schedule       - clinician schedule array ({ day_of_week, am_start, am_end, pm_start, pm_end })
+//   clinicianName  - string used in the unavailability warning message
+//   selectedDate   - string YYYY-MM-DD (controlled)
+//   onDateChange   - (dateStr) => void  <- parent should also reset selectedSlot to null
+//   selectedSlot   - slot object | null (controlled)
+//   onSlotSelect   - (slot) => void
+//   minDate        - string YYYY-MM-DD (optional, defaults to today)
+//   maxDate        - string YYYY-MM-DD (optional, defaults to today + 60 days)
+//   dateInputId    - string (optional, for label htmlFor association)
 
 export default function SlotPicker({
   schedule,
@@ -108,7 +108,7 @@ export default function SlotPicker({
     ? new Set(Object.keys(availableSlots).map(date => getDayOfWeek(date).slice(0, 3)))
     : new Set(schedule.filter(s => s.am_start || s.pm_start).map(s => s.day_of_week.slice(0, 3)))
 
-  // Derive everything from selectedDate + schedule/availableSlots — no internal state needed
+  // Derive everything from selectedDate + schedule/availableSlots - no internal state needed
   const dow = selectedDate ? getDayOfWeek(selectedDate) : null
 
   let slots = []
@@ -133,7 +133,7 @@ export default function SlotPicker({
           slot_id: s.slot_id,
           slot_date: s.slot_date,
           id: s.start_time.slice(0, 5),
-          label: `${formatTime(s.start_time)} – ${formatTime(s.end_time)}`,
+          label: `${formatTime(s.start_time)} - ${formatTime(s.end_time)}`,
           period: parseInt(s.start_time.slice(0, 2), 10) < 12 ? 'AM' : 'PM',
           start_time: s.start_time,
           end_time: s.end_time,

@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import SlotPicker from '../../components/shared/SlotPicker'
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// -- Constants -----------------------------------------------------------------
 
 const STEPS        = ['Consult Type', 'Date & Time', 'Details', 'Review']
 const BOOKING_TYPES = ['New Consultation', 'Follow-up', 'Referral']
@@ -17,7 +17,7 @@ const MONTHS = [
 ]
 const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
+// -- Utilities -----------------------------------------------------------------
 
 function formatFullDate(dateStr) {
   const [y, mo, d] = dateStr.split('-').map(Number)
@@ -42,13 +42,13 @@ function toDateStr(date) {
   ].join('-')
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+// -- Sub-components ------------------------------------------------------------
 
 function ReviewRow({ label, value }) {
   return (
     <div className="flex gap-4">
       <span className="text-sm text-slate-400 w-36 shrink-0">{label}</span>
-      <span className="text-sm text-[var(--color-dark)] font-medium">{value || '—'}</span>
+      <span className="text-sm text-[var(--color-dark)] font-medium">{value || '-'}</span>
     </div>
   )
 }
@@ -69,7 +69,7 @@ function ConsultTypePill({ type }) {
   )
 }
 
-// ── Step indicator (shared visual style with Register.jsx) ────────────────────
+// -- Step indicator (shared visual style with Register.jsx) --------------------
 
 function StepIndicator({ step }) {
   return (
@@ -110,14 +110,14 @@ function StepIndicator({ step }) {
   )
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// -- Main component ------------------------------------------------------------
 
 export default function BookAppointment() {
   const { id }                  = useParams()
   const navigate                = useNavigate()
   const { user, authLoading }   = useAuth()
 
-  // ── All hooks first (Rules of Hooks) ────────────────────────────────────────
+  // -- All hooks first (Rules of Hooks) ----------------------------------------
   const [step, setStep]               = useState(1)
   // Step 1
   const [consultationType, setConsultationType] = useState(null)
@@ -144,7 +144,7 @@ export default function BookAppointment() {
   const [slotsLoading, setSlotsLoading]         = useState(false)
   const [fetchError, setFetchError]             = useState('')
 
-  // Auth guard — wait for auth to resolve before redirecting
+  // Auth guard - wait for auth to resolve before redirecting
   useEffect(() => {
     if (!authLoading && !user) navigate(`/login?redirect=/book/${id}`, { replace: true })
   }, [authLoading, user, id, navigate])
@@ -154,7 +154,7 @@ export default function BookAppointment() {
     if (!user?.id) return
     api.get(`/patients/${user.id}`)
       .then(res => setPatient(res.data))
-      .catch(() => {}) // non-critical — discount guard degrades to disabled
+      .catch(() => {}) // non-critical - discount guard degrades to disabled
   }, [user?.id])
 
   // Fetch clinician profile on mount
@@ -204,13 +204,13 @@ export default function BookAppointment() {
     return () => { cancelled = true }
   }, [id, consultationType])
 
-  // ── Early returns (after all hooks) ─────────────────────────────────────────
+  // -- Early returns (after all hooks) -----------------------------------------
   if (authLoading || !user) return null
 
   if (clinicianLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-slate-400 text-sm">Loading…</p>
+        <p className="text-slate-400 text-sm">Loading...</p>
       </div>
     )
   }
@@ -230,7 +230,7 @@ export default function BookAppointment() {
     )
   }
 
-  // ── Error mapper ─────────────────────────────────────────────────────────────
+  // -- Error mapper -------------------------------------------------------------
   function mapApiError(err) {
     const status = err?.response?.status
     const apiMsg = err?.response?.data?.error
@@ -242,7 +242,7 @@ export default function BookAppointment() {
     return apiMsg || 'Failed to submit. Please try again.'
   }
 
-  // ── Derived values (clinician is guaranteed non-null here) ───────────────────
+  // -- Derived values (clinician is guaranteed non-null here) -------------------
   const hasF2F   = clinician.schedules.some(s => !s.consultation_type || s.consultation_type === 'f2f')
   const hasTele  = clinician.schedules.some(s => s.consultation_type === 'teleconsult')
   const hasSCPWD = !!(patient?.sc_pwd_id_number)
@@ -258,10 +258,10 @@ export default function BookAppointment() {
     ? `HMO:${selectedHmo}`
     : paymentMethod || ''
   const paymentDisplayValue = paymentMethod === 'HMO' && selectedHmo
-    ? `HMO — ${selectedHmo}`
-    : paymentMethod || '—'
+    ? `HMO - ${selectedHmo}`
+    : paymentMethod || '-'
 
-  // ── Handlers ─────────────────────────────────────────────────────────────────
+  // -- Handlers -----------------------------------------------------------------
 
   function handleSelectConsultationType(type) {
     if (type === consultationType) return
@@ -326,7 +326,7 @@ export default function BookAppointment() {
     (step === 1 && !consultationType) ||
     (step === 2 && (!selectedDate || !selectedSlot || slotsLoading))
 
-  // ── Render ────────────────────────────────────────────────────────────────────
+  // -- Render --------------------------------------------------------------------
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-start justify-center px-4 py-14">
@@ -345,7 +345,7 @@ export default function BookAppointment() {
 
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-8 py-8">
 
-          {/* ── Clinician context header (visible on all steps) ── */}
+          {/* -- Clinician context header (visible on all steps) -- */}
           <div className="flex items-center gap-4 mb-6">
             <div className="w-12 h-12 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-white font-bold text-base shrink-0 select-none">
               {initials}
@@ -369,16 +369,16 @@ export default function BookAppointment() {
 
           <div className="border-t border-slate-100 mb-7" />
 
-          {/* ── Step indicator ── */}
+          {/* -- Step indicator -- */}
           <div className="mb-8">
             <StepIndicator step={step} />
           </div>
 
           <div className="border-t border-slate-100 mb-7" />
 
-          {/* ════════════════════════════════════════════════
-              STEP 1 — Select Consultation Type
-          ════════════════════════════════════════════════ */}
+          {/* ================================================
+              STEP 1 - Select Consultation Type
+          ================================================ */}
           {step === 1 && (
             <div className="space-y-4">
               <p className="text-sm font-semibold text-[var(--color-dark)]">
@@ -478,13 +478,13 @@ export default function BookAppointment() {
             </div>
           )}
 
-          {/* ════════════════════════════════════════════════
-              STEP 2 — Select Date & Time
-          ════════════════════════════════════════════════ */}
+          {/* ================================================
+              STEP 2 - Select Date & Time
+          ================================================ */}
           {step === 2 && (
             <div>
               {slotsLoading ? (
-                <p className="text-slate-400 text-sm text-center py-8">Loading available slots…</p>
+                <p className="text-slate-400 text-sm text-center py-8">Loading available slots...</p>
               ) : (
                 <SlotPicker
                   schedule={clinician.schedules}
@@ -502,9 +502,9 @@ export default function BookAppointment() {
             </div>
           )}
 
-          {/* ════════════════════════════════════════════════
-              STEP 3 — Appointment Details
-          ════════════════════════════════════════════════ */}
+          {/* ================================================
+              STEP 3 - Appointment Details
+          ================================================ */}
           {step === 3 && (
             <div className="space-y-5">
 
@@ -587,7 +587,7 @@ export default function BookAppointment() {
                       : 'border-slate-200 focus:ring-[var(--color-primary)]',
                   ].join(' ')}
                 >
-                  <option value="">Select…</option>
+                  <option value="">Select...</option>
                   {BOOKING_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
                 {step3Errors.bookingType && (
@@ -654,7 +654,7 @@ export default function BookAppointment() {
                         : 'border-slate-200 focus:ring-[var(--color-primary)]',
                     ].join(' ')}
                   >
-                    <option value="">Select your HMO…</option>
+                    <option value="">Select your HMO...</option>
                     {clinician.hmos.map(h => (
                       <option key={h.hmo_id} value={h.hmo_name}>{h.hmo_name}</option>
                     ))}
@@ -717,7 +717,7 @@ export default function BookAppointment() {
                     'Have your HMO card ready if applicable',
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-2.5 text-sm text-slate-600">
-                      <span className="text-[var(--color-primary-light)] font-bold mt-0.5 shrink-0">·</span>
+                      <span className="text-[var(--color-primary-light)] font-bold mt-0.5 shrink-0">.</span>
                       {item}
                     </li>
                   ))}
@@ -726,9 +726,9 @@ export default function BookAppointment() {
             </div>
           )}
 
-          {/* ════════════════════════════════════════════════
-              STEP 4 — Review & Confirm
-          ════════════════════════════════════════════════ */}
+          {/* ================================================
+              STEP 4 - Review & Confirm
+          ================================================ */}
           {step === 4 && (
             <div className="space-y-6">
 
@@ -775,7 +775,7 @@ export default function BookAppointment() {
                 </p>
                 <div className="space-y-2.5">
                   <ReviewRow label="Chief Complaint" value={chiefComplaint} />
-                  <ReviewRow label="Description"     value={description.trim() || '—'} />
+                  <ReviewRow label="Description"     value={description.trim() || '-'} />
                 </div>
               </div>
 
@@ -801,7 +801,7 @@ export default function BookAppointment() {
             </div>
           )}
 
-          {/* ── Navigation buttons ── */}
+          {/* -- Navigation buttons -- */}
           <div className="flex items-center gap-3 mt-8 pt-6 border-t border-slate-100">
             {step > 1 && (
               <button
@@ -809,7 +809,7 @@ export default function BookAppointment() {
                 onClick={handleBack}
                 className="px-5 py-3 rounded-lg text-sm font-medium text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
               >
-                ← Back
+                &larr; Back
               </button>
             )}
 
@@ -820,7 +820,7 @@ export default function BookAppointment() {
                 disabled={continueDisabled}
                 className="flex-1 py-3 px-6 rounded-lg text-sm font-semibold text-white bg-[var(--color-primary)] hover:opacity-90 transition-opacity duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Continue →
+                Continue &rarr;
               </button>
             ) : (
               <button
@@ -829,7 +829,7 @@ export default function BookAppointment() {
                 disabled={!confirmed || loading}
                 className="flex-1 py-3 px-6 rounded-lg text-sm font-semibold text-white bg-[var(--color-primary)] hover:opacity-90 transition-opacity duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {loading ? 'Submitting…' : 'Submit Appointment'}
+                {loading ? 'Submitting...' : 'Submit Appointment'}
               </button>
             )}
           </div>

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Copy, Check } from 'lucide-react'
 import api from '../../services/api'
 
-// ── Skeleton ───────────────────────────────────────────────────────────────────
+// -- Skeleton -------------------------------------------------------------------
 
 function Skeleton() {
   return (
@@ -14,7 +14,7 @@ function Skeleton() {
   )
 }
 
-// ── Template list item ─────────────────────────────────────────────────────────
+// -- Template list item ---------------------------------------------------------
 
 function TemplateItem({ item, selected, onClick }) {
   const isActive = selected?.id === item.id
@@ -45,7 +45,7 @@ function TemplateItem({ item, selected, onClick }) {
   )
 }
 
-// ── Copy button ────────────────────────────────────────────────────────────────
+// -- Copy button ----------------------------------------------------------------
 
 function CopyButton({ html }) {
   const [copied, setCopied] = useState(false)
@@ -60,7 +60,7 @@ function CopyButton({ html }) {
       clearTimeout(timerRef.current)
       timerRef.current = setTimeout(() => setCopied(false), 2000)
     } catch {
-      /* clipboard unavailable — silently ignore */
+      /* clipboard unavailable - silently ignore */
     }
   }
 
@@ -78,7 +78,7 @@ function CopyButton({ html }) {
   )
 }
 
-// ── Main page ──────────────────────────────────────────────────────────────────
+// -- Main page ------------------------------------------------------------------
 
 export default function AdminEmailPreviews() {
   const [previews, setPreviews]   = useState([])
@@ -100,7 +100,7 @@ export default function AdminEmailPreviews() {
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-slate-50">
 
-      {/* ── Left panel — template list ── */}
+      {/* -- Left panel - template list -- */}
       <aside className="
         md:w-72 md:min-h-screen md:border-r md:border-slate-200
         bg-white shrink-0
@@ -111,7 +111,7 @@ export default function AdminEmailPreviews() {
           <p className="text-xs text-slate-400 mt-0.5">8 templates</p>
         </div>
 
-        {/* Template list — desktop vertical, mobile horizontal scroll */}
+        {/* Template list - desktop vertical, mobile horizontal scroll */}
         {loading ? (
           <Skeleton />
         ) : error ? (
@@ -130,7 +130,7 @@ export default function AdminEmailPreviews() {
               ))}
             </nav>
 
-            {/* Mobile — horizontal scrollable pill strip */}
+            {/* Mobile - horizontal scrollable pill strip */}
             <div className="md:hidden flex gap-2 px-4 py-3 overflow-x-auto">
               {previews.map(item => {
                 const isActive = selected?.id === item.id
@@ -156,7 +156,7 @@ export default function AdminEmailPreviews() {
         )}
       </aside>
 
-      {/* ── Right panel — email preview ── */}
+      {/* -- Right panel - email preview -- */}
       <main className="flex-1 flex flex-col p-6 md:p-8 min-w-0">
         {loading ? (
           <div className="flex-1 flex items-center justify-center">

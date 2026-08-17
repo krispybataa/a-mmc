@@ -4,9 +4,9 @@ email_templates.py
 HTML email templates for all Alagang MMC transactional notifications.
 
 Each public function returns a dict: {"subject": str, "html": str}.
-No Flask context required — pure Python f-strings with inline CSS only.
+No Flask context required - pure Python f-strings with inline CSS only.
 
-Brand colours (inline only — no external stylesheets):
+Brand colours (inline only - no external stylesheets):
   primary : #1D409C
   accent  : #CE1117
   dark    : #303030
@@ -36,7 +36,7 @@ def _base(title: str, body_html: str) -> str:
         '<table role="presentation" width="600" cellpadding="0" cellspacing="0"'
         ' style="max-width:600px;width:100%;">'
 
-        # ── Header ──────────────────────────────────────────────────────────
+        # -- Header ----------------------------------------------------------
         '<tr>'
         '<td style="background-color:#1D409C;padding:24px 32px;'
         'border-radius:8px 8px 0 0;">'
@@ -45,7 +45,7 @@ def _base(title: str, body_html: str) -> str:
         '</td>'
         '</tr>'
 
-        # ── Body ─────────────────────────────────────────────────────────────
+        # -- Body -------------------------------------------------------------
         '<tr>'
         '<td style="background-color:#FFFFFF;padding:32px;color:#303030;'
         'font-size:16px;line-height:1.6;border-left:1px solid #e8e8e8;'
@@ -54,7 +54,7 @@ def _base(title: str, body_html: str) -> str:
         '</td>'
         '</tr>'
 
-        # ── Footer ───────────────────────────────────────────────────────────
+        # -- Footer -----------------------------------------------------------
         '<tr>'
         '<td style="background-color:#f0f0f0;padding:16px 32px;'
         'border-radius:0 0 8px 8px;border:1px solid #e8e8e8;border-top:none;">'

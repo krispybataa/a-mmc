@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import { uploadFile } from '../../services/uploadService'
 
-// ── Constants ──────────────────────────────────────────────────────────────────
+// -- Constants ------------------------------------------------------------------
 
 const REQUIRED = [
   'first_name', 'last_name', 'birthday', 'gender',
@@ -25,7 +25,7 @@ const EMPTY_FORM = {
   sc_pwd_id_number: '', pwd_id_front: '', pwd_id_back: '',
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+// -- Helpers --------------------------------------------------------------------
 
 function validate(form) {
   const errs = {}
@@ -35,7 +35,7 @@ function validate(form) {
   return errs
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
+// -- Sub-components -------------------------------------------------------------
 
 function Section({ title, children }) {
   return (
@@ -72,13 +72,13 @@ function inputCls(hasError) {
   ].join(' ')
 }
 
-// ── UpdateProfile ──────────────────────────────────────────────────────────────
+// -- UpdateProfile --------------------------------------------------------------
 
 export default function UpdateProfile() {
   const { user, authLoading, refreshUser } = useAuth()
   const navigate               = useNavigate()
 
-  // ── All hooks first (Rules of Hooks) ────────────────────────────────────────
+  // -- All hooks first (Rules of Hooks) ----------------------------------------
   const [form, setForm]             = useState(EMPTY_FORM)
   const [fetchLoading, setFetchLoading] = useState(true)
   const [fetchError, setFetchError] = useState('')
@@ -135,13 +135,13 @@ export default function UpdateProfile() {
       .finally(() => setFetchLoading(false))
   }, [user])
 
-  // ── Early returns (after all hooks) ─────────────────────────────────────────
+  // -- Early returns (after all hooks) -----------------------------------------
   if (authLoading || !user) return null
 
   if (fetchLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-slate-400 text-sm">Loading…</p>
+        <p className="text-slate-400 text-sm">Loading...</p>
       </div>
     )
   }
@@ -154,7 +154,7 @@ export default function UpdateProfile() {
     )
   }
 
-  // ── Handlers ─────────────────────────────────────────────────────────────────
+  // -- Handlers -----------------------------------------------------------------
 
   function set(field, value) {
     setForm(f => ({ ...f, [field]: value }))
@@ -192,7 +192,7 @@ export default function UpdateProfile() {
     setSuccessMsg('')
 
     const payload = { ...form }
-    // Omit empty upload URLs — don't overwrite existing values with blank strings
+    // Omit empty upload URLs - don't overwrite existing values with blank strings
     if (!payload.pwd_id_front) delete payload.pwd_id_front
     if (!payload.pwd_id_back)  delete payload.pwd_id_back
 
@@ -210,7 +210,7 @@ export default function UpdateProfile() {
     }
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────────
+  // -- Render --------------------------------------------------------------------
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -238,7 +238,7 @@ export default function UpdateProfile() {
 
         <form onSubmit={handleSubmit} noValidate className="space-y-5">
 
-          {/* ── Personal Information ── */}
+          {/* -- Personal Information -- */}
           <Section title="Personal Information">
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -283,7 +283,7 @@ export default function UpdateProfile() {
                     onChange={e => set('gender', e.target.value)}
                     className={inputCls(!!errors.gender)}
                   >
-                    <option value="">Select…</option>
+                    <option value="">Select...</option>
                     {GENDER_OPTIONS.map(g => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </Field>
@@ -340,7 +340,7 @@ export default function UpdateProfile() {
             </div>
           </Section>
 
-          {/* ── Contact Information ── */}
+          {/* -- Contact Information -- */}
           <Section title="Contact Information">
             <div className="space-y-4">
               <Field label="Mobile Number" required error={errors.mobile_number}>
@@ -403,7 +403,7 @@ export default function UpdateProfile() {
             </div>
           </Section>
 
-          {/* ── Next of Kin ── */}
+          {/* -- Next of Kin -- */}
           <Section title="Next of Kin">
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -436,7 +436,7 @@ export default function UpdateProfile() {
             </div>
           </Section>
 
-          {/* ── Preferences ── */}
+          {/* -- Preferences -- */}
           <Section title="Preferences">
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -470,7 +470,7 @@ export default function UpdateProfile() {
             </div>
           </Section>
 
-          {/* ── SC / PWD Information ── */}
+          {/* -- SC / PWD Information -- */}
           <Section title="SC / PWD Information">
             <div className="space-y-5">
               <Field label="SC / PWD ID Number" hint="Senior Citizen or PWD ID number, if applicable.">
@@ -502,17 +502,17 @@ export default function UpdateProfile() {
             </div>
           </Section>
 
-          {/* ── Submit ── */}
+          {/* -- Submit -- */}
           <div className="flex items-center gap-4 pt-2">
             <button
               type="submit"
               disabled={saving}
               className="px-8 py-3 rounded-lg bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
             >
-              {saving ? 'Saving…' : 'Save Changes'}
+              {saving ? 'Saving...' : 'Save Changes'}
             </button>
             {saving && (
-              <p className="text-xs text-slate-400 select-none">Saving your profile…</p>
+              <p className="text-xs text-slate-400 select-none">Saving your profile...</p>
             )}
           </div>
 
@@ -522,7 +522,7 @@ export default function UpdateProfile() {
   )
 }
 
-// ── UploadField ────────────────────────────────────────────────────────────────
+// -- UploadField ----------------------------------------------------------------
 
 function UploadField({ label, context, status, existingUrl, onFileSelect }) {
   function handleChange(e) {
@@ -560,11 +560,11 @@ function UploadField({ label, context, status, existingUrl, onFileSelect }) {
 
       {/* Upload status messages */}
       {status === 'uploading' && (
-        <p className="text-xs text-slate-400 mt-1.5">Uploading…</p>
+        <p className="text-xs text-slate-400 mt-1.5">Uploading...</p>
       )}
       {status === 'unavailable' && (
         <p className="text-xs text-slate-500 mt-1.5">
-          File upload unavailable — please try again later.
+          File upload unavailable - please try again later.
         </p>
       )}
       {status === 'done' && (

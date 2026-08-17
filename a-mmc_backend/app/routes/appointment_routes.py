@@ -25,9 +25,9 @@ appointment_bp = Blueprint("appointments", __name__)
 # ---------------------------------------------------------------------------
 
 def _format_payment_type(payment_type: str | None) -> str | None:
-    """Convert stored 'HMO:<name>' to display 'HMO — <name>'. Pass-through otherwise."""
+    """Convert stored 'HMO:<name>' to display 'HMO - <name>'. Pass-through otherwise."""
     if payment_type and payment_type.startswith("HMO:"):
-        return "HMO — " + payment_type[4:]
+        return "HMO - " + payment_type[4:]
     return payment_type
 
 
@@ -50,7 +50,7 @@ def _check_cancellation_time(slot: ClinicianTimeslot, role: str) -> tuple | None
     """
     hours = _hours_until_slot(slot)
     if hours is None:
-        return None  # Can't determine time — allow and let operations handle it
+        return None  # Can't determine time - allow and let operations handle it
 
     if role == "patient" and hours < 24:
         return jsonify({
@@ -70,7 +70,7 @@ def _check_cancellation_time(slot: ClinicianTimeslot, role: str) -> tuple | None
 
 
 def _warning_for_cancellation(slot: ClinicianTimeslot) -> str | None:
-    """Return a warning string if 24–48 hours remain, else None."""
+    """Return a warning string if 24-48 hours remain, else None."""
     hours = _hours_until_slot(slot)
     if hours is not None and 24 <= hours < 48:
         return "This appointment is within 48 hours. Please confirm the cancellation."
@@ -153,7 +153,7 @@ def create_appointment():
     if slot.clinician_id != data["clinician_id"]:
         return jsonify({"error": "Slot does not belong to the specified clinician"}), 409
 
-    # Temporal guard — PH time (Asia/Manila, UTC+8)
+    # Temporal guard - PH time (Asia/Manila, UTC+8)
     _manila = ZoneInfo("Asia/Manila")
     _now_ph = datetime.now(_manila)
     _today_ph = _now_ph.date()
@@ -234,7 +234,7 @@ def update_appointment(appointment_id: int):
                 }), 409
 
             # ----------------------------------------------------------------
-            # Done — C/S marks appointment as completed after patient is seen
+            # Done - C/S marks appointment as completed after patient is seen
             # ----------------------------------------------------------------
             if new_status == "done":
                 if role not in ("clinician", "secretary"):
@@ -243,7 +243,7 @@ def update_appointment(appointment_id: int):
                     }), 403
 
             # ----------------------------------------------------------------
-            # Decline — C/S declines a pending appointment
+            # Decline - C/S declines a pending appointment
             # ----------------------------------------------------------------
             elif new_status == "declined":
                 decline_reason = (data.get("decline_reason") or "").strip()
@@ -252,7 +252,7 @@ def update_appointment(appointment_id: int):
                 a.decline_reason = decline_reason
 
             # ----------------------------------------------------------------
-            # Reschedule request — either party initiates
+            # Reschedule request - either party initiates
             # ----------------------------------------------------------------
             elif new_status == "reschedule_requested":
                 reschedule_reason = (data.get("reschedule_reason") or "").strip()
@@ -261,7 +261,7 @@ def update_appointment(appointment_id: int):
                 a.reschedule_reason = reschedule_reason
 
             # ----------------------------------------------------------------
-            # Accepting a reschedule — C/S must confirm with a new slot
+            # Accepting a reschedule - C/S must confirm with a new slot
             # ----------------------------------------------------------------
             elif new_status == "accepted" and a.status == "reschedule_requested":
                 new_slot_id = data.get("new_slot_id")
@@ -282,7 +282,7 @@ def update_appointment(appointment_id: int):
                 a.consultation_date = str(new_slot.slot_date)
 
             # ----------------------------------------------------------------
-            # Accept a pending appointment — check max_patients auto-block
+            # Accept a pending appointment - check max_patients auto-block
             # ----------------------------------------------------------------
             elif new_status == "accepted" and a.status == "pending":
                 slot = db.get_or_404(ClinicianTimeslot, a.slot_id)
@@ -297,7 +297,7 @@ def update_appointment(appointment_id: int):
             if field in data:
                 setattr(a, field, data[field])
 
-        # payment_status — C/S only
+        # payment_status - C/S only
         if "payment_status" in data:
             if role == "patient":
                 return jsonify({"error": "Patients cannot update payment status."}), 403
@@ -311,7 +311,7 @@ def update_appointment(appointment_id: int):
         db.session.rollback()
         raise
 
-    # Post-commit notifications — failures are caught inside each function and logged;
+    # Post-commit notifications - failures are caught inside each function and logged;
     # they never propagate back to the caller or affect the HTTP response.
     if new_status and new_status != original_status:
         if new_status == "accepted" and original_status == "pending":
@@ -339,7 +339,7 @@ def cancel_appointment(appointment_id: int):
     """
     Soft-cancel an appointment. Requires a cancellation_reason.
     Time-gated: patients blocked <24h, C/S directed to reschedule flow <24h.
-    Warning returned for 24–48h window.
+    Warning returned for 24-48h window.
     """
     a = db.get_or_404(Appointment, appointment_id)
     data = request.get_json(force=True) or {}
@@ -368,10 +368,10 @@ def cancel_appointment(appointment_id: int):
     if block:
         return block
 
-    # Build response — include warning if in the 24–48h window
+    # Build response - include warning if in the 24-48h window
     warning = _warning_for_cancellation(slot)
 
-    # Slot status is NOT changed — other patients on this slot are unaffected.
+    # Slot status is NOT changed - other patients on this slot are unaffected.
     # B1-D-patch: transaction boundary added
     try:
         a.status = "cancelled"
@@ -381,7 +381,7 @@ def cancel_appointment(appointment_id: int):
         db.session.rollback()
         raise
 
-    # Post-commit notifications — pass role so the template can show who cancelled
+    # Post-commit notifications - pass role so the template can show who cancelled
     send_cancellation_notice(a, "patient",   cancelled_by=role)
     send_cancellation_notice(a, "clinician", cancelled_by=role)
 

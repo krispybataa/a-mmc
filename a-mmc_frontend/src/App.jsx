@@ -43,7 +43,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
 
-        {/* ── Admin shell — auth-guarded (role: admin), sidebar layout ── */}
+        {/* -- Admin shell - auth-guarded (role: admin), sidebar layout -- */}
         <Route element={<AdminLayout />}>
           <Route path="/admin"              element={<AdminDashboard />} />
           <Route path="/admin/clinicians"   element={<AdminClinicians />} />
@@ -53,7 +53,7 @@ export default function App() {
           <Route path="/admin/email-previews"   element={<AdminEmailPreviews />} />
         </Route>
 
-        {/* ── Staff shell — auth-guarded, own topbar, no patient navbar ── */}
+        {/* -- Staff shell - auth-guarded, own topbar, no patient navbar -- */}
         <Route element={<StaffLayout />}>
           <Route path="/clinician-dashboard/today"            element={<ClinicianTodayView />} />
           <Route path="/clinician-dashboard"                  element={<ClinicianDashboard />} />
@@ -62,10 +62,10 @@ export default function App() {
           <Route path="/clinician-dashboard/change-password"  element={<ChangePassword />} />
         </Route>
 
-        {/* ── Staff login — no layout at all ── */}
+        {/* -- Staff login - no layout at all -- */}
         <Route path="/staff/login" element={<StaffLogin />} />
 
-        {/* ── Public + patient routes — patient navbar (hidden on /login, /register) ── */}
+        {/* -- Public + patient routes - patient navbar (hidden on /login, /register) -- */}
         <Route element={<Layout />}>
           <Route path="/"                       element={<Navigate to="/find" replace />} />
           <Route path="/find"                   element={<FindDoctor />} />

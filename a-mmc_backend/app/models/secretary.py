@@ -33,4 +33,4 @@ class SecretaryClinicianLink(db.Model):
     clinician = db.relationship("Clinician", back_populates="secretary_links")
 
     def __repr__(self) -> str:
-        return f"<SecretaryClinicianLink sec={self.secretary_id} → clin={self.clinician_id}>"
+        return f"<SecretaryClinicianLink sec={self.secretary_id} -> clin={self.clinician_id}>"

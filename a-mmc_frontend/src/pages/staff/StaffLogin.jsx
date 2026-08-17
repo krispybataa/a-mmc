@@ -4,7 +4,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api, { configureApiAuth } from '../../services/api'
 
-// Role options — radio/segmented control, not a dropdown
+// Role options - radio/segmented control, not a dropdown
 const ROLES = [
   { value: 'clinician', label: 'Clinician' },
   { value: 'secretary', label: 'Secretary' },
@@ -96,7 +96,7 @@ export default function StaffLogin() {
 
           <form onSubmit={handleSubmit} noValidate className="space-y-5">
 
-            {/* Role selector — segmented control */}
+            {/* Role selector - segmented control */}
             <div>
               <p className="text-sm font-medium text-[var(--color-dark)] mb-2">
                 Role
@@ -196,7 +196,7 @@ export default function StaffLogin() {
                 disabled={loading}
                 className="w-full py-3 px-6 rounded-xl text-base font-semibold text-white bg-[var(--color-primary)] hover:brightness-110 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed min-h-[48px]"
               >
-                {loading ? 'Signing in…' : 'Sign In'}
+                {loading ? 'Signing in...' : 'Sign In'}
               </button>
             </div>
           </form>

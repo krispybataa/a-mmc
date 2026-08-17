@@ -14,7 +14,7 @@ from app import db
 from app.models.clinician import ClinicianSchedule, ClinicianTimeslot
 
 
-# Map day name → Python weekday int (Monday=0 … Sunday=6)
+# Map day name -> Python weekday int (Monday=0 ... Sunday=6)
 _DAY_MAP = {
     "Monday": 0,
     "Tuesday": 1,
@@ -31,7 +31,7 @@ def _time_to_minutes(t) -> int:
 
     Handles three types returned by SQLAlchemy depending on driver and session state:
       - timedelta  : Postgres TIME columns sometimes returned as timedelta
-      - str        : "HH:MM" or "HH:MM:SS" — seen when reading from a flushed-but-
+      - str        : "HH:MM" or "HH:MM:SS" - seen when reading from a flushed-but-
                      not-committed session (B1-A-patch-3)
       - datetime.time : standard Python time object
     """
@@ -82,7 +82,7 @@ def generate_slots(
             schedule_by_day.setdefault(_DAY_MAP[row.day_of_week], []).append(row)
 
     if not schedule_by_day:
-        return 0  # No schedule defined — nothing to generate
+        return 0  # No schedule defined - nothing to generate
 
     # Fetch existing slot keys to avoid duplicates.
     # Key includes consultation_type so f2f and teleconsult slots at the same
@@ -117,7 +117,7 @@ def generate_slots(
                 if start_min is None or end_min is None:
                     continue  # Window not defined for this day
                 if start_min >= end_min:
-                    continue  # Degenerate window — skip
+                    continue  # Degenerate window - skip
 
                 start_str = _minutes_to_time_str(start_min)
                 end_str   = _minutes_to_time_str(end_min)
@@ -156,7 +156,7 @@ def _compute_expected_keys(
     SHOULD exist for a clinician given their current ClinicianSchedule, for
     dates in [from_date, to_date].
 
-    One key per AM window and one per PM window — mirrors generate_slots().
+    One key per AM window and one per PM window - mirrors generate_slots().
     Used by regenerate_slots_for_schedule_change() to identify orphaned slots.
     """
     schedule_rows = ClinicianSchedule.query.filter_by(clinician_id=clinician_id).all()
@@ -196,12 +196,12 @@ def regenerate_slots_for_schedule_change(
     Handle schedule changes by inserting new slots and removing orphaned ones.
 
     Call this after a ClinicianSchedule row is modified (times changed or day
-    toggled). Operates over the full [from_date, to_date] range — all slots for
+    toggled). Operates over the full [from_date, to_date] range - all slots for
     the clinician in that window are checked against the updated schedule.
 
     Algorithm
     ---------
-    1. Call generate_slots() with commit=False — inserts any new slots that match
+    1. Call generate_slots() with commit=False - inserts any new slots that match
        the updated schedule into the session (no commit yet).
     2. Derive the expected (slot_date, start_time_str) key set from the current
        ClinicianSchedule rows (post-edit values, visible via session autoflush).
@@ -214,7 +214,7 @@ def regenerate_slots_for_schedule_change(
        - Safe orphan: status == "available" AND zero active appointments.
                       Deleted from the DB.
        - Blocked with no active appointments: left in place (C/S explicitly blocked it).
-    5. Commit — a single commit covers both the generate_slots inserts and the
+    5. Commit - a single commit covers both the generate_slots inserts and the
        safe orphan deletes (atomic with the schedule update if the caller flushed
        the schedule change before invoking this function).
 
@@ -261,14 +261,14 @@ def regenerate_slots_for_schedule_change(
             ClinicianTimeslot.slot_date <= to_date,
         ).all()
 
-        # Step 4: Identify orphans — slots whose key is no longer in the schedule
+        # Step 4: Identify orphans - slots whose key is no longer in the schedule
         orphans = [
             s for s in all_slots
             if (s.slot_date, _minutes_to_time_str(_time_to_minutes(s.start_time)), s.consultation_type)
             not in expected_keys
         ]
 
-        # Step 5: Classify — deferred import avoids circular reference
+        # Step 5: Classify - deferred import avoids circular reference
         from app.models.appointment import Appointment
 
         safe_orphans: list = []
@@ -281,7 +281,7 @@ def regenerate_slots_for_schedule_change(
             ).count()
 
             if active_count > 0:
-                # Stuck: has active appointments — C/S must resolve manually
+                # Stuck: has active appointments - C/S must resolve manually
                 stuck.append({
                     "slot_id": slot.slot_id,
                     "slot_date": str(slot.slot_date),
@@ -290,15 +290,15 @@ def regenerate_slots_for_schedule_change(
                     "active_appointment_count": active_count,
                 })
             elif slot.status == "available":
-                # Safe: available and no active appointments — delete
+                # Safe: available and no active appointments - delete
                 safe_orphans.append(slot)
-            # else: blocked with no active appointments — leave in place
+            # else: blocked with no active appointments - leave in place
 
         # Step 6: Delete safe orphans
         for orphan in safe_orphans:
             db.session.delete(orphan)
 
-        # Step 7: Single commit — covers generate_slots inserts + orphan deletes
+        # Step 7: Single commit - covers generate_slots inserts + orphan deletes
         # (and the caller's flushed schedule update if this is called from the route)
         db.session.commit()
 

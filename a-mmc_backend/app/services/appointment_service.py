@@ -3,7 +3,7 @@ appointment_service.py
 ----------------------
 Business logic for appointment operations.
 
-Pure functions — no route handling. DB-accessing functions require an active
+Pure functions - no route handling. DB-accessing functions require an active
 Flask application context (called from within a request or app.app_context()).
 
 Uses deferred imports inside functions to avoid circular references, consistent
@@ -32,14 +32,14 @@ def has_overlap(patient_id: int, candidate_slot, exclude_appointment_id=None) ->
     Returns
     -------
     bool
-        True  — an overlap exists; the booking should be rejected.
-        False — no overlap; safe to proceed.
+        True  - an overlap exists; the booking should be rejected.
+        False - no overlap; safe to proceed.
 
-    Overlap definition (from CLAUDE.md)
+    Overlap definition
     ------------------------------------
     Two slots overlap when NOT (A.end <= B.start OR B.end <= A.start).
     Touching boundaries are NOT considered overlapping:
-      slot A ending at 14:00 and slot B starting at 14:00 → False (no overlap).
+      slot A ending at 14:00 and slot B starting at 14:00 -> False (no overlap).
 
     Notes
     -----

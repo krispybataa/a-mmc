@@ -113,7 +113,7 @@ def delete_secretary(secretary_id: int):
     if claims.get("role") != "admin":
         return {"error": "Admin access required"}, 403
     s = db.get_or_404(Secretary, secretary_id)
-    # B1-A-patch-2: cascade deletes SecretaryClinicianLink rows — multi-table write
+    # B1-A-patch-2: cascade deletes SecretaryClinicianLink rows - multi-table write
     try:
         db.session.delete(s)
         db.session.commit()

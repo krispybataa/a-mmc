@@ -9,7 +9,7 @@ const SYMPTOM_STEP = TRIAGE_STEPS[1]   // { id: 'symptoms', question, options }
 
 const TOTAL_STEPS = 4
 
-// ── Shared styles ─────────────────────────────────────────────────────────────
+// -- Shared styles -------------------------------------------------------------
 
 const baseCard = [
   'w-full bg-white rounded-xl border border-[var(--color-border)] shadow-sm',
@@ -43,7 +43,7 @@ const SYMPTOM_SPECIALTY_MAP_LEGACY = {
   others:   null,
 }
 
-// ── Age band and sex options ──────────────────────────────────────────────────
+// -- Age band and sex options --------------------------------------------------
 
 const AGE_BANDS = [
   { id: 'u18',   label: 'Under 18' },
@@ -58,7 +58,7 @@ const SEX_OPTIONS = [
   { id: 'none',   label: 'Prefer not to say' },
 ]
 
-// ── Main component ─────────────────────────────────────────────────────────────
+// -- Main component -------------------------------------------------------------
 
 export default function GuidedSearch() {
   const navigate = useNavigate()
@@ -115,7 +115,7 @@ export default function GuidedSearch() {
     setShowFallback(false)
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
+  // -- Helpers ----------------------------------------------------------------
 
   // Split HMO options into the emphasized "no HMO" card and the rest
   const noHmoOption = HMO_STEP.options.find(o => o.emphasized)
@@ -143,9 +143,9 @@ export default function GuidedSearch() {
           </p>
         </div>
 
-        {/* ════════════════════════════
-            STEP 1 — HMO selection
-        ════════════════════════════ */}
+        {/* ============================
+            STEP 1 - HMO selection
+        ============================ */}
         {step === 1 && (
           <div>
             <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
@@ -155,7 +155,7 @@ export default function GuidedSearch() {
               Select your HMO so we can show you accredited clinicians.
             </p>
 
-            {/* "I do not have HMO" — full-width, emphasized, above the grid */}
+            {/* "I do not have HMO" - full-width, emphasized, above the grid */}
             {noHmoOption && (
               <button
                 onClick={() => handleHMOSelect(noHmoOption.id)}
@@ -188,9 +188,9 @@ export default function GuidedSearch() {
           </div>
         )}
 
-        {/* ════════════════════════════
-            STEP 2 — Age group
-        ════════════════════════════ */}
+        {/* ============================
+            STEP 2 - Age group
+        ============================ */}
         {step === 2 && (
           <div>
             <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
@@ -214,9 +214,9 @@ export default function GuidedSearch() {
           </div>
         )}
 
-        {/* ════════════════════════════
-            STEP 3 — Biological sex
-        ════════════════════════════ */}
+        {/* ============================
+            STEP 3 - Biological sex
+        ============================ */}
         {step === 3 && (
           <div>
             <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
@@ -240,9 +240,9 @@ export default function GuidedSearch() {
           </div>
         )}
 
-        {/* ════════════════════════════
-            STEP 4 — Body diagram
-        ════════════════════════════ */}
+        {/* ============================
+            STEP 4 - Body diagram
+        ============================ */}
         {step === 4 && (
           <div>
             <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">

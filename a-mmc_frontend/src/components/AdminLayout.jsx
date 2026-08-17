@@ -4,7 +4,7 @@ import { Menu, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
 
-// ── Constants ──────────────────────────────────────────────────────────────────
+// -- Constants ------------------------------------------------------------------
 
 const NAV_LINKS = [
   { to: '/admin',                  label: 'Dashboard',      end: true  },
@@ -15,7 +15,7 @@ const NAV_LINKS = [
   { to: '/admin/email-previews',   label: 'Email Previews', end: false },
 ]
 
-// ── Sidebar content (shared between desktop and mobile drawer) ─────────────────
+// -- Sidebar content (shared between desktop and mobile drawer) -----------------
 
 function SidebarNav({ email, onLogout, onNavClick }) {
   return (
@@ -72,7 +72,7 @@ function SidebarNav({ email, onLogout, onNavClick }) {
   )
 }
 
-// ── AdminLayout ────────────────────────────────────────────────────────────────
+// -- AdminLayout ----------------------------------------------------------------
 
 export default function AdminLayout() {
   const { user, authLoading } = useAuth()
@@ -92,7 +92,7 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen flex bg-[var(--color-bg)]">
 
-      {/* ── Desktop sidebar (md+) ── */}
+      {/* -- Desktop sidebar (md+) -- */}
       <aside className="hidden md:flex md:flex-col md:w-56 md:fixed md:inset-y-0 z-30 shrink-0">
         <SidebarNav
           email={adminEmail}
@@ -101,7 +101,7 @@ export default function AdminLayout() {
         />
       </aside>
 
-      {/* ── Mobile: sticky top bar ── */}
+      {/* -- Mobile: sticky top bar -- */}
       <header className="md:hidden fixed top-0 inset-x-0 z-40 bg-[var(--color-primary)] h-16 flex items-center px-4 gap-3">
         <button
           type="button"
@@ -119,7 +119,7 @@ export default function AdminLayout() {
         </span>
       </header>
 
-      {/* ── Mobile drawer ── */}
+      {/* -- Mobile drawer -- */}
       {drawerOpen && (
         <div
           className="md:hidden fixed inset-0 z-50 bg-black/50"
@@ -150,7 +150,7 @@ export default function AdminLayout() {
         </div>
       )}
 
-      {/* ── Main content area ── */}
+      {/* -- Main content area -- */}
       <div className="flex-1 md:ml-56 flex flex-col min-h-screen">
         <main className="flex-1 pt-16 md:pt-0">
           <Outlet />

@@ -3,11 +3,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 
-// ── Constants ──────────────────────────────────────────────────────────────────
+// -- Constants ------------------------------------------------------------------
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+// -- Helpers --------------------------------------------------------------------
 
 function makeEmptyRows() {
   return DAYS.map(day => ({
@@ -72,7 +72,7 @@ function pmWarning(value) {
   return `PM hours should be after 12:00 noon. Did you mean ${suggested}?`
 }
 
-// ── TimeInput ──────────────────────────────────────────────────────────────────
+// -- TimeInput ------------------------------------------------------------------
 
 function TimeInput({ value, onChange, disabled }) {
   return (
@@ -92,7 +92,7 @@ function TimeInput({ value, onChange, disabled }) {
   )
 }
 
-// ── TypeBadge ─────────────────────────────────────────────────────────────────
+// -- TypeBadge -----------------------------------------------------------------
 
 function TypeBadge({ type }) {
   return type === 'f2f' ? (
@@ -106,13 +106,13 @@ function TypeBadge({ type }) {
   )
 }
 
-// ── ScheduleManager ────────────────────────────────────────────────────────────
+// -- ScheduleManager ------------------------------------------------------------
 
 export default function ScheduleManager() {
   const { user, authLoading } = useAuth()
   const navigate = useNavigate()
 
-  // ── Clinician resolution + fetch ─────────────────────────────────────────────
+  // -- Clinician resolution + fetch ---------------------------------------------
   const [clinicianId, setClinicianId]   = useState(null)
   const [fetchLoading, setFetchLoading] = useState(false)
   const [fetchError, setFetchError]     = useState('')
@@ -126,7 +126,7 @@ export default function ScheduleManager() {
   const [isSaving, setIsSaving]   = useState(false)
   const [stuckSlots, setStuckSlots] = useState([])
 
-  // Auth guard — wait for silent refresh before deciding
+  // Auth guard - wait for silent refresh before deciding
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/staff/login?redirect=/clinician-dashboard/schedule')
@@ -159,11 +159,11 @@ export default function ScheduleManager() {
       .finally(() => setFetchLoading(false))
   }, [clinicianId])
 
-  // ── All hooks above this line ──────────────────────────────────────────────
+  // -- All hooks above this line ----------------------------------------------
 
   if (authLoading || !user) return null
 
-  // ── Derived state ──────────────────────────────────────────────────────────
+  // -- Derived state ----------------------------------------------------------
 
   const rows = rowsByType[consultationType]
 
@@ -172,7 +172,7 @@ export default function ScheduleManager() {
     setRowsByType(prev => ({ ...prev, [consultationType]: updater(prev[consultationType]) }))
   }
 
-  // ── Tab switch ─────────────────────────────────────────────────────────────
+  // -- Tab switch -------------------------------------------------------------
 
   function handleTabSwitch(type) {
     if (type === consultationType) return
@@ -181,7 +181,7 @@ export default function ScheduleManager() {
     setStuckSlots([])
   }
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
+  // -- Handlers ---------------------------------------------------------------
 
   function updateRow(index, field, value) {
     setConfirmSave(false)
@@ -249,7 +249,7 @@ export default function ScheduleManager() {
       })
     )
 
-    // Build a day → result map
+    // Build a day -> result map
     const resultByDay = {}
     activeRows.forEach((row, i) => { resultByDay[row.day] = results[i] })
 
@@ -285,12 +285,12 @@ export default function ScheduleManager() {
     setConfirmSave(false)
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // -- Render -----------------------------------------------------------------
 
   if (fetchLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-slate-400 text-sm">Loading…</p>
+        <p className="text-slate-400 text-sm">Loading...</p>
       </div>
     )
   }
@@ -303,7 +303,7 @@ export default function ScheduleManager() {
           to="/clinician-dashboard"
           className="text-sm text-[var(--color-primary)] hover:underline"
         >
-          ← Back to Inbox
+          &larr; Back to Inbox
         </Link>
       </div>
     )
@@ -328,7 +328,7 @@ export default function ScheduleManager() {
         {/* Heading */}
         <h1 className="text-3xl font-bold text-[var(--color-dark)] mb-6">Schedule Manager</h1>
 
-        {/* ── Consultation type tabs ── */}
+        {/* -- Consultation type tabs -- */}
         <div className="flex gap-2 mb-8">
           {[
             { value: 'f2f',         label: 'Face-to-Face' },
@@ -368,7 +368,7 @@ export default function ScheduleManager() {
           <p className="text-sm text-[var(--color-accent)] mb-6">{fetchError}</p>
         )}
 
-        {/* ── Desktop table (sm+) ── */}
+        {/* -- Desktop table (sm+) -- */}
         <div className="hidden sm:block bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden mb-6">
 
           {/* Table header */}
@@ -411,7 +411,7 @@ export default function ScheduleManager() {
                     onChange={(v) => updateRow(i, 'amStart', v)}
                     disabled={!row.active}
                   />
-                  <span className={`text-sm select-none ${row.active ? 'text-slate-400' : 'text-slate-200'}`}>–</span>
+                  <span className={`text-sm select-none ${row.active ? 'text-slate-400' : 'text-slate-200'}`}>-</span>
                   <TimeInput
                     value={row.amEnd}
                     onChange={(v) => updateRow(i, 'amEnd', v)}
@@ -427,7 +427,7 @@ export default function ScheduleManager() {
                       onChange={(v) => updateRow(i, 'pmStart', v)}
                       disabled={!row.active}
                     />
-                    <span className={`text-sm select-none ${row.active ? 'text-slate-400' : 'text-slate-200'}`}>–</span>
+                    <span className={`text-sm select-none ${row.active ? 'text-slate-400' : 'text-slate-200'}`}>-</span>
                     <TimeInput
                       value={row.pmEnd}
                       onChange={(v) => updateRow(i, 'pmEnd', v)}
@@ -456,7 +456,7 @@ export default function ScheduleManager() {
           ))}
         </div>
 
-        {/* ── Mobile cards (below sm) ── */}
+        {/* -- Mobile cards (below sm) -- */}
         <div className="sm:hidden space-y-4 mb-6">
           {rows.map((row, i) => (
             <div
@@ -492,7 +492,7 @@ export default function ScheduleManager() {
                       onChange={(v) => updateRow(i, 'amStart', v)}
                       disabled={!row.active}
                     />
-                    <span className={`text-xs select-none ${row.active ? 'text-slate-400' : 'text-slate-200'}`}>–</span>
+                    <span className={`text-xs select-none ${row.active ? 'text-slate-400' : 'text-slate-200'}`}>-</span>
                     <TimeInput
                       value={row.amEnd}
                       onChange={(v) => updateRow(i, 'amEnd', v)}
@@ -508,7 +508,7 @@ export default function ScheduleManager() {
                       onChange={(v) => updateRow(i, 'pmStart', v)}
                       disabled={!row.active}
                     />
-                    <span className={`text-xs select-none ${row.active ? 'text-slate-400' : 'text-slate-200'}`}>–</span>
+                    <span className={`text-xs select-none ${row.active ? 'text-slate-400' : 'text-slate-200'}`}>-</span>
                     <TimeInput
                       value={row.pmEnd}
                       onChange={(v) => updateRow(i, 'pmEnd', v)}
@@ -536,7 +536,7 @@ export default function ScheduleManager() {
           ))}
         </div>
 
-        {/* ── Save button / inline confirm ── */}
+        {/* -- Save button / inline confirm -- */}
         {confirmSave ? (
           <div className="space-y-3">
             <p className="text-sm text-[var(--color-dark)]">
@@ -549,7 +549,7 @@ export default function ScheduleManager() {
                 disabled={isSaving}
                 className="px-6 py-3 rounded-lg bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
               >
-                {isSaving ? 'Saving…' : 'Confirm'}
+                {isSaving ? 'Saving...' : 'Confirm'}
               </button>
               <button
                 type="button"
@@ -571,11 +571,11 @@ export default function ScheduleManager() {
           </button>
         )}
 
-        {/* ── Stuck slots warning panel ── */}
+        {/* -- Stuck slots warning panel -- */}
         {stuckSlots.length > 0 && (
           <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-6">
             <h2 className="text-base font-semibold text-amber-800 mb-1">
-              Action Required — Slots with Active Appointments
+              Action Required - Slots with Active Appointments
             </h2>
             <p className="text-sm text-amber-700 mb-4">
               These slots have active appointments and could not be removed. Please resolve them

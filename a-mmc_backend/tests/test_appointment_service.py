@@ -13,7 +13,7 @@ The overlap arithmetic (NOT (A.end <= B.start OR B.end <= A.start)) runs in
 Python after the query returns, so it IS exercised by these tests even though
 the DB layer is mocked.
 
-Overlap rule (from CLAUDE.md):
+Overlap rule: 
   Touching boundaries are NOT overlapping.
   e.g. slot A ends at 14:00, slot B starts at 14:00 → not an overlap.
 """
