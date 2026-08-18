@@ -113,7 +113,7 @@ export default function ChangePassword() {
       </div>
 
       {successMsg && (
-        <div className="mb-5 px-4 py-3 rounded-lg bg-green-50 border border-green-200 text-sm text-green-700">
+        <div ref={successRef} className="mb-5 px-4 py-3 rounded-lg bg-green-50 border border-green-200 text-sm text-green-700">
           {successMsg}
         </div>
       )}

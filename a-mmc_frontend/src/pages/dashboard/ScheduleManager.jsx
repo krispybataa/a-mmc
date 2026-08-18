@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
+import { useAnimeOnMount, EASE, DURATION } from '../../lib/motion'
 
 // -- Constants ------------------------------------------------------------------
 
@@ -125,6 +126,12 @@ export default function ScheduleManager() {
   const [confirmSave, setConfirmSave] = useState(false)
   const [isSaving, setIsSaving]   = useState(false)
   const [stuckSlots, setStuckSlots] = useState([])
+  const stuckSlotsRef = useRef(null)
+
+  useAnimeOnMount(stuckSlotsRef, () => {
+    if (stuckSlots.length === 0) return null
+    return { opacity: [0, 1], translateY: [8, 0], duration: DURATION.base, ease: EASE.decelerate }
+  }, [stuckSlots])
 
   // Auth guard - wait for silent refresh before deciding
   useEffect(() => {
@@ -573,7 +580,7 @@ export default function ScheduleManager() {
 
         {/* -- Stuck slots warning panel -- */}
         {stuckSlots.length > 0 && (
-          <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-6">
+          <div ref={stuckSlotsRef} className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-6">
             <h2 className="text-base font-semibold text-amber-800 mb-1">
               Action Required - Slots with Active Appointments
             </h2>
