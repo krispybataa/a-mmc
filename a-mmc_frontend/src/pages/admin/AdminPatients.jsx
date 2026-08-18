@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import api from '../../services/api'
+import { useStaggerOnChange } from '../../lib/motion'
 
 // -- Constants ------------------------------------------------------------------
 
@@ -13,6 +14,7 @@ export default function AdminPatients() {
   const [fetchError, setFetchError] = useState('')
   const [search, setSearch]         = useState('')
   const [page, setPage]             = useState(1)
+  const tbodyRef = useRef(null)
 
   useEffect(() => {
     api.get('/admin/patients')
@@ -30,6 +32,9 @@ export default function AdminPatients() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const pageItems  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const pageItemsSignature = pageItems.map(p => p.patient_id).join(',')
+  useStaggerOnChange(tbodyRef, '[data-motion-item]', pageItemsSignature)
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
@@ -70,9 +75,9 @@ export default function AdminPatients() {
                   ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody ref={tbodyRef}>
                 {pageItems.map(p => (
-                  <tr key={p.patient_id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                  <tr key={p.patient_id} data-motion-item className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 font-medium text-[var(--color-dark)] whitespace-nowrap">
                       {p.first_name} {p.last_name}
                     </td>

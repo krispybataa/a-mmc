@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import api from '../../services/api'
+import AnimatedModal from '../../components/shared/AnimatedModal'
+import { useStaggerOnChange } from '../../lib/motion'
 
 // -- Constants ------------------------------------------------------------------
 
@@ -63,16 +65,14 @@ function AddClinicianModal({ onClose, onCreated }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center p-4 overflow-y-auto">
-      <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-lg my-8"
-        onClick={e => e.stopPropagation()}
-      >
+    <AnimatedModal onClose={onClose} align="start" panelClassName="bg-white rounded-2xl shadow-xl w-full max-w-lg my-8">
+      {(close) => (
+      <>
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
           <h2 className="text-base font-semibold text-[var(--color-dark)]">Add Clinician</h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={close}
             className="text-slate-400 hover:text-slate-600 text-xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             x
@@ -130,15 +130,16 @@ function AddClinicianModal({ onClose, onCreated }) {
             </button>
             <button
               type="button"
-              onClick={onClose}
+              onClick={close}
               className="px-5 py-3 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors min-h-[44px]"
             >
               Cancel
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </>
+      )}
+    </AnimatedModal>
   )
 }
 
@@ -173,6 +174,7 @@ export default function AdminClinicians() {
   const [fetchError, setFetchError] = useState('')
   const [page, setPage]             = useState(1)
   const [showModal, setShowModal]   = useState(false)
+  const tbodyRef = useRef(null)
 
   function load() {
     setLoading(true)
@@ -197,6 +199,9 @@ export default function AdminClinicians() {
 
   const totalPages = Math.max(1, Math.ceil(clinicians.length / PAGE_SIZE))
   const pageItems  = clinicians.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const pageItemsSignature = pageItems.map(c => c.clinician_id).join(',')
+  useStaggerOnChange(tbodyRef, '[data-motion-item]', pageItemsSignature)
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
@@ -233,9 +238,9 @@ export default function AdminClinicians() {
                   ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody ref={tbodyRef}>
                 {pageItems.map(c => (
-                  <tr key={c.clinician_id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                  <tr key={c.clinician_id} data-motion-item className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 font-medium text-[var(--color-dark)] whitespace-nowrap">
                       {formatName(c)}
                     </td>

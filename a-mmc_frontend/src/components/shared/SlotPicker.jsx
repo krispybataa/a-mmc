@@ -1,3 +1,6 @@
+import { useRef } from 'react'
+import { useStaggerOnChange } from '../../lib/motion'
+
 function formatTime(timeStr) {
   if (!timeStr) return ''
   const [h, m] = timeStr.split(':')
@@ -52,6 +55,7 @@ function SlotButton({ slot, isSelected, onSelect }) {
   return (
     <button
       type="button"
+      data-motion-item
       onClick={() => onSelect(slot)}
       className={[
         'flex items-center justify-center rounded-lg border min-h-[52px] px-3 py-2.5 transition-colors text-center',
@@ -100,6 +104,8 @@ export default function SlotPicker({
   const today = toDateStr(new Date())
   const min   = minDate ?? today
   const max   = maxDate ?? toDateStr(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000))
+
+  const slotGridRef = useRef(null)
 
   // Which abbreviated day names have available slots.
   // When real slots are provided, derive from those (respects consultation_type filtering done upstream).
@@ -150,6 +156,8 @@ export default function SlotPicker({
 
   const amSlots = slots.filter(s => s.period === 'AM')
   const pmSlots = slots.filter(s => s.period === 'PM')
+
+  useStaggerOnChange(slotGridRef, '[data-motion-item]', selectedDate)
 
   return (
     <div className="space-y-5">
@@ -207,7 +215,7 @@ export default function SlotPicker({
 
       {/* Slot grid */}
       {slots.length > 0 && (
-        <div className="space-y-5">
+        <div ref={slotGridRef} className="space-y-5">
           <p className="text-sm font-medium text-[var(--color-dark)]">
             Select a Time Slot
             <span className="text-[var(--color-accent)] ml-0.5">*</span>

@@ -1,4 +1,6 @@
+import { useRef } from 'react'
 import { Clock } from 'lucide-react'
+import { useStaggerOnChange } from '../lib/motion'
 
 // -- Helpers -------------------------------------------------------------------
 
@@ -26,6 +28,8 @@ function formatTime12(timeStr) {
  *               null or undefined input).
  */
 export default function AppointmentReminderBanner({ appointments = [] }) {
+  const containerRef = useRef(null)
+
   const tomorrow = new Date()
   tomorrow.setDate(tomorrow.getDate() + 1)
   const tomorrowStr = tomorrow.toISOString().split('T')[0]   // "YYYY-MM-DD"
@@ -34,10 +38,15 @@ export default function AppointmentReminderBanner({ appointments = [] }) {
     a => a.slot?.slot_date === tomorrowStr && a.status === 'accepted'
   )
 
+  // Hook must run before the early return below (Rules of Hooks) - it's a
+  // safe no-op when there's nothing to animate.
+  const signature = tomorrowAppts.map(a => a.appointment_id).join(',')
+  useStaggerOnChange(containerRef, '[data-motion-item]', signature)
+
   if (tomorrowAppts.length === 0) return null
 
   return (
-    <div className="space-y-3 mb-6">
+    <div ref={containerRef} className="space-y-3 mb-6">
       {tomorrowAppts.map(appt => {
         const isTeleconsult = appt.consultation_type === 'teleconsult'
         const lastName = appt.clinician?.last_name ?? ''
@@ -52,6 +61,7 @@ export default function AppointmentReminderBanner({ appointments = [] }) {
         return (
           <div
             key={appt.appointment_id}
+            data-motion-item
             role="alert"
             className="flex items-start gap-3 bg-[var(--color-primary)]/5 border-l-4 border-[var(--color-accent)] rounded-r-xl px-5 py-4"
           >

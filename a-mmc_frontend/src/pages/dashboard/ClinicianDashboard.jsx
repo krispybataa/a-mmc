@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import { generateStaffAppointmentPDF } from '../../services/pdfService'
 import AppointmentDrawer from '../../components/shared/AppointmentDrawer'
+import { useStaggerOnChange } from '../../lib/motion'
 
 // -- Constants ------------------------------------------------------------------
 
@@ -80,6 +81,9 @@ export default function ClinicianDashboard() {
 
   const [drawerAppt, setDrawerAppt] = useState(null)
 
+  const tbodyRef      = useRef(null)
+  const mobileListRef = useRef(null)
+
   // Auth guard - wait for silent refresh before deciding
   useEffect(() => {
     if (!authLoading && !user) {
@@ -138,6 +142,10 @@ export default function ClinicianDashboard() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const pageDataSignature = pageData.map(a => a.appointment_id).join(',')
+  useStaggerOnChange(tbodyRef, '[data-motion-item]', pageDataSignature)
+  useStaggerOnChange(mobileListRef, '[data-motion-item]', pageDataSignature)
 
   // -- Shared styles ----------------------------------------------------------
 
@@ -232,10 +240,11 @@ export default function ClinicianDashboard() {
                       ))}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody ref={tbodyRef}>
                     {pageData.map(appt => (
                       <tr
                         key={appt.appointment_id}
+                        data-motion-item
                         className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors"
                       >
                         <td className="px-5 py-4 font-medium text-[var(--color-dark)] whitespace-nowrap">
@@ -278,10 +287,11 @@ export default function ClinicianDashboard() {
               </div>
 
               {/* Mobile cards (below md) */}
-              <div className="md:hidden space-y-4">
+              <div ref={mobileListRef} className="md:hidden space-y-4">
                 {pageData.map(appt => (
                   <div
                     key={appt.appointment_id}
+                    data-motion-item
                     className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 space-y-3"
                   >
                     <div className="flex items-start justify-between gap-3">

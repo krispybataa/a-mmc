@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import SlotPicker from '../../components/shared/SlotPicker'
 import AppointmentDrawer from '../../components/shared/AppointmentDrawer'
+import AnimatedModal from '../../components/shared/AnimatedModal'
 import { generatePatientAppointmentPDF } from '../../services/pdfService'
 import AppointmentReminderBanner from '../../components/AppointmentReminderBanner'
+import { useStaggerOnChange } from '../../lib/motion'
 
 // -- Utilities -----------------------------------------------------------------
 
@@ -78,6 +80,8 @@ export default function PatientAppointments() {
   // Detail drawer
   const [drawerAppointment, setDrawerAppointment] = useState(null)
 
+  const listRef = useRef(null)
+
   // Inline success message
   const [successApptId, setSuccessApptId] = useState(null)
 
@@ -125,6 +129,9 @@ export default function PatientAppointments() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage   = Math.min(currentPage, totalPages)
   const paged      = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  const pagedSignature = paged.map(a => a.appointment_id).join(',')
+  useStaggerOnChange(listRef, '[data-motion-item]', pagedSignature)
 
   // -- Handlers --------------------------------------------------------------
 
@@ -271,14 +278,14 @@ export default function PatientAppointments() {
         ) : paged.length === 0 ? (
           <p className="text-center text-slate-400 py-16 text-base">No appointments found.</p>
         ) : (
-          <div className="space-y-3">
+          <div ref={listRef} className="space-y-3">
             {paged.map(appt => {
               const docName  = `${appt.clinician.last_name}, ${appt.clinician.first_name} . ${appt.clinician.specialty}`
               const eligible = ELIGIBLE.has(appt.status)
               const showCancelConfirm = cancelConfirmId === appt.appointment_id
 
               return (
-                <div key={appt.appointment_id}>
+                <div key={appt.appointment_id} data-motion-item>
                   <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
@@ -401,17 +408,18 @@ export default function PatientAppointments() {
 
       {/* -- Reschedule Modal -- */}
       {modalOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
-          onClick={e => { if (e.target === e.currentTarget) closeModal() }}
+        <AnimatedModal
+          onClose={closeModal}
+          closeOnBackdropClick
+          panelClassName="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col"
         >
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
-
+          {(close) => (
+          <>
             {/* Header - fixed */}
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100 shrink-0">
               <h2 className="text-lg font-semibold text-[var(--color-dark)]">Request for Reschedule</h2>
               <button
-                onClick={closeModal}
+                onClick={close}
                 aria-label="Close"
                 className="text-slate-400 hover:text-slate-600 transition-colors p-1 -mr-1"
               >
@@ -480,9 +488,9 @@ export default function PatientAppointments() {
                 {reschedLoading ? 'Sending...' : 'Request'}
               </button>
             </div>
-
-          </div>
-        </div>
+          </>
+          )}
+        </AnimatedModal>
       )}
 
     </div>
