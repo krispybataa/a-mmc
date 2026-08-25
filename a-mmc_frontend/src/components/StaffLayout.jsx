@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Navigate, Outlet, NavLink } from 'react-router-dom'
 import { Menu, X, CalendarDays, Inbox, User, Clock, KeyRound, LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { ActingClinicianProvider, useActingClinician } from '../context/ActingClinicianContext'
 
 // -- Constants ------------------------------------------------------------------
 
@@ -84,6 +85,36 @@ function SidebarNav({ user, onLogout, onNavClick }) {
   )
 }
 
+// -- Acting-clinician switcher ---------------------------------------------------
+// Only rendered when a secretary has more than one linked clinician; a
+// secretary with a single clinician is auto-selected silently with no UI.
+
+function ActingClinicianBar() {
+  const { clinicianId, setClinicianId, clinicianOptions } = useActingClinician()
+
+  if (clinicianOptions.length <= 1) return null
+
+  return (
+    <div className="bg-amber-50 border-b border-amber-100 px-4 md:px-6 py-2.5 flex items-center gap-2.5">
+      <label htmlFor="acting-clinician-select" className="text-sm font-medium text-slate-600 shrink-0">
+        Acting as:
+      </label>
+      <select
+        id="acting-clinician-select"
+        value={clinicianId ?? ''}
+        onChange={(e) => setClinicianId(Number(e.target.value))}
+        className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-[var(--color-dark)] min-h-[36px] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+      >
+        {clinicianOptions.map(opt => (
+          <option key={opt.clinician_id} value={opt.clinician_id}>
+            {opt.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 // -- StaffLayout ----------------------------------------------------------------
 
 export default function StaffLayout() {
@@ -100,73 +131,76 @@ export default function StaffLayout() {
   }
 
   return (
-    <div className="min-h-screen flex bg-[var(--color-bg)]">
+    <ActingClinicianProvider>
+      <div className="min-h-screen flex bg-[var(--color-bg)]">
 
-      {/* -- Desktop sidebar (md+) -- */}
-      <aside className="hidden md:flex md:flex-col md:w-56 md:fixed md:inset-y-0 z-30 shrink-0">
-        <SidebarNav
-          user={user}
-          onLogout={handleLogout}
-          onNavClick={() => {}}
-        />
-      </aside>
+        {/* -- Desktop sidebar (md+) -- */}
+        <aside className="hidden md:flex md:flex-col md:w-56 md:fixed md:inset-y-0 z-30 shrink-0">
+          <SidebarNav
+            user={user}
+            onLogout={handleLogout}
+            onNavClick={() => {}}
+          />
+        </aside>
 
-      {/* -- Mobile: sticky top bar -- */}
-      <header className="md:hidden fixed top-0 inset-x-0 z-40 navbar-gradient h-16 flex items-center px-4 gap-3">
-        <button
-          type="button"
-          aria-label="Open navigation"
-          onClick={() => setDrawerOpen(true)}
-          className="text-white p-2 rounded-lg hover:bg-white/10 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0"
-        >
-          <Menu size={22} />
-        </button>
-        <span className="text-white font-bold text-base tracking-tight select-none">
-          Unicorn
-        </span>
-        <span className="bg-white/20 text-white text-xs font-semibold px-2 py-0.5 rounded-full select-none">
-          Staff . {roleLabel(user.role)}
-        </span>
-      </header>
-
-      {/* -- Mobile drawer -- */}
-      {drawerOpen && (
-        <div
-          className="md:hidden fixed inset-0 z-50 bg-black/50"
-          onClick={() => setDrawerOpen(false)}
-        >
-          {/* Drawer panel */}
-          <div
-            className="absolute left-0 top-0 bottom-0 w-64 flex flex-col"
-            onClick={(e) => e.stopPropagation()}
+        {/* -- Mobile: sticky top bar -- */}
+        <header className="md:hidden fixed top-0 inset-x-0 z-40 navbar-gradient h-16 flex items-center px-4 gap-3">
+          <button
+            type="button"
+            aria-label="Open navigation"
+            onClick={() => setDrawerOpen(true)}
+            className="text-white p-2 rounded-lg hover:bg-white/10 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0"
           >
-            {/* Close button inside drawer */}
-            <div className="absolute top-3 right-3 z-10">
-              <button
-                type="button"
-                aria-label="Close navigation"
-                onClick={() => setDrawerOpen(false)}
-                className="text-white p-2 rounded-lg hover:bg-white/10 min-h-[44px] min-w-[44px] flex items-center justify-center"
-              >
-                <X size={20} />
-              </button>
+            <Menu size={22} />
+          </button>
+          <span className="text-white font-bold text-base tracking-tight select-none">
+            Unicorn
+          </span>
+          <span className="bg-white/20 text-white text-xs font-semibold px-2 py-0.5 rounded-full select-none">
+            Staff . {roleLabel(user.role)}
+          </span>
+        </header>
+
+        {/* -- Mobile drawer -- */}
+        {drawerOpen && (
+          <div
+            className="md:hidden fixed inset-0 z-50 bg-black/50"
+            onClick={() => setDrawerOpen(false)}
+          >
+            {/* Drawer panel */}
+            <div
+              className="absolute left-0 top-0 bottom-0 w-64 flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close button inside drawer */}
+              <div className="absolute top-3 right-3 z-10">
+                <button
+                  type="button"
+                  aria-label="Close navigation"
+                  onClick={() => setDrawerOpen(false)}
+                  className="text-white p-2 rounded-lg hover:bg-white/10 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <SidebarNav
+                user={user}
+                onLogout={handleLogout}
+                onNavClick={() => setDrawerOpen(false)}
+              />
             </div>
-            <SidebarNav
-              user={user}
-              onLogout={handleLogout}
-              onNavClick={() => setDrawerOpen(false)}
-            />
           </div>
+        )}
+
+        {/* -- Main content area -- */}
+        <div className="flex-1 md:ml-56 flex flex-col min-h-screen">
+          <main className="flex-1 pt-16 md:pt-0">
+            <ActingClinicianBar />
+            <Outlet />
+          </main>
         </div>
-      )}
 
-      {/* -- Main content area -- */}
-      <div className="flex-1 md:ml-56 flex flex-col min-h-screen">
-        <main className="flex-1 pt-16 md:pt-0">
-          <Outlet />
-        </main>
       </div>
-
-    </div>
+    </ActingClinicianProvider>
   )
 }

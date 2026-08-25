@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { useActingClinician } from '../../context/ActingClinicianContext'
 import api from '../../services/api'
 import { generateStaffAppointmentPDF } from '../../services/pdfService'
 import AppointmentDrawer from '../../components/shared/AppointmentDrawer'
@@ -150,9 +151,9 @@ function StatCard({ icon, count, label, borderColor, isActive, onClick }) {
 
 export default function ClinicianTodayView() {
   const { user, authLoading } = useAuth()
+  const { clinicianId, error: clinicianError } = useActingClinician()
   const navigate = useNavigate()
 
-  const [clinicianId, setClinicianId]   = useState(null)
   const [appointments, setAppointments] = useState([])
   const [fetchLoading, setFetchLoading] = useState(false)
   const [fetchError, setFetchError]     = useState('')
@@ -171,18 +172,6 @@ export default function ClinicianTodayView() {
       navigate('/staff/login?redirect=/clinician-dashboard/today')
     }
   }, [authLoading, user, navigate])
-
-  // -- Resolve clinician_id ---------------------------------------------------
-  useEffect(() => {
-    if (!user) return
-    if (user.role === 'clinician') {
-      setClinicianId(user.id)
-    } else if (user.role === 'secretary') {
-      api.get(`/secretaries/${user.id}`)
-        .then(({ data }) => setClinicianId(data.clinician_ids?.[0] ?? null))
-        .catch(() => setFetchError('Unable to resolve your linked clinician.'))
-    }
-  }, [user])
 
   // -- Fetch appointments -----------------------------------------------------
   useEffect(() => {
@@ -324,8 +313,8 @@ export default function ClinicianTodayView() {
           {/* -- Appointment list -- */}
           {fetchLoading ? (
             <p className="text-center text-slate-400 py-16 text-sm">Loading...</p>
-          ) : fetchError ? (
-            <p className="text-center text-[var(--color-accent)] py-16 text-sm font-medium">{fetchError}</p>
+          ) : fetchError || clinicianError ? (
+            <p className="text-center text-[var(--color-accent)] py-16 text-sm font-medium">{fetchError || clinicianError}</p>
           ) : todayAppointments.length === 0 ? (
             <div className="text-center py-20">
               <p className="text-slate-400 text-base">You have no appointments scheduled for today.</p>

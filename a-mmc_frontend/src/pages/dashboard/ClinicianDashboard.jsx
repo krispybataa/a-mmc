@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { useActingClinician } from '../../context/ActingClinicianContext'
 import api from '../../services/api'
 import { generateStaffAppointmentPDF } from '../../services/pdfService'
 import AppointmentDrawer from '../../components/shared/AppointmentDrawer'
@@ -68,9 +69,9 @@ function StatusBadge({ status }) {
 
 export default function ClinicianDashboard() {
   const { user, authLoading } = useAuth()
+  const { clinicianId, error: clinicianError } = useActingClinician()
   const navigate = useNavigate()
 
-  const [clinicianId, setClinicianId]   = useState(null)
   const [appointments, setAppointments] = useState([])
   const [fetchLoading, setFetchLoading] = useState(false)
   const [fetchError, setFetchError]     = useState('')
@@ -90,18 +91,6 @@ export default function ClinicianDashboard() {
       navigate('/staff/login?redirect=/clinician-dashboard')
     }
   }, [authLoading, user, navigate])
-
-  // Resolve clinician_id based on role
-  useEffect(() => {
-    if (!user) return
-    if (user.role === 'clinician') {
-      setClinicianId(user.id)
-    } else if (user.role === 'secretary') {
-      api.get(`/secretaries/${user.id}`)
-        .then(({ data }) => setClinicianId(data.clinician_ids?.[0] ?? null))
-        .catch(() => setFetchError('Unable to resolve your linked clinician.'))
-    }
-  }, [user])
 
   // Fetch appointments when clinicianId is available
   useEffect(() => {
@@ -222,8 +211,8 @@ export default function ClinicianDashboard() {
           {/* -- Appointment list -- */}
           {fetchLoading ? (
             <p className="text-center text-slate-400 py-16 text-sm">Loading...</p>
-          ) : fetchError ? (
-            <p className="text-center text-[var(--color-accent)] py-16 text-sm font-medium">{fetchError}</p>
+          ) : fetchError || clinicianError ? (
+            <p className="text-center text-[var(--color-accent)] py-16 text-sm font-medium">{fetchError || clinicianError}</p>
           ) : filtered.length === 0 ? (
             <p className="text-center text-slate-400 py-16">No appointments match the current filters.</p>
           ) : (
