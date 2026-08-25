@@ -30,7 +30,9 @@ export default function Navbar() {
     ? `${user.first_name[0]}${user.last_name[0]}`.toUpperCase()
     : ''
 
-  const showBackLink = user?.role === 'patient' && (
+  const isPatient = user?.role === 'patient'
+
+  const showBackLink = isPatient && (
     pathname === '/dashboard/appointments' ||
     pathname === '/dashboard/profile' ||
     pathname.startsWith('/book/')
@@ -78,21 +80,25 @@ export default function Navbar() {
 
             {open && (
               <div className="absolute right-0 top-12 w-52 bg-white rounded-xl border border-slate-100 shadow-lg py-1.5 z-50">
-                <Link
-                  to="/dashboard"
-                  onClick={() => setOpen(false)}
-                  className="block px-4 py-2.5 text-sm text-[var(--color-dark)] hover:bg-slate-50 transition-colors"
-                >
-                  My Appointments
-                </Link>
-                <Link
-                  to="/dashboard/profile"
-                  onClick={() => setOpen(false)}
-                  className="block px-4 py-2.5 text-sm text-[var(--color-dark)] hover:bg-slate-50 transition-colors"
-                >
-                  Edit Profile
-                </Link>
-                <div className="border-t border-slate-100 my-1" />
+                {isPatient && (
+                  <>
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setOpen(false)}
+                      className="block px-4 py-2.5 text-sm text-[var(--color-dark)] hover:bg-slate-50 transition-colors"
+                    >
+                      My Appointments
+                    </Link>
+                    <Link
+                      to="/dashboard/profile"
+                      onClick={() => setOpen(false)}
+                      className="block px-4 py-2.5 text-sm text-[var(--color-dark)] hover:bg-slate-50 transition-colors"
+                    >
+                      Edit Profile
+                    </Link>
+                    <div className="border-t border-slate-100 my-1" />
+                  </>
+                )}
                 <button
                   onClick={handleSignOut}
                   className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-accent)] hover:bg-slate-50 transition-colors"

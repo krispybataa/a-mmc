@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { useActingClinician } from '../../context/ActingClinicianContext'
 import api from '../../services/api'
 import { useAnimeOnMount, useStaggerOnChange, EASE, DURATION } from '../../lib/motion'
 
@@ -79,10 +80,10 @@ function SaveSuccess() {
 
 export default function ClinicianProfileManager() {
   const { user, authLoading } = useAuth()
+  const { clinicianId, error: clinicianError } = useActingClinician()
   const navigate = useNavigate()
 
-  // -- Clinician resolution + fetch ---------------------------------------------
-  const [clinicianId, setClinicianId]   = useState(null)
+  // -- Clinician profile fetch ---------------------------------------------------
   const [fetchLoading, setFetchLoading] = useState(false)
   const [fetchError, setFetchError]     = useState('')
 
@@ -137,18 +138,6 @@ export default function ClinicianProfileManager() {
       navigate('/staff/login?redirect=/clinician-dashboard/profile')
     }
   }, [authLoading, user, navigate])
-
-  // Resolve clinician_id based on role
-  useEffect(() => {
-    if (!user) return
-    if (user.role === 'clinician') {
-      setClinicianId(user.id)
-    } else if (user.role === 'secretary') {
-      api.get(`/secretaries/${user.id}`)
-        .then(({ data }) => setClinicianId(data.clinician_ids?.[0] ?? null))
-        .catch(() => setFetchError('Unable to resolve your linked clinician.'))
-    }
-  }, [user])
 
   // Fetch profile when clinicianId is available
   useEffect(() => {
@@ -322,10 +311,10 @@ export default function ClinicianProfileManager() {
     )
   }
 
-  if (fetchError && !clinicianId) {
+  if ((fetchError || clinicianError) && !clinicianId) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4 px-6">
-        <p className="text-[var(--color-accent)] text-sm font-medium">{fetchError}</p>
+        <p className="text-[var(--color-accent)] text-sm font-medium">{fetchError || clinicianError}</p>
         <Link
           to="/clinician-dashboard"
           className="text-sm text-[var(--color-primary)] hover:underline"
