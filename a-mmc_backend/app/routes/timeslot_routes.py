@@ -1,8 +1,29 @@
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required, get_jwt
 from app import db
 from app.models.clinician import ClinicianTimeslot
+from app.models.secretary import SecretaryClinicianLink
 
 timeslot_bp = Blueprint("timeslots", __name__)
+
+
+def _can_manage_clinician(clinician_id, claims: dict) -> bool:
+    """
+    True if the caller (per JWT claims) may create/edit/delete timeslots for
+    this clinician_id: the clinician themselves, a secretary linked to them,
+    or an admin.
+    """
+    role = claims.get("role")
+    user_id = claims.get("user", {}).get("id")
+    if role == "admin":
+        return True
+    if role == "clinician":
+        return clinician_id == user_id
+    if role == "secretary":
+        return SecretaryClinicianLink.query.filter_by(
+            secretary_id=user_id, clinician_id=clinician_id
+        ).first() is not None
+    return False
 
 
 @timeslot_bp.get("/")
@@ -34,8 +55,11 @@ def get_timeslot(slot_id: int):
 
 
 @timeslot_bp.post("/")
+@jwt_required()
 def create_timeslot():
     data = request.get_json(force=True)
+    if not _can_manage_clinician(data.get("clinician_id"), get_jwt()):
+        return jsonify({"error": "Forbidden - not authorized for this clinician"}), 403
     slot = ClinicianTimeslot(
         clinician_id=data["clinician_id"],
         slot_date=data["slot_date"],
@@ -49,8 +73,11 @@ def create_timeslot():
 
 
 @timeslot_bp.patch("/<int:slot_id>")
+@jwt_required()
 def update_timeslot(slot_id: int):
     s = db.get_or_404(ClinicianTimeslot, slot_id)
+    if not _can_manage_clinician(s.clinician_id, get_jwt()):
+        return jsonify({"error": "Forbidden - not authorized for this clinician"}), 403
     data = request.get_json(force=True)
     # B1-A-patch-2: validate status value - "booked" and other invalid strings
     # must not reach the DB (valid: available)
@@ -66,8 +93,11 @@ def update_timeslot(slot_id: int):
 
 
 @timeslot_bp.delete("/<int:slot_id>")
+@jwt_required()
 def delete_timeslot(slot_id: int):
     s = db.get_or_404(ClinicianTimeslot, slot_id)
+    if not _can_manage_clinician(s.clinician_id, get_jwt()):
+        return jsonify({"error": "Forbidden - not authorized for this clinician"}), 403
     db.session.delete(s)
     db.session.commit()
     return jsonify({"message": "deleted"})
