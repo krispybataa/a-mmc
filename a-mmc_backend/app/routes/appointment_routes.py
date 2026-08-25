@@ -2,11 +2,13 @@ from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required, get_jwt
 
 from app import db
 from app.models.appointment import Appointment
 from app.models.clinician import ClinicianTimeslot
 from app.models.patient import Patient
+from app.models.secretary import SecretaryClinicianLink
 from app.utils.validators import require_fields
 from app.services.appointment_service import has_overlap
 from app.services.email_service import (
@@ -91,6 +93,46 @@ def _maybe_auto_block_slot(slot: ClinicianTimeslot) -> None:
         slot.status = "blocked"
 
 
+def _appointment_scope(claims: dict) -> dict:
+    """
+    Determine which appointments the caller (per the JWT's claims) may see or act on.
+
+    Returns one of:
+      {"admin": True}               - no restriction
+      {"patient_id": <id>}          - patient role, scoped to their own appointments
+      {"clinician_ids": [<id>...]}  - clinician role (their own id) or secretary role
+                                       (every clinician_id they're linked to)
+    """
+    role = claims.get("role")
+    user_id = claims.get("user", {}).get("id")
+
+    if role == "admin":
+        return {"admin": True}
+    if role == "patient":
+        return {"patient_id": user_id}
+    if role == "clinician":
+        return {"clinician_ids": [user_id]}
+    if role == "secretary":
+        linked = [
+            link.clinician_id
+            for link in SecretaryClinicianLink.query.filter_by(secretary_id=user_id).all()
+        ]
+        return {"clinician_ids": linked}
+    return {}
+
+
+def _can_access_appointment(a: Appointment, claims: dict) -> bool:
+    """True if the caller's scope (see _appointment_scope) covers this appointment."""
+    scope = _appointment_scope(claims)
+    if scope.get("admin"):
+        return True
+    if "patient_id" in scope:
+        return a.patient_id == scope["patient_id"]
+    if "clinician_ids" in scope:
+        return a.clinician_id in scope["clinician_ids"]
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Status transition table
 # ---------------------------------------------------------------------------
@@ -111,17 +153,43 @@ VALID_TRANSITIONS = {
 # ---------------------------------------------------------------------------
 
 @appointment_bp.get("/")
+@jwt_required()
 def list_appointments():
-    """Filter by patient_id, clinician_id, or status via query params."""
-    query = Appointment.query
+    """
+    Filter by patient_id, clinician_id, or status via query params.
+
+    Results are scoped to the caller: patients see only their own appointments,
+    clinicians/secretaries see only appointments for the clinician_id(s) they're
+    linked to, admins see everything. A patient_id/clinician_id query param
+    outside the caller's scope is rejected rather than silently ignored.
+    """
+    claims = get_jwt()
+    scope = _appointment_scope(claims)
+
     patient_id = request.args.get("patient_id", type=int)
     clinician_id = request.args.get("clinician_id", type=int)
     status = request.args.get("status")
 
-    if patient_id:
-        query = query.filter_by(patient_id=patient_id)
-    if clinician_id:
-        query = query.filter_by(clinician_id=clinician_id)
+    query = Appointment.query
+
+    if "patient_id" in scope:
+        query = query.filter_by(patient_id=scope["patient_id"])
+    elif "clinician_ids" in scope:
+        allowed = scope["clinician_ids"]
+        if clinician_id is not None:
+            if clinician_id not in allowed:
+                return jsonify({"error": "Forbidden - not authorized for this clinician"}), 403
+            query = query.filter_by(clinician_id=clinician_id)
+        else:
+            query = query.filter(Appointment.clinician_id.in_(allowed))
+    elif scope.get("admin"):
+        if patient_id:
+            query = query.filter_by(patient_id=patient_id)
+        if clinician_id:
+            query = query.filter_by(clinician_id=clinician_id)
+    else:
+        return jsonify({"error": "Forbidden"}), 403
+
     if status:
         query = query.filter_by(status=status)
 
@@ -130,18 +198,29 @@ def list_appointments():
 
 
 @appointment_bp.get("/<int:appointment_id>")
+@jwt_required()
 def get_appointment(appointment_id: int):
     a = db.get_or_404(Appointment, appointment_id)
+    if not _can_access_appointment(a, get_jwt()):
+        return jsonify({"error": "Forbidden"}), 403
     return jsonify(_serialize(a))
 
 
 @appointment_bp.post("/")
+@jwt_required()
 def create_appointment():
     data = request.get_json(force=True) or {}
 
     err = require_fields(data, "patient_id", "clinician_id", "slot_id", "consultation_date")
     if err:
         return err
+
+    # A patient can only ever book for themselves. Staff (clinician/secretary/
+    # admin) booking on a patient's behalf - e.g. a phone booking - is allowed
+    # deliberately: they may pass any patient_id.
+    claims = get_jwt()
+    if claims.get("role") == "patient" and data["patient_id"] != claims.get("user", {}).get("id"):
+        return jsonify({"error": "Forbidden - cannot book an appointment for another patient"}), 403
 
     patient = db.get_or_404(Patient, data["patient_id"])  # B1-A-patch-2: verify patient FK before insert
 
@@ -208,13 +287,19 @@ def create_appointment():
 
 
 @appointment_bp.patch("/<int:appointment_id>")
+@jwt_required()
 def update_appointment(appointment_id: int):
     a = db.get_or_404(Appointment, appointment_id)
+    claims = get_jwt()
+    if not _can_access_appointment(a, claims):
+        return jsonify({"error": "Forbidden"}), 403
+
     data = request.get_json(force=True) or {}
 
     new_status = data.get("status")
     original_status = a.status  # capture before any mutation for email routing
-    role = (data.get("role") or "").lower()  # "patient" | "clinician" | "secretary"
+    # "patient" | "clinician" | "secretary" | "admin" - from the JWT, never the request body
+    role = claims.get("role")
 
     # Completed appointments are immutable
     if a.status == "done":
@@ -320,7 +405,6 @@ def update_appointment(appointment_id: int):
             send_reschedule_confirmation_to_patient(a)
         elif new_status == "reschedule_requested":
             # Determine who initiated: if caller is patient, notify clinician; else notify patient
-            role = (data.get("role") or "").lower()
             if role == "patient":
                 send_reschedule_request_to_clinician(a)
             else:
@@ -335,6 +419,7 @@ def update_appointment(appointment_id: int):
 
 
 @appointment_bp.delete("/<int:appointment_id>")
+@jwt_required()
 def cancel_appointment(appointment_id: int):
     """
     Soft-cancel an appointment. Requires a cancellation_reason.
@@ -342,6 +427,10 @@ def cancel_appointment(appointment_id: int):
     Warning returned for 24-48h window.
     """
     a = db.get_or_404(Appointment, appointment_id)
+    claims = get_jwt()
+    if not _can_access_appointment(a, claims):
+        return jsonify({"error": "Forbidden"}), 403
+
     data = request.get_json(force=True) or {}
 
     if a.status == "done":
@@ -357,9 +446,10 @@ def cancel_appointment(appointment_id: int):
     if not cancellation_reason:
         return jsonify({"error": "cancellation_reason is required"}), 422
 
-    role = (data.get("role") or "patient").lower()  # "patient" or "cs"
-    if role not in ("patient", "cs"):
-        return jsonify({"error": "role must be 'patient' or 'cs'"}), 422
+    # Cancellation-cutoff rule only distinguishes patient vs. staff - clinician,
+    # secretary, and admin are all treated as staff ("cs") here. Token-derived,
+    # not client-supplied.
+    role = "patient" if claims.get("role") == "patient" else "cs"
 
     slot = db.get_or_404(ClinicianTimeslot, a.slot_id)
 
