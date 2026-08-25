@@ -15,6 +15,13 @@ from app.services.auth_service import hash_password
 clinician_bp = Blueprint("clinicians", __name__)
 
 
+def _require_staff():
+    """Return a 403 response tuple if the caller isn't clinician/secretary/admin, else None."""
+    claims = get_jwt()
+    if claims.get("role") not in ("clinician", "secretary", "admin"):
+        return jsonify({"error": "Forbidden - staff access required"}), 403
+    return None
+
 
 # ---------------------------------------------------------------------------
 # Clinicians
@@ -125,7 +132,11 @@ def create_clinician():
 
 
 @clinician_bp.patch("/<int:clinician_id>")
+@jwt_required()
 def update_clinician(clinician_id: int):
+    err = _require_staff()
+    if err:
+        return err
     c = db.get_or_404(Clinician, clinician_id)
     data = request.get_json(force=True)
     updatable = [
@@ -181,7 +192,11 @@ def list_schedules(clinician_id: int):
 
 
 @clinician_bp.post("/<int:clinician_id>/schedules")
+@jwt_required()
 def create_schedule(clinician_id: int):
+    err = _require_staff()
+    if err:
+        return err
     db.get_or_404(Clinician, clinician_id)
     data = request.get_json(force=True)
     schedule = ClinicianSchedule(
@@ -313,7 +328,11 @@ def list_hmos(clinician_id: int):
 
 
 @clinician_bp.post("/<int:clinician_id>/hmos")
+@jwt_required()
 def create_hmo(clinician_id: int):
+    err = _require_staff()
+    if err:
+        return err
     db.get_or_404(Clinician, clinician_id)
     data = request.get_json(force=True)
     hmo = ClinicianHMO(clinician_id=clinician_id, hmo_name=data["hmo_name"])
@@ -323,7 +342,11 @@ def create_hmo(clinician_id: int):
 
 
 @clinician_bp.delete("/<int:clinician_id>/hmos/<int:hmo_id>")
+@jwt_required()
 def delete_hmo(clinician_id: int, hmo_id: int):
+    err = _require_staff()
+    if err:
+        return err
     db.get_or_404(Clinician, clinician_id)
     hmo = db.get_or_404(ClinicianHMO, hmo_id)
     if hmo.clinician_id != clinician_id:
@@ -348,7 +371,11 @@ def list_infos(clinician_id: int):
 
 
 @clinician_bp.post("/<int:clinician_id>/infos")
+@jwt_required()
 def create_info(clinician_id: int):
+    err = _require_staff()
+    if err:
+        return err
     db.get_or_404(Clinician, clinician_id)
     data = request.get_json(force=True)
     info = ClinicianInfo(
@@ -362,7 +389,11 @@ def create_info(clinician_id: int):
 
 
 @clinician_bp.delete("/<int:clinician_id>/infos/<int:info_id>")
+@jwt_required()
 def delete_info(clinician_id: int, info_id: int):
+    err = _require_staff()
+    if err:
+        return err
     db.get_or_404(Clinician, clinician_id)
     info = db.get_or_404(ClinicianInfo, info_id)
     if info.clinician_id != clinician_id:
@@ -377,9 +408,12 @@ def delete_info(clinician_id: int, info_id: int):
 # ---------------------------------------------------------------------------
 
 @clinician_bp.post("/<int:clinician_id>/generate-slots")
+@jwt_required()
 def generate_clinician_slots(clinician_id: int):
     """
     Generate available timeslots for a clinician from their schedule.
+
+    Requires a valid JWT with role "clinician", "secretary", or "admin".
 
     Body (JSON):
         from_date  (str, YYYY-MM-DD, required)
@@ -388,6 +422,9 @@ def generate_clinician_slots(clinician_id: int):
     Returns:
         { "slots_created": N }
     """
+    err = _require_staff()
+    if err:
+        return err
     db.get_or_404(Clinician, clinician_id)
     data = request.get_json(force=True) or {}
 
