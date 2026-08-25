@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { SlidersHorizontal, X } from 'lucide-react'
 import api from '../../services/api'
 import ClinicianCard from '../../components/ClinicianCard'
+import { useAnimeOnMount, useStaggerOnChange, EASE, DURATION } from '../../lib/motion'
 
 // -- Constants ------------------------------------------------------------------
 
@@ -67,6 +68,11 @@ export default function Doctors() {
   // We scroll to results when loading completes; useRef avoids triggering on later filter changes.
   const hadTriageParams  = useRef(!!(paramSpec || paramHMO))
 
+  // -- Motion: grid staggers in whenever the filtered result set changes;
+  // banner fades in once on mount when present.
+  const gridRef   = useRef(null)
+  const bannerRef = useRef(null)
+
   useEffect(() => {
     async function load() {
       try {
@@ -111,6 +117,24 @@ export default function Doctors() {
     periods: selectedPeriods,
     hmo:     selectedHMO,
   }), [clinicians, nameQuery, specQuery, selectedDays, selectedPeriods, selectedHMO])
+
+  // Stable signature so the stagger re-fires only when the actual result
+  // set changes, not on every re-render.
+  const visibleSignature = useMemo(
+    () => visible.map(c => c.clinician_id).join(','),
+    [visible]
+  )
+  useStaggerOnChange(gridRef, '[data-motion-item]', visibleSignature)
+
+  useAnimeOnMount(bannerRef, () => {
+    if (!showBanner) return null
+    return {
+      opacity: [0, 1],
+      translateY: [-6, 0],
+      duration: DURATION.base,
+      ease: EASE.decelerate,
+    }
+  }, [showBanner])
 
   // -- Handlers --------------------------------------------------------------
 
@@ -159,7 +183,7 @@ export default function Doctors() {
 
         {/* -- Triage results banner -- */}
         {showBanner && (
-          <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 mb-6">
+          <div ref={bannerRef} className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 mb-6">
             <div className="flex-1 text-sm text-blue-800">
               Showing results based on your responses.{' '}
               <button
@@ -347,13 +371,14 @@ export default function Doctors() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {visible.map(c => (
-              <ClinicianCard
-                key={c.clinician_id}
-                clinician={c}
-                displayName={`${c.last_name}, ${c.first_name}`}
-              />
+              <div key={c.clinician_id} data-motion-item>
+                <ClinicianCard
+                  clinician={c}
+                  displayName={`${c.last_name}, ${c.first_name}`}
+                />
+              </div>
             ))}
           </div>
         )}

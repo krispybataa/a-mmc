@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import { generateStaffAppointmentPDF } from '../../services/pdfService'
 import AppointmentDrawer from '../../components/shared/AppointmentDrawer'
+import { useStaggerOnChange } from '../../lib/motion'
 
 // -- Constants ------------------------------------------------------------------
 
@@ -161,6 +162,9 @@ export default function ClinicianTodayView() {
 
   const [drawerAppt, setDrawerAppt] = useState(null)
 
+  const tbodyRef      = useRef(null)
+  const mobileListRef = useRef(null)
+
   // -- Auth guard -------------------------------------------------------------
   useEffect(() => {
     if (!authLoading && !user) {
@@ -232,6 +236,10 @@ export default function ClinicianTodayView() {
       : activeFilter === 'done'
         ? todayAppointments.filter(a => a.status === 'done')
         : todayAppointments.filter(a => a.status === 'cancelled' || a.status === 'rejected')
+
+  const filteredSignature = filtered.map(a => a.appointment_id).join(',')
+  useStaggerOnChange(tbodyRef, '[data-motion-item]', filteredSignature)
+  useStaggerOnChange(mobileListRef, '[data-motion-item]', filteredSignature)
 
   // -- Shared styles ----------------------------------------------------------
 
@@ -340,10 +348,11 @@ export default function ClinicianTodayView() {
                       ))}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody ref={tbodyRef}>
                     {filtered.map(appt => (
                       <tr
                         key={appt.appointment_id}
+                        data-motion-item
                         className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors"
                       >
                         <td className="px-5 py-4 text-[var(--color-dark)] whitespace-nowrap font-medium">
@@ -383,10 +392,11 @@ export default function ClinicianTodayView() {
               </div>
 
               {/* Mobile cards (below md) */}
-              <div className="md:hidden space-y-4">
+              <div ref={mobileListRef} className="md:hidden space-y-4">
                 {filtered.map(appt => (
                   <div
                     key={appt.appointment_id}
+                    data-motion-item
                     className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 space-y-3"
                   >
                     <div className="flex items-start justify-between gap-3">

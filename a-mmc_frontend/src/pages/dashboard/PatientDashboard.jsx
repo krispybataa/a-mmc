@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { CheckCircle, X, CalendarPlus, Calendar, User } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import AppointmentReminderBanner from '../../components/AppointmentReminderBanner'
+import { useAnimeOnMount, useStaggerOnChange, EASE, DURATION } from '../../lib/motion'
 
 // -- Utilities -----------------------------------------------------------------
 
@@ -50,6 +51,9 @@ export default function PatientDashboard() {
   const [apptLoading,  setApptLoading]  = useState(false)
   const [apptError,    setApptError]    = useState('')
 
+  const bannerRef = useRef(null)
+  const recentRef = useRef(null)
+
   // Auth guard
   useEffect(() => {
     if (!user) navigate('/login?redirect=/dashboard')
@@ -82,6 +86,19 @@ export default function PatientDashboard() {
   const dateLabel = today.toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
   const recentAppts = [...appointments].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 3)
 
+  const recentSignature = recentAppts.map(a => a.appointment_id).join(',')
+  useStaggerOnChange(recentRef, '[data-motion-item]', recentSignature)
+
+  useAnimeOnMount(bannerRef, () => {
+    if (!showBanner) return null
+    return {
+      opacity: [0, 1],
+      translateY: [-6, 0],
+      duration: DURATION.base,
+      ease: EASE.decelerate,
+    }
+  }, [showBanner])
+
   return (
     <div className="min-h-screen bg-[var(--color-bg)]">
       <div className="max-w-5xl mx-auto px-6 py-10">
@@ -90,7 +107,7 @@ export default function PatientDashboard() {
 
         {/* -- Booking success banner -- */}
         {showBanner && (
-          <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-xl px-5 py-4 mb-8">
+          <div ref={bannerRef} className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-xl px-5 py-4 mb-8">
             <CheckCircle size={18} className="text-green-600 mt-0.5 shrink-0" />
             <div className="flex-1 text-sm text-green-800">
               <p className="font-semibold">Appointment request submitted!</p>
@@ -156,10 +173,11 @@ export default function PatientDashboard() {
             ) : recentAppts.length === 0 ? (
               <p className="text-center text-[var(--color-muted)] py-12">No appointments yet.</p>
             ) : (
-              <div className="space-y-3">
+              <div ref={recentRef} className="space-y-3">
                 {recentAppts.map(appt => (
                   <div
                     key={appt.appointment_id}
+                    data-motion-item
                     className="bg-[var(--color-bg)] rounded-xl border border-[var(--color-border)] p-5 flex flex-col sm:flex-row sm:items-center gap-3"
                   >
                     <div className="flex-1 space-y-1">

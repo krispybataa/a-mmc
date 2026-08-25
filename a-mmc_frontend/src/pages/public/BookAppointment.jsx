@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, Check, MapPin, Monitor, User } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import SlotPicker from '../../components/shared/SlotPicker'
+import { useStepTransition, popIn } from '../../lib/motion'
 
 // -- Constants -----------------------------------------------------------------
 
@@ -72,6 +73,18 @@ function ConsultTypePill({ type }) {
 // -- Step indicator (shared visual style with Register.jsx) --------------------
 
 function StepIndicator({ step }) {
+  const checkRefs   = useRef(new Map())
+  const prevStepRef = useRef(step)
+
+  // Pop the checkmark that just appeared - only on forward progress, so
+  // stepping back through the wizard doesn't re-trigger it.
+  useEffect(() => {
+    if (step > prevStepRef.current) {
+      popIn(checkRefs.current.get(step - 1))
+    }
+    prevStepRef.current = step
+  }, [step])
+
   return (
     <div className="flex items-start">
       {STEPS.map((label, i) => {
@@ -85,7 +98,17 @@ function StepIndicator({ step }) {
                 'w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-colors',
                 done || active ? 'bg-[var(--color-primary)] text-white' : 'bg-slate-100 text-slate-400',
               ].join(' ')}>
-                {done ? <Check size={15} strokeWidth={2.5} /> : num}
+                {done ? (
+                  <span
+                    ref={el => {
+                      if (el) checkRefs.current.set(num, el)
+                      else checkRefs.current.delete(num)
+                    }}
+                    className="flex items-center justify-center"
+                  >
+                    <Check size={15} strokeWidth={2.5} />
+                  </span>
+                ) : num}
               </div>
               <span
                 className={[
@@ -143,6 +166,9 @@ export default function BookAppointment() {
   const [clinicianLoading, setClinicianLoading] = useState(true)
   const [slotsLoading, setSlotsLoading]         = useState(false)
   const [fetchError, setFetchError]             = useState('')
+
+  const stepContentRef = useRef(null)
+  useStepTransition(stepContentRef, step)
 
   // Auth guard - wait for auth to resolve before redirecting
   useEffect(() => {
@@ -375,6 +401,8 @@ export default function BookAppointment() {
           </div>
 
           <div className="border-t border-slate-100 mb-7" />
+
+          <div ref={stepContentRef}>
 
           {/* ================================================
               STEP 1 - Select Consultation Type
@@ -800,6 +828,8 @@ export default function BookAppointment() {
               )}
             </div>
           )}
+
+          </div>
 
           {/* -- Navigation buttons -- */}
           <div className="flex items-center gap-3 mt-8 pt-6 border-t border-slate-100">

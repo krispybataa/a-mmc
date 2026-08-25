@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, MapPin, DoorOpen, ShieldCheck, Building2, Video } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import ClinicianCard from '../../components/ClinicianCard'
+import { useStaggerOnChange } from '../../lib/motion'
 
 // -- helpers ------------------------------------------------------------------
 
@@ -104,6 +105,10 @@ export default function ClinicianProfile() {
   const [fetchError, setFetchError]     = useState('')
   const [similar, setSimilar]           = useState([])
   const [similarLoading, setSimilarLoading] = useState(false)
+  const similarGridRef = useRef(null)
+
+  const similarSignature = similar.map(c => c.clinician_id).join(',')
+  useStaggerOnChange(similarGridRef, '[data-motion-item]', similarSignature)
 
   // Scroll to top whenever the profile changes
   useEffect(() => {
@@ -359,13 +364,15 @@ export default function ClinicianProfile() {
             <p className="text-sm text-slate-400 mt-0.5">Other clinicians in {specialty}</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+          <div ref={similarGridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
             {similarLoading
               ? [1, 2, 3].map(i => (
                   <div key={i} className="w-full h-48 rounded-2xl animate-pulse bg-gray-100" />
                 ))
               : similar.map(c => (
-                  <ClinicianCard key={c.clinician_id} clinician={c} />
+                  <div key={c.clinician_id} data-motion-item>
+                    <ClinicianCard clinician={c} />
+                  </div>
                 ))
             }
           </div>

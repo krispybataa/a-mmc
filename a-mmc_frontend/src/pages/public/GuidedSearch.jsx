@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, ListFilter, X } from 'lucide-react'
 import { TRIAGE_STEPS, HMO_LABEL_MAP, computeTriageScores } from '../../data/triageLogic'
 import BodyDiagram from '../../components/BodyDiagram'
+import { useStepTransition, useStaggerOnChange } from '../../lib/motion'
 
 const HMO_STEP     = TRIAGE_STEPS[0]   // { id: 'hmo', question, options }
 const SYMPTOM_STEP = TRIAGE_STEPS[1]   // { id: 'symptoms', question, options }
@@ -68,6 +69,23 @@ export default function GuidedSearch() {
   const [selectedAgeBand, setSelectedAgeBand] = useState(null)  // age band id
   const [selectedSex,     setSelectedSex]    = useState('none') // sex id
   const [showFallback,    setShowFallback]   = useState(false)
+
+  // -- Motion: each step's option grid staggers in when that step mounts.
+  // Fallback symptom list staggers in separately when the drawer opens.
+  const hmoGridRef      = useRef(null)
+  const ageGridRef      = useRef(null)
+  const sexGridRef      = useRef(null)
+  const fallbackListRef = useRef(null)
+  const step4Ref        = useRef(null)
+
+  useStaggerOnChange(hmoGridRef, '[data-motion-item]', step)
+  useStaggerOnChange(ageGridRef, '[data-motion-item]', step)
+  useStaggerOnChange(sexGridRef, '[data-motion-item]', step)
+  useStaggerOnChange(fallbackListRef, '[data-motion-item]', showFallback)
+
+  // Step 4 has no grid to stagger (it's the body diagram) - fade the whole
+  // step in as one block instead when it mounts.
+  useStepTransition(step4Ref, step)
 
   function handleHMOSelect(hmoId) {
     setSelectedHmo(hmoId === 'no_hmo' ? null : HMO_LABEL_MAP[hmoId])
@@ -167,10 +185,11 @@ export default function GuidedSearch() {
 
             {/* Scrollable HMO grid */}
             <div className="max-h-[300px] sm:max-h-[400px] overflow-y-auto pr-1">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div ref={hmoGridRef} className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {hmoList.map(hmo => (
                   <button
                     key={hmo.id}
+                    data-motion-item
                     onClick={() => handleHMOSelect(hmo.id)}
                     className="bg-white border border-[var(--color-border)] rounded-xl min-h-[56px] px-4 py-3 text-sm text-center font-medium text-[var(--color-text)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all duration-150 flex flex-col items-center justify-center gap-1"
                   >
@@ -200,10 +219,11 @@ export default function GuidedSearch() {
               This helps us suggest the right specialist.
             </p>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div ref={ageGridRef} className="grid grid-cols-2 gap-3">
               {AGE_BANDS.map(band => (
                 <button
                   key={band.id}
+                  data-motion-item
                   onClick={() => { setSelectedAgeBand(band.id); setStep(3) }}
                   className={tapCard}
                 >
@@ -226,10 +246,11 @@ export default function GuidedSearch() {
               Helps us suggest the right specialist. Not saved or stored.
             </p>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div ref={sexGridRef} className="grid grid-cols-3 gap-3">
               {SEX_OPTIONS.map(sex => (
                 <button
                   key={sex.id}
+                  data-motion-item
                   onClick={() => { setSelectedSex(sex.id); setStep(4) }}
                   className={tapCard}
                 >
@@ -244,26 +265,33 @@ export default function GuidedSearch() {
             STEP 4 - Body diagram
         ============================ */}
         {step === 4 && (
-          <div>
-            <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
-              {SYMPTOM_STEP.question}
-            </h2>
-            <p className="text-[var(--color-muted)] mb-6">
-              Tap the area of your body that concerns you.
-            </p>
+          <>
+            {/* ref'd wrapper only covers in-flow content - the fixed-position
+                drawer below is deliberately kept out of it, since animating
+                translate on an ancestor would create a CSS containing block
+                for its fixed-position children and break the overlay's
+                full-viewport positioning. */}
+            <div ref={step4Ref}>
+              <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
+                {SYMPTOM_STEP.question}
+              </h2>
+              <p className="text-[var(--color-muted)] mb-6">
+                Tap the area of your body that concerns you.
+              </p>
 
-            <BodyDiagram
-              onSelect={handleBodyDiagramSelect}
-              excludeSpecialties={selectedSex === 'male' ? ['Obstetrics & Gynecology'] : []}
-            />
+              <BodyDiagram
+                onSelect={handleBodyDiagramSelect}
+                excludeSpecialties={selectedSex === 'male' ? ['Obstetrics & Gynecology'] : []}
+              />
 
-            <button
-              onClick={() => setShowFallback(true)}
-              className="mt-6 w-full flex items-center justify-center gap-2 border-2 border-[var(--color-primary)] text-[var(--color-primary)] font-semibold rounded-xl py-3 px-6 hover:bg-[var(--color-primary)] hover:text-white transition-all duration-150"
-            >
-              <ListFilter className="w-5 h-5" />
-              Browse Typical Symptoms
-            </button>
+              <button
+                onClick={() => setShowFallback(true)}
+                className="mt-6 w-full flex items-center justify-center gap-2 border-2 border-[var(--color-primary)] text-[var(--color-primary)] font-semibold rounded-xl py-3 px-6 hover:bg-[var(--color-primary)] hover:text-white transition-all duration-150"
+              >
+                <ListFilter className="w-5 h-5" />
+                Browse Typical Symptoms
+              </button>
+            </div>
 
             {/* Symptom drawer */}
             {showFallback && (
@@ -288,12 +316,13 @@ export default function GuidedSearch() {
                       <X size={20} />
                     </button>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div ref={fallbackListRef} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {SYMPTOM_STEP.options.filter(opt =>
                       !(opt.id === 'womens' && selectedSex === 'male')
                     ).map(opt => (
                       <button
                         key={opt.id}
+                        data-motion-item
                         onClick={() => { setShowFallback(false); handleSymptomSelect(opt.id) }}
                         className={`${baseCard} min-h-[72px] px-5 py-4 flex-col items-start`}
                       >
@@ -309,7 +338,7 @@ export default function GuidedSearch() {
                 </div>
               </>
             )}
-          </div>
+          </>
         )}
 
       </div>

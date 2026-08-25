@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import api from '../../services/api'
+import { useAnimeOnMount, EASE, DURATION } from '../../lib/motion'
 
 function PasswordField({ id, label, value, onChange, show, onToggle, error }) {
   return (
@@ -48,10 +49,21 @@ export default function ChangePassword() {
   const [successMsg, setSuccessMsg] = useState('')
 
   const successTimerRef = useRef(null)
+  const successRef = useRef(null)
 
   useEffect(() => {
     return () => clearTimeout(successTimerRef.current)
   }, [])
+
+  useAnimeOnMount(successRef, () => {
+    if (!successMsg) return null
+    return {
+      opacity: [0, 1],
+      translateY: [-6, 0],
+      duration: DURATION.base,
+      ease: EASE.decelerate,
+    }
+  }, [successMsg])
 
   function validate() {
     const errs = {}
@@ -101,7 +113,7 @@ export default function ChangePassword() {
       </div>
 
       {successMsg && (
-        <div className="mb-5 px-4 py-3 rounded-lg bg-green-50 border border-green-200 text-sm text-green-700">
+        <div ref={successRef} className="mb-5 px-4 py-3 rounded-lg bg-green-50 border border-green-200 text-sm text-green-700">
           {successMsg}
         </div>
       )}

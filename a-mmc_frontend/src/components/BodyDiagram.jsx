@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Model from 'react-body-highlighter'
+import { useAnimeOnMount, useFlipTransition, EASE, DURATION } from '../lib/motion'
 
 // -- Region substep definitions ------------------------------------------------
 
@@ -71,6 +72,29 @@ export default function BodyDiagram({ onSelect, excludeSpecialties = [] }) {
   const [highlighted, setHighlighted] = useState(null)
   const [substep,     setSubstep]     = useState(null)  // null or substep definition object
 
+  // Substep panel pops in as one block (a quick fade + scale) rather than
+  // staggering its handful of options individually - staggering the
+  // children too would double-fade them since they'd be nested inside this
+  // panel's own opacity/transform tween.
+  const substepPanelRef = useRef(null)
+  useAnimeOnMount(substepPanelRef, () => {
+    if (!substep) return null
+    return {
+      opacity: [0, 1],
+      scale: [0.97, 1],
+      duration: DURATION.base,
+      ease: EASE.decelerate,
+    }
+  }, [substep])
+
+  // The diagram wrapper's width class flips (full-width <-> 160px sidebar,
+  // sm+ only) whenever a substep opens or closes, to make room for the
+  // panel above. That's a layout change, so it can't be animated directly -
+  // FLIP smooths it over using only transform. capture() must be called
+  // synchronously before the setSubstep() that triggers the width change.
+  const diagramWrapperRef = useRef(null)
+  const captureDiagramRect = useFlipTransition(diagramWrapperRef, [!!substep])
+
   function handleMuscleClick({ muscle }) {
     const region = MUSCLE_REGION[muscle]
     if (!region) return
@@ -80,6 +104,7 @@ export default function BodyDiagram({ onSelect, excludeSpecialties = [] }) {
     if (region.startsWith('direct:')) {
       onSelect(region.slice(7))
     } else {
+      captureDiagramRect()
       setSubstep(SUBSTEPS[region])
     }
   }
@@ -91,6 +116,7 @@ export default function BodyDiagram({ onSelect, excludeSpecialties = [] }) {
   }
 
   function dismissSubstep() {
+    captureDiagramRect()
     setSubstep(null)
     setHighlighted(null)
   }
@@ -113,6 +139,7 @@ export default function BodyDiagram({ onSelect, excludeSpecialties = [] }) {
 
       {/* Body diagram - pure Tailwind so sm: breakpoints aren't overridden by inline style */}
       <div
+        ref={diagramWrapperRef}
         className={
           substep
             ? 'w-full mx-auto max-w-[420px] sm:w-[160px] sm:max-w-[160px] sm:mx-0 shrink-0'
@@ -131,7 +158,7 @@ export default function BodyDiagram({ onSelect, excludeSpecialties = [] }) {
 
       {/* Substep narrowing card - below on mobile, right-of-diagram on sm+ */}
       {substep && (
-        <div className="flex-1 w-full bg-white rounded-xl border border-[var(--color-border)] shadow-sm p-5 self-start">
+        <div ref={substepPanelRef} className="flex-1 w-full bg-white rounded-xl border border-[var(--color-border)] shadow-sm p-5 self-start">
           <p className="font-semibold text-base text-[var(--color-text)] mb-4">
             {substep.question}
           </p>

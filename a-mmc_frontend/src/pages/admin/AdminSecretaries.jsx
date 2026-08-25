@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import api from '../../services/api'
+import AnimatedModal from '../../components/shared/AnimatedModal'
+import { useStaggerOnChange } from '../../lib/motion'
 
 // -- Constants ------------------------------------------------------------------
 
@@ -95,16 +97,14 @@ function AddSecretaryModal({ onClose, onCreated }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center p-4 overflow-y-auto">
-      <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md my-8"
-        onClick={e => e.stopPropagation()}
-      >
+    <AnimatedModal onClose={onClose} align="start" panelClassName="bg-white rounded-2xl shadow-xl w-full max-w-md my-8">
+      {(close) => (
+      <>
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
           <h2 className="text-base font-semibold text-[var(--color-dark)]">Add Secretary</h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={close}
             className="text-slate-400 hover:text-slate-600 text-xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             x
@@ -144,15 +144,16 @@ function AddSecretaryModal({ onClose, onCreated }) {
             </button>
             <button
               type="button"
-              onClick={onClose}
+              onClick={close}
               className="px-5 py-3 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors min-h-[44px]"
             >
               Cancel
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </>
+      )}
+    </AnimatedModal>
   )
 }
 
@@ -186,11 +187,9 @@ function LinkClinicianModal({ secretary, onClose, onLinked }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-sm"
-        onClick={e => e.stopPropagation()}
-      >
+    <AnimatedModal onClose={onClose} panelClassName="bg-white rounded-2xl shadow-xl w-full max-w-sm">
+      {(close) => (
+      <>
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h2 className="text-base font-semibold text-[var(--color-dark)]">Link Clinician</h2>
@@ -198,7 +197,7 @@ function LinkClinicianModal({ secretary, onClose, onLinked }) {
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={close}
             className="text-slate-400 hover:text-slate-600 text-xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             x
@@ -243,15 +242,16 @@ function LinkClinicianModal({ secretary, onClose, onLinked }) {
             </button>
             <button
               type="button"
-              onClick={onClose}
+              onClick={close}
               className="px-5 py-3 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors min-h-[44px]"
             >
               Cancel
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </>
+      )}
+    </AnimatedModal>
   )
 }
 
@@ -264,6 +264,7 @@ export default function AdminSecretaries() {
   const [page, setPage]               = useState(1)
   const [showAddModal, setShowAddModal]     = useState(false)
   const [linkTarget, setLinkTarget]         = useState(null) // secretary object
+  const tbodyRef = useRef(null)
 
   function load() {
     setLoading(true)
@@ -288,6 +289,9 @@ export default function AdminSecretaries() {
 
   const totalPages = Math.max(1, Math.ceil(secretaries.length / PAGE_SIZE))
   const pageItems  = secretaries.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const pageItemsSignature = pageItems.map(s => s.secretary_id).join(',')
+  useStaggerOnChange(tbodyRef, '[data-motion-item]', pageItemsSignature)
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
@@ -324,11 +328,11 @@ export default function AdminSecretaries() {
                   ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody ref={tbodyRef}>
                 {pageItems.map(s => {
                   const linked = getLinkedNames(s)
                   return (
-                    <tr key={s.secretary_id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                    <tr key={s.secretary_id} data-motion-item className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3 font-medium text-[var(--color-dark)] whitespace-nowrap">
                         {formatName(s)}
                       </td>

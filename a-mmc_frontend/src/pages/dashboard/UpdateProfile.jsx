@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import { uploadFile } from '../../services/uploadService'
+import { useAnimeOnMount, EASE, DURATION } from '../../lib/motion'
 
 // -- Constants ------------------------------------------------------------------
 
@@ -88,6 +89,18 @@ export default function UpdateProfile() {
   const [successMsg, setSuccessMsg] = useState('')
   const [uploadStatus, setUploadStatus] = useState({ pwd_front: null, pwd_back: null })
   const successTimerRef = useRef(null)
+  const successBannerRef = useRef(null)
+  const errorBannerRef   = useRef(null)
+
+  useAnimeOnMount(successBannerRef, () => {
+    if (!successMsg) return null
+    return { opacity: [0, 1], translateY: [-6, 0], duration: DURATION.base, ease: EASE.decelerate }
+  }, [successMsg])
+
+  useAnimeOnMount(errorBannerRef, () => {
+    if (!saveError) return null
+    return { opacity: [0, 1], translateY: [-6, 0], duration: DURATION.base, ease: EASE.decelerate }
+  }, [saveError])
 
   // Auth guard
   useEffect(() => {
@@ -224,14 +237,14 @@ export default function UpdateProfile() {
 
         {/* Success banner */}
         {successMsg && (
-          <div className="mb-6 rounded-xl bg-green-50 border border-green-200 px-5 py-4">
+          <div ref={successBannerRef} className="mb-6 rounded-xl bg-green-50 border border-green-200 px-5 py-4">
             <p className="text-sm font-medium text-green-800">{successMsg}</p>
           </div>
         )}
 
         {/* Save error */}
         {saveError && (
-          <div className="mb-6 rounded-xl bg-red-50 border border-red-200 px-5 py-4">
+          <div ref={errorBannerRef} className="mb-6 rounded-xl bg-red-50 border border-red-200 px-5 py-4">
             <p className="text-sm text-[var(--color-accent)]">{saveError}</p>
           </div>
         )}

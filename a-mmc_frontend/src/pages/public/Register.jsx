@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff, Check } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api, { configureApiAuth } from '../../services/api'
+import { useStepTransition, popIn } from '../../lib/motion'
 
 // -- Constants -----------------------------------------------------------------
 
@@ -180,6 +181,18 @@ export default function Register() {
   const [showPassword, setShowPassword]   = useState(false)
   const [showConfirm, setShowConfirm]     = useState(false)
 
+  const stepContentRef = useRef(null)
+  useStepTransition(stepContentRef, step)
+
+  const checkRefs   = useRef(new Map())
+  const prevStepRef = useRef(step)
+  useEffect(() => {
+    if (step > prevStepRef.current) {
+      popIn(checkRefs.current.get(step - 1))
+    }
+    prevStepRef.current = step
+  }, [step])
+
   function update(field, value) {
     setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }))
@@ -294,7 +307,17 @@ export default function Register() {
                           : 'bg-slate-100 text-slate-400',
                       ].join(' ')}
                     >
-                      {done ? <Check size={15} strokeWidth={2.5} /> : num}
+                      {done ? (
+                        <span
+                          ref={el => {
+                            if (el) checkRefs.current.set(num, el)
+                            else checkRefs.current.delete(num)
+                          }}
+                          className="flex items-center justify-center"
+                        >
+                          <Check size={15} strokeWidth={2.5} />
+                        </span>
+                      ) : num}
                     </div>
                     <span
                       className={[
@@ -320,6 +343,8 @@ export default function Register() {
           </div>
 
           <div className="border-t border-slate-100 mb-7" />
+
+          <div ref={stepContentRef}>
 
           {/* -- STEP 1: Personal Information -- */}
           {step === 1 && (
@@ -691,6 +716,8 @@ export default function Register() {
               </div>
             </div>
           )}
+
+          </div>
 
           {/* -- Navigation buttons -- */}
           {errors.submit && (

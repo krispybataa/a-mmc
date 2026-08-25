@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
+import { useAnimeOnMount, useStaggerOnChange, EASE, DURATION } from '../../lib/motion'
 
 // -- Empty basic info template --------------------------------------------------
 
@@ -61,8 +62,16 @@ function FieldLabel({ htmlFor, children, optional }) {
 }
 
 function SaveSuccess() {
+  const ref = useRef(null)
+  useAnimeOnMount(ref, () => ({
+    opacity: [0, 1],
+    translateY: [-4, 0],
+    duration: DURATION.base,
+    ease: EASE.decelerate,
+  }), [])
+
   return (
-    <p className="text-sm font-medium text-green-700 mt-2">Changes saved.</p>
+    <p ref={ref} className="text-sm font-medium text-green-700 mt-2">Changes saved.</p>
   )
 }
 
@@ -107,6 +116,20 @@ export default function ClinicianProfileManager() {
   const [secSaving,     setSecSaving]  = useState(false)
   const [secSaveSuccess, setSecSuccess] = useState(false)
   const [secSaveError,  setSecError]   = useState('')
+
+  const hmoListRef  = useRef(null)
+  const infoListRef = useRef(null)
+  const secSuccessRef = useRef(null)
+
+  const hmoSignature  = hmos.map(h => h.hmo_id).join(',')
+  const infoSignature = infos.map(i => i.info_id).join(',')
+  useStaggerOnChange(hmoListRef, '[data-motion-item]', hmoSignature)
+  useStaggerOnChange(infoListRef, '[data-motion-item]', infoSignature)
+
+  useAnimeOnMount(secSuccessRef, () => {
+    if (!secSaveSuccess) return null
+    return { opacity: [0, 1], translateY: [-4, 0], duration: DURATION.base, ease: EASE.decelerate }
+  }, [secSaveSuccess])
 
   // Auth guard
   useEffect(() => {
@@ -544,10 +567,11 @@ export default function ClinicianProfileManager() {
           {hmos.length === 0 ? (
             <p className="text-sm text-slate-400 mb-4">No HMO accreditations added yet.</p>
           ) : (
-            <ul className="space-y-2 mb-4">
+            <ul ref={hmoListRef} className="space-y-2 mb-4">
               {hmos.map(hmo => (
                 <li
                   key={hmo.hmo_id}
+                  data-motion-item
                   className="flex items-center justify-between gap-3 px-4 py-3 rounded-lg border border-slate-100 bg-slate-50"
                 >
                   <span className="text-sm text-[var(--color-dark)]">{hmo.hmo_name}</span>
@@ -598,10 +622,11 @@ export default function ClinicianProfileManager() {
           {infos.length === 0 ? (
             <p className="text-sm text-slate-400 mb-4">No info entries added yet.</p>
           ) : (
-            <div className="space-y-3 mb-6">
+            <div ref={infoListRef} className="space-y-3 mb-6">
               {infos.map(entry => (
                 <div
                   key={entry.info_id}
+                  data-motion-item
                   className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3"
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -725,7 +750,7 @@ export default function ClinicianProfileManager() {
                 {secSaving ? 'Saving...' : 'Save Secretary Info'}
               </button>
               {secSaveSuccess && (
-                <p className="text-sm font-medium text-green-700">Secretary information updated.</p>
+                <p ref={secSuccessRef} className="text-sm font-medium text-green-700">Secretary information updated.</p>
               )}
               {secSaveError && (
                 <p className="text-sm font-medium text-[var(--color-accent)]">{secSaveError}</p>

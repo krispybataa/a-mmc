@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api, { configureApiAuth } from '../../services/api'
+import { useAnimeOnMount, EASE, DURATION } from '../../lib/motion'
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1200&q=80'
 
@@ -29,6 +30,12 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
+  const submitErrorRef = useRef(null)
+
+  useAnimeOnMount(submitErrorRef, () => {
+    if (!errors.submit) return null
+    return { opacity: [0, 1], translateY: [-6, 0], duration: DURATION.base, ease: EASE.decelerate }
+  }, [errors.submit])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -165,7 +172,7 @@ export default function Login() {
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
               {errors.submit && (
-                <p className="mt-3 text-xs text-[var(--color-accent)] text-center">{errors.submit}</p>
+                <p ref={submitErrorRef} className="mt-3 text-xs text-[var(--color-accent)] text-center">{errors.submit}</p>
               )}
             </div>
           </form>

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api, { configureApiAuth } from '../../services/api'
+import { useAnimeOnMount, EASE, DURATION } from '../../lib/motion'
 
 // Role options - radio/segmented control, not a dropdown
 const ROLES = [
@@ -36,6 +37,12 @@ export default function StaffLogin() {
   const [errors, setErrors] = useState({})
   const [serverError, setServerError] = useState('')
   const [loading, setLoading] = useState(false)
+  const serverErrorRef = useRef(null)
+
+  useAnimeOnMount(serverErrorRef, () => {
+    if (!serverError) return null
+    return { opacity: [0, 1], translateY: [-6, 0], duration: DURATION.base, ease: EASE.decelerate }
+  }, [serverError])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -186,7 +193,7 @@ export default function StaffLogin() {
 
             {/* Server error */}
             {serverError && (
-              <p className="text-sm text-[var(--color-accent)]">{serverError}</p>
+              <p ref={serverErrorRef} className="text-sm text-[var(--color-accent)]">{serverError}</p>
             )}
 
             {/* Submit */}
