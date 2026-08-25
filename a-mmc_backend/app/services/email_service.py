@@ -229,11 +229,7 @@ def send_cancellation_notice(appointment, recipient: str, cancelled_by: str = ""
             )
             other_name     = f"{patient.first_name} {patient.last_name}"
 
-        reason = (
-            appointment.cancellation_reason
-            or appointment.reschedule_reason
-            or "Not specified"
-        )
+        reason = appointment.reschedule_reason or "Not specified"
 
         tpl = cancellation_notice(
             recipient_name   = recipient_name,
