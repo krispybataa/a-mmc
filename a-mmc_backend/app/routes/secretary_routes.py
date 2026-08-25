@@ -9,8 +9,20 @@ from app.services.auth_service import hash_password
 secretary_bp = Blueprint("secretaries", __name__)
 
 
+def _require_staff():
+    """Return a 403 response tuple if the caller isn't clinician/secretary/admin, else None."""
+    claims = get_jwt()
+    if claims.get("role") not in ("clinician", "secretary", "admin"):
+        return jsonify({"error": "Forbidden - staff access required"}), 403
+    return None
+
+
 @secretary_bp.get("/")
+@jwt_required()
 def list_secretaries():
+    err = _require_staff()
+    if err:
+        return err
     secretaries = Secretary.query.all()
     return jsonify([
         {
@@ -27,7 +39,11 @@ def list_secretaries():
 
 
 @secretary_bp.get("/<int:secretary_id>")
+@jwt_required()
 def get_secretary(secretary_id: int):
+    err = _require_staff()
+    if err:
+        return err
     s = db.get_or_404(Secretary, secretary_id)
     return jsonify({
         "secretary_id": s.secretary_id,
@@ -77,7 +93,9 @@ def update_secretary_profile(secretary_id: int):
         return {"error": "Forbidden"}, 403
     s = db.get_or_404(Secretary, secretary_id)
     data = request.get_json(force=True) or {}
-    for field in ["first_name", "last_name", "contact_phone", "contact_email"]:
+    # B-STAFF-1-patch: merged in the fields from the old unguarded PATCH /<id>
+    # route (title, suffix) so removing that route drops no capability.
+    for field in ["title", "first_name", "last_name", "suffix", "contact_phone", "contact_email"]:
         if field in data:
             setattr(s, field, data[field])
     try:
@@ -87,23 +105,14 @@ def update_secretary_profile(secretary_id: int):
         raise
     return jsonify({
         "secretary_id":  s.secretary_id,
+        "title":         s.title,
         "first_name":    s.first_name,
         "last_name":     s.last_name,
+        "suffix":        s.suffix,
         "contact_phone": s.contact_phone,
         "contact_email": s.contact_email,
         "login_email":   s.login_email,
     })
-
-
-@secretary_bp.patch("/<int:secretary_id>")
-def update_secretary(secretary_id: int):
-    s = db.get_or_404(Secretary, secretary_id)
-    data = request.get_json(force=True)
-    for field in ["title", "first_name", "last_name", "suffix", "contact_phone", "contact_email"]:
-        if field in data:
-            setattr(s, field, data[field])
-    db.session.commit()
-    return jsonify({"message": "updated"})
 
 
 @secretary_bp.delete("/<int:secretary_id>")
@@ -135,6 +144,13 @@ def link_clinician(secretary_id: int, clinician_id: int):
         return {"error": "Admin access required"}, 403
     db.get_or_404(Secretary, secretary_id)
     db.get_or_404(Clinician, clinician_id)  # B1-A-patch-2: verify clinician FK before insert
+    # B-STAFF-1-patch: reject a duplicate link with a clean 409 instead of
+    # letting it hit the DB's unique constraint and surface as a 500.
+    existing = SecretaryClinicianLink.query.filter_by(
+        secretary_id=secretary_id, clinician_id=clinician_id
+    ).first()
+    if existing:
+        return jsonify({"error": "This secretary is already linked to this clinician"}), 409
     link = SecretaryClinicianLink(secretary_id=secretary_id, clinician_id=clinician_id)
     db.session.add(link)
     db.session.commit()
