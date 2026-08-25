@@ -411,6 +411,7 @@ export default function PatientAppointments() {
         <AnimatedModal
           onClose={closeModal}
           closeOnBackdropClick
+          backdropClassName="bg-black/40"
           panelClassName="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col"
         >
           {(close) => (

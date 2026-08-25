@@ -3,6 +3,7 @@ import { X } from 'lucide-react'
 import { generatePatientAppointmentPDF } from '../../services/pdfService'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
+import { prefersReducedMotion } from '../../lib/motion'
 
 // -- Utilities ------------------------------------------------------------------
 
@@ -425,12 +426,16 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
     return () => cancelAnimationFrame(id)
   }, [appointment])
 
-  // Animated close - slide out first, then notify parent
+  // Animated close - slide out first, then notify parent. Under reduced
+  // motion the CSS transition is sped up to ~0ms globally (index.css), so
+  // match that here instead of leaving the drawer mounted - and its
+  // backdrop intercepting clicks - for a real 200ms after it's already
+  // visually gone.
   function close() {
     if (closingRef.current) return
     closingRef.current = true
     setOpen(false)
-    setTimeout(onClose, 200)
+    setTimeout(onClose, prefersReducedMotion() ? 0 : 200)
   }
 
   if (!appointment) return null

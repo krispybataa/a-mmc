@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { prefersReducedMotion } from '../../lib/motion'
 
 // -- AnimatedModal ---------------------------------------------------------
 //
@@ -19,6 +20,10 @@ import { useState, useEffect, useRef } from 'react'
 //   closeOnBackdropClick  - bool, defaults false - only enable for modals
 //                            that already had this behavior, to avoid
 //                            changing existing UX in modals that didn't
+//   backdropClassName     - backdrop color/opacity, defaults to bg-black/50
+//                            - override per call site to match what that
+//                            modal used before (e.g. the reschedule modal
+//                            was bg-black/40, not /50)
 //   panelClassName        - className applied to the panel element
 //   children              - ReactNode, or (close) => ReactNode if the
 //                            modal's own Cancel/X buttons should trigger the
@@ -28,6 +33,7 @@ export default function AnimatedModal({
   onClose,
   align = 'center',
   closeOnBackdropClick = false,
+  backdropClassName = 'bg-black/50',
   panelClassName = '',
   children,
 }) {
@@ -44,13 +50,18 @@ export default function AnimatedModal({
     if (closingRef.current) return
     closingRef.current = true
     setOpen(false)
-    setTimeout(onClose, 200)
+    // Under reduced motion the CSS transition above is sped up to ~0ms by
+    // the global rule in index.css - match that here instead of leaving the
+    // modal mounted (and its backdrop intercepting clicks) for a real 200ms
+    // after it's already visually gone.
+    setTimeout(onClose, prefersReducedMotion() ? 0 : 200)
   }
 
   return (
     <div
       className={[
-        'fixed inset-0 z-50 bg-black/50 flex p-4',
+        'fixed inset-0 z-50 flex p-4',
+        backdropClassName,
         align === 'start' ? 'items-start justify-center overflow-y-auto' : 'items-center justify-center',
         'transition-opacity duration-200',
         open ? 'opacity-100' : 'opacity-0',
