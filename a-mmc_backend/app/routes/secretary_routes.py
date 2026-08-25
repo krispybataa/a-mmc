@@ -144,6 +144,13 @@ def link_clinician(secretary_id: int, clinician_id: int):
         return {"error": "Admin access required"}, 403
     db.get_or_404(Secretary, secretary_id)
     db.get_or_404(Clinician, clinician_id)  # B1-A-patch-2: verify clinician FK before insert
+    # B-STAFF-1-patch: reject a duplicate link with a clean 409 instead of
+    # letting it hit the DB's unique constraint and surface as a 500.
+    existing = SecretaryClinicianLink.query.filter_by(
+        secretary_id=secretary_id, clinician_id=clinician_id
+    ).first()
+    if existing:
+        return jsonify({"error": "This secretary is already linked to this clinician"}), 409
     link = SecretaryClinicianLink(secretary_id=secretary_id, clinician_id=clinician_id)
     db.session.add(link)
     db.session.commit()

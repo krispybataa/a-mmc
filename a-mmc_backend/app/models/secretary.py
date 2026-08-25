@@ -24,6 +24,9 @@ class Secretary(db.Model):
 class SecretaryClinicianLink(db.Model):
     """M2M junction between secretaries and clinicians."""
     __tablename__ = "secretary_clinician"
+    __table_args__ = (
+        db.UniqueConstraint("secretary_id", "clinician_id", name="uq_secretary_clinician"),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     secretary_id = db.Column(db.Integer, db.ForeignKey("secretary.secretary_id"), nullable=False)
