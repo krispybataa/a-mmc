@@ -5,10 +5,16 @@ Shared pytest fixtures for the Alagang MMC backend test suite.
 
 Fixtures
 --------
-flask_app   (scope=module) — test Flask app with SQLite in-memory DB
+flask_app   (scope=module) — test Flask app bound to a disposable database
 client      (scope=module) — Flask test client bound to flask_app
 make_slot                  — factory for SimpleNamespace ClinicianTimeslot-like objects
 make_appointment           — factory for SimpleNamespace Appointment-like objects
+
+This is the ONLY place that decides whether a database is safe to run
+create_all()/drop_all() against - see the assertion inside flask_app().
+Tests that need DB-backed fixtures must depend on flask_app/client rather
+than building their own app instance; a second implementation of that
+safety check is how B-CANCEL-1's dev-database incident happened.
 """
 
 import pytest
@@ -38,9 +44,11 @@ def flask_app():
     """
     A Flask application instance configured for testing.
 
-    Uses SQLite in-memory — no real PostgreSQL connection required.
-    Creates all tables before the first test in the module and drops them after.
-    The application context is pushed for the duration of the module.
+    Bound to a disposable database - in-memory SQLite locally (the default
+    set above), or CI's throwaway per-run Postgres service, whichever
+    ACTIONS_TEST_DATABASE_URL resolves to. Creates all tables before the
+    first test in the module and drops them after. The application context
+    is pushed for the duration of the module.
     """
     from app import create_app, db as _db
 
@@ -52,16 +60,30 @@ def flask_app():
         "JWT_COOKIE_SECURE": False,
     })
 
-    # Safety net: never let this fixture run create_all()/drop_all() against
-    # anything but an isolated test database (see comment above).
-    uri = _app.config["SQLALCHEMY_DATABASE_URI"]
-    assert uri and uri.startswith("sqlite"), (
-        f"Refusing to run flask_app fixture against non-sqlite database: {uri!r}"
+    # Safety net: confirm the ACTIONS_TEST_DATABASE_URL override actually
+    # took effect, rather than trusting it blindly. "Safe" isn't "sqlite
+    # specifically" - it's "whatever disposable DB this environment set via
+    # ACTIONS_TEST_DATABASE_URL, as opposed to BaseConfig's PG*-based
+    # fallback to the real dev database". That fallback silently taking over
+    # is exactly how the B-CANCEL-1 incident happened.
+    expected_uri = os.environ["ACTIONS_TEST_DATABASE_URL"]
+    actual_uri = _app.config["SQLALCHEMY_DATABASE_URI"]
+    assert actual_uri == expected_uri, (
+        "Refusing to run flask_app fixture (create_all/drop_all) against a "
+        f"database that isn't the ACTIONS_TEST_DATABASE_URL override: "
+        f"got {actual_uri!r}, expected {expected_uri!r}"
     )
 
     with _app.app_context():
         _db.create_all()
         yield _app
+        # A request or test can leave its scoped session's transaction open
+        # (e.g. a lazy-loaded relationship SELECT that never got committed
+        # or rolled back). Against Postgres, drop_all() then blocks
+        # indefinitely on the ACCESS EXCLUSIVE lock it needs - it doesn't
+        # error, it just hangs forever waiting on that other session.
+        # session.remove() closes/rolls back any such leftover session first.
+        _db.session.remove()
         _db.drop_all()
 
 

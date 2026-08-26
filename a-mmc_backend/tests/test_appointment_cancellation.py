@@ -5,21 +5,21 @@ Regression coverage for B-CANCEL-1: cancellation_reason must be persisted in
 its own column, not overloaded onto reschedule_reason (DELETE endpoint) or
 silently dropped (PATCH endpoint).
 
-Uses its own function-scoped app/db fixture (fresh in-memory SQLite per test)
-rather than conftest.py's module-scoped `flask_app`/`client`, since these
-tests reuse the same patient/clinician login_email across cases and a shared
-module-scoped DB would collide on the unique constraint.
+Uses conftest.py's shared `flask_app`/`client` fixtures, like every other
+DB-backed test should - there is exactly one place (conftest.flask_app) that
+decides whether a database is safe to run create_all()/drop_all() against.
+A second, independent copy of that check is what caused B-CANCEL-1's dev
+database incident: it hardcoded "must be sqlite" and broke in CI, where the
+disposable-but-real Postgres service is the legitimately safe database.
 
-Database isolation itself relies on conftest.py pinning
-ACTIONS_TEST_DATABASE_URL to sqlite before `app`/`config` are first imported
-in this process (see the comment there) - BaseConfig.SQLALCHEMY_DATABASE_URI
-is resolved once, at import time, so it cannot be safely overridden per-test
-via app.config.update() after the fact. The assertion below is a safety net
-in case that ever regresses.
+flask_app is module-scoped (one DB, shared by every test in this file), so
+`booking()` gives each test its own uniquely-emailed patient/clinician to
+avoid colliding on the login_email unique constraint.
 """
 
 from datetime import date, time, timedelta
 from unittest.mock import patch
+from uuid import uuid4
 
 import pytest
 from flask_jwt_extended import create_access_token
@@ -30,51 +30,24 @@ from flask_jwt_extended import create_access_token
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def app():
-    from app import create_app, db as _db
-
-    _app = create_app("development")
-    _app.config.update({
-        "TESTING": True,
-        "JWT_SECRET_KEY": "test-secret-key-at-least-32-bytes-long",
-        "JWT_COOKIE_SECURE": False,
-    })
-
-    uri = _app.config["SQLALCHEMY_DATABASE_URI"]
-    assert uri and uri.startswith("sqlite"), (
-        f"Refusing to run against non-sqlite database: {uri!r}"
-    )
-
-    with _app.app_context():
-        _db.create_all()
-        yield _app
-        _db.session.remove()
-        _db.drop_all()
-
-
-@pytest.fixture
-def client(app):
-    return app.test_client()
-
-
-@pytest.fixture
-def booking(app):
+def booking(flask_app):
     """Creates a patient, clinician, future timeslot, and a pending appointment."""
     from app import db as _db
     from app.models.patient import Patient
     from app.models.clinician import Clinician, ClinicianTimeslot
     from app.models.appointment import Appointment
 
+    unique = uuid4().hex[:10]
     patient = Patient(
         last_name="Dela Cruz", first_name="Juana", birthday=date(1990, 1, 1),
         gender="Female", mobile_number="09170000000",
         address_line_1="123 St", province="Metro Manila", city="Manila", barangay="Brgy 1",
-        login_email="patient@example.com", login_password_hash="x",
+        login_email=f"patient-{unique}@example.com", login_password_hash="x",
         educational_attainment="College",
     )
     clinician = Clinician(
         first_name="Jose", last_name="Rizal",
-        login_email="clinician@example.com", login_password_hash="x",
+        login_email=f"clinician-{unique}@example.com", login_password_hash="x",
     )
     _db.session.add_all([patient, clinician])
     _db.session.commit()
@@ -103,8 +76,8 @@ def booking(app):
     return {"patient": patient, "clinician": clinician, "slot": slot, "appointment": appt}
 
 
-def _patient_auth_header(app, patient):
-    with app.app_context():
+def _patient_auth_header(flask_app, patient):
+    with flask_app.app_context():
         token = create_access_token(
             identity=str(patient.patient_id),
             additional_claims={
@@ -128,12 +101,12 @@ def _patient_auth_header(app, patient):
 class TestCancelAppointmentPersistsReason:
 
     @patch("app.routes.appointment_routes.send_cancellation_notice")
-    def test_cancel_reason_lands_in_its_own_column(self, mock_notice, app, client, booking):
+    def test_cancel_reason_lands_in_its_own_column(self, mock_notice, flask_app, client, booking):
         from app import db as _db
         from app.models.appointment import Appointment
 
         appt = booking["appointment"]
-        headers = _patient_auth_header(app, booking["patient"])
+        headers = _patient_auth_header(flask_app, booking["patient"])
 
         resp = client.delete(
             f"/api/appointments/{appt.appointment_id}",
@@ -142,7 +115,7 @@ class TestCancelAppointmentPersistsReason:
         )
         assert resp.status_code == 200
 
-        with app.app_context():
+        with flask_app.app_context():
             refreshed = _db.session.get(Appointment, appt.appointment_id)
             assert refreshed.status == "cancelled"
             assert refreshed.cancellation_reason == "Feeling better, no longer needed."
@@ -153,9 +126,9 @@ class TestCancelAppointmentPersistsReason:
         assert mock_notice.called
 
     @patch("app.routes.appointment_routes.send_cancellation_notice")
-    def test_cancel_without_reason_is_rejected(self, mock_notice, app, client, booking):
+    def test_cancel_without_reason_is_rejected(self, mock_notice, flask_app, client, booking):
         appt = booking["appointment"]
-        headers = _patient_auth_header(app, booking["patient"])
+        headers = _patient_auth_header(flask_app, booking["patient"])
 
         resp = client.delete(
             f"/api/appointments/{appt.appointment_id}",
@@ -166,9 +139,9 @@ class TestCancelAppointmentPersistsReason:
         mock_notice.assert_not_called()
 
     @patch("app.routes.appointment_routes.send_cancellation_notice")
-    def test_serialized_appointment_exposes_cancellation_reason(self, mock_notice, app, client, booking):
+    def test_serialized_appointment_exposes_cancellation_reason(self, mock_notice, flask_app, client, booking):
         appt = booking["appointment"]
-        headers = _patient_auth_header(app, booking["patient"])
+        headers = _patient_auth_header(flask_app, booking["patient"])
 
         client.delete(
             f"/api/appointments/{appt.appointment_id}",
