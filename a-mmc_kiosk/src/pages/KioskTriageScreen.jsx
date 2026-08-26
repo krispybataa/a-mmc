@@ -5,9 +5,8 @@ import { TRIAGE_STEPS, HMO_LABEL_MAP, computeTriageScores } from '@triage'
 import api from '../services/api'
 import KioskClock from '../components/KioskClock'
 import KioskBodyDiagram from '../components/KioskBodyDiagram'
+import { COLOR_PRIMARY as PRIMARY, COLOR_ACCENT as ACCENT } from '../theme'
 
-const PRIMARY   = '#1D409C'
-const ACCENT    = '#CE1117'
 const MAIN_URL  = import.meta.env.VITE_MAIN_APP_URL
 
 const HMO_STEP     = TRIAGE_STEPS.find(s => s.id === 'hmo')

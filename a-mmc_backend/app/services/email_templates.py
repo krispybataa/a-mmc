@@ -7,11 +7,17 @@ Each public function returns a dict: {"subject": str, "html": str}.
 No Flask context required - pure Python f-strings with inline CSS only.
 
 Brand colours (inline only - no external stylesheets):
-  primary : #1D409C
-  accent  : #CE1117
+  primary : COLOR_PRIMARY below
+  accent  : COLOR_ACCENT below
   dark    : #303030
   white   : #FFFFFF
 """
+
+# Centralized here (no shared build step with the frontend/kiosk apps) - keep
+# numerically in sync with --color-primary / --color-accent in
+# a-mmc_frontend/src/index.css and a-mmc_kiosk/src/index.css.
+COLOR_PRIMARY = "#1D409C"
+COLOR_ACCENT = "#CE1117"
 
 
 # ---------------------------------------------------------------------------
@@ -38,7 +44,7 @@ def _base(title: str, body_html: str) -> str:
 
         # -- Header ----------------------------------------------------------
         '<tr>'
-        '<td style="background-color:#1D409C;padding:24px 32px;'
+        f'<td style="background-color:{COLOR_PRIMARY};padding:24px 32px;'
         'border-radius:8px 8px 0 0;">'
         '<p style="margin:0;color:#FFFFFF;font-size:20px;font-weight:bold;'
         'letter-spacing:-0.3px;">Alagang MMC</p>'
@@ -97,7 +103,7 @@ def _detail_table(rows: list) -> str:
     )
 
 
-def _info_box(text: str, colour: str = "#1D409C", bg: str = "#f0f5ff") -> str:
+def _info_box(text: str, colour: str = COLOR_PRIMARY, bg: str = "#f0f5ff") -> str:
     """Render a highlighted callout box (blue for info, red accent for warnings)."""
     return (
         f'<p style="margin:20px 0;padding:14px 16px;background-color:{bg};'
@@ -129,7 +135,7 @@ def _cta_button(label: str, url: str) -> str:
     return (
         f'<p style="margin:24px 0 0;text-align:center;">'
         f'<a href="{url}"'
-        f' style="display:inline-block;background-color:#1D409C;color:#FFFFFF;'
+        f' style="display:inline-block;background-color:{COLOR_PRIMARY};color:#FFFFFF;'
         f'font-size:15px;font-weight:bold;text-decoration:none;'
         f'padding:14px 32px;border-radius:6px;">{label}</a>'
         f'</p>'
@@ -374,7 +380,7 @@ def initial_credentials_clinician(
         f'<p>Your Alagang MMC staff account has been created. You can now log in to '
         f'manage your profile, schedule, and appointments.</p>'
         f'{_credential_box(login_email, temporary_password)}'
-        f'{_info_box(pw_warning, colour="#CE1117", bg="#fff5f5")}'
+        f'{_info_box(pw_warning, colour=COLOR_ACCENT, bg="#fff5f5")}'
         f'{_cta_button("Log In to Staff Portal", login_url)}'
         f'<p style="margin-top:24px;">Welcome aboard.</p>'
     )
@@ -407,7 +413,7 @@ def initial_credentials_secretary(
         f'<p>Your Alagang MMC staff account has been created. You can now log in to '
         f'manage clinician profiles, schedules, and patient appointments.</p>'
         f'{_credential_box(login_email, temporary_password)}'
-        f'{_info_box(pw_warning, colour="#CE1117", bg="#fff5f5")}'
+        f'{_info_box(pw_warning, colour=COLOR_ACCENT, bg="#fff5f5")}'
         f'{_cta_button("Log In to Staff Portal", login_url)}'
         f'<p style="margin-top:24px;">Welcome aboard.</p>'
     )

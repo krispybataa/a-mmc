@@ -1,8 +1,6 @@
 import { Stethoscope, ClipboardList } from 'lucide-react'
 import KioskClock from '../components/KioskClock'
-
-const PRIMARY = '#1D409C'
-const ACCENT  = '#CE1117'
+import { COLOR_PRIMARY as PRIMARY, COLOR_ACCENT as ACCENT } from '../theme'
 
 function ModeButton({ Icon, label, subtext, onClick, disabled, badge, borderColor }) {
   return (

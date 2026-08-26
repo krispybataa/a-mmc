@@ -3,8 +3,7 @@ import { MapPin } from 'lucide-react'
 import api from '../services/api'
 import QRDisplay from '../components/QRDisplay'
 import KioskClock from '../components/KioskClock'
-
-const PRIMARY = '#1D409C'
+import { COLOR_PRIMARY as PRIMARY } from '../theme'
 
 const DAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 

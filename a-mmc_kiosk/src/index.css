@@ -39,5 +39,5 @@ body {
 }
 
 .navbar-gradient {
-  background: linear-gradient(135deg, #1D409C 0%, #162f75 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, #162f75 100%);
 }

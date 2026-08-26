@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react'
 import api from '../services/api'
 import KioskClock from '../components/KioskClock'
-
-const PRIMARY = '#1D409C'
-const ACCENT  = '#CE1117'
+import { COLOR_PRIMARY as PRIMARY, COLOR_ACCENT as ACCENT } from '../theme'
 
 function ClinicianKioskCard({ clinician, onSelect }) {
   const name     = [clinician.first_name, clinician.last_name].filter(Boolean).join(' ')

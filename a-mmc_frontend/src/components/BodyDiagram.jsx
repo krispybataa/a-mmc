@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import Model from 'react-body-highlighter'
 import { useAnimeOnMount, useFlipTransition, EASE, DURATION } from '../lib/motion'
+import { COLOR_PRIMARY } from '../theme'
 
 // -- Region substep definitions ------------------------------------------------
 
@@ -149,7 +150,7 @@ export default function BodyDiagram({ onSelect, excludeSpecialties = [] }) {
         <Model
           data={modelData}
           bodyColor="#E2E0F0"
-          highlightedColors={['#8EA0CE', '#1D409C']}
+          highlightedColors={['#8EA0CE', COLOR_PRIMARY]}
           onClick={handleMuscleClick}
           type="anterior"
           svgStyle={{ cursor: 'pointer', width: '100%', height: 'auto' }}

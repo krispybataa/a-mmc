@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Model from 'react-body-highlighter'
+import { COLOR_PRIMARY as PRIMARY } from '../theme'
 
-const PRIMARY       = '#1D409C'
 const PRIMARY_LIGHT = '#8EA0CE'
 
 // ── Region substep definitions ─────────────────────────────────────────────────

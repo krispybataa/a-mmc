@@ -6,6 +6,7 @@ import {
   AreaChart, Area,
 } from 'recharts'
 import api from '../../services/api'
+import { COLOR_PRIMARY as PRIMARY, COLOR_ACCENT as ACCENT } from '../../theme'
 
 // -- Constants ------------------------------------------------------------------
 
@@ -16,9 +17,7 @@ const PERIOD_OPTIONS = [
 ]
 
 // Hex colors are required inside recharts props - CSS variables are not
-// supported there. These match the brand token values.
-const PRIMARY = '#1D409C'
-const ACCENT  = '#CE1117'
+// supported there. PRIMARY/ACCENT are sourced from theme.js.
 
 const STATUS_META = {
   pending:              { label: 'Pending',              color: '#F59E0B' },

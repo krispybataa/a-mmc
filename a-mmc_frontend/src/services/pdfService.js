@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf'
+import { COLOR_PRIMARY, hexToRgb } from '../theme'
 
 // -- Layout constants -----------------------------------------------------------
 
@@ -17,8 +18,9 @@ const COL2_VALUE_X = 151   // col 2 value left-aligned from x=151
 const COL2_VALUE_W = 39    // col 2 value max width (PAGE_W - MARGIN - COL2_VALUE_X)
 const ROW_H        = 8     // mm per body row
 
-// Brand colours (RGB)
-const PRIMARY = [29, 64, 156]   // #1D409C
+// Brand colours (RGB) - PRIMARY sourced from theme.js; jsPDF needs RGB arrays,
+// not CSS custom properties, so it can't read index.css directly.
+const PRIMARY = hexToRgb(COLOR_PRIMARY)
 const DARK    = [48, 48, 48]    // #303030
 const MUTED   = [102, 102, 102] // #666666
 const RULE    = [180, 180, 180] // divider line
