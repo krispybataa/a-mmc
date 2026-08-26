@@ -48,7 +48,7 @@ export default function Navbar() {
             to="/"
             className="text-white font-bold text-lg tracking-tight hover:opacity-80 transition-opacity"
           >
-            Unicorn
+            Alagang MMC
           </Link>
           {showBackLink && (
             <Link

@@ -86,7 +86,7 @@ export default function HomeScreen({ onNavigate }) {
       {/* Header */}
       <div className="navbar-gradient flex items-center justify-between py-5 px-8 shrink-0">
         <h1 className="text-white font-bold tracking-wide" style={{ fontSize: '36px' }}>
-          Unicorn
+          Alagang MMC
         </h1>
         <KioskClock />
       </div>

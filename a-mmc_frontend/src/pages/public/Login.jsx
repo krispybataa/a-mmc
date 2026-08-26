@@ -88,7 +88,7 @@ export default function Login() {
             style={{ background: 'linear-gradient(to bottom, rgba(29,64,156,0.85), rgba(29,64,156,0.65))' }}
           />
           <div className="relative z-10">
-            <p className="text-white font-bold text-2xl mb-4">Unicorn</p>
+            <p className="text-white font-bold text-2xl mb-4">Alagang MMC</p>
             <h2 className="text-white font-bold text-3xl leading-tight mb-3">
               Welcome back
             </h2>
@@ -102,7 +102,7 @@ export default function Login() {
         <div className="flex-1 bg-white px-8 py-10">
           <div className="mb-8">
             <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-primary-light)] mb-2">
-              Unicorn
+              Alagang MMC
             </p>
             <h1 className="text-2xl font-bold text-[var(--color-text)]">Sign in</h1>
             <p className="text-sm text-[var(--color-muted)] mt-1">Sign in to your patient account to continue.</p>

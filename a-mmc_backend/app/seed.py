@@ -608,7 +608,7 @@ def _write_production_manifest(csv_path, admin_password, secretary_entries):
     W = 62
     lines = [
         '=' * W,
-        '  UNICORN - TESTER CREDENTIALS MANIFEST',
+        '  ALAGANG MMC - TESTER CREDENTIALS MANIFEST',
         '  Keep this file offline. Do not commit.',
         '=' * W,
         '',

@@ -1,4 +1,4 @@
-# Project U
+# Alagang MMC
 
 > A digital health coordination platform for pre-consultation appointment management.
 
@@ -12,7 +12,7 @@
 
 ## Overview
 
-Project U is a standalone pre-consultation layer that sits outside the institution's existing clinical systems. Patients can find clinicians through a guided triage flow or a searchable directory, book appointments, and manage their appointment history. Clinicians and their secretaries manage schedules, review incoming requests, and track their daily patient queue. The system operates independently — it handles coordination only, with no billing, diagnostics, or post-consultation records.
+Alagang MMC is a standalone pre-consultation layer that sits outside the institution's existing clinical systems. Patients can find clinicians through a guided triage flow or a searchable directory, book appointments, and manage their appointment history. Clinicians and their secretaries manage schedules, review incoming requests, and track their daily patient queue. The system operates independently — it handles coordination only, with no billing, diagnostics, or post-consultation records.
 
 ---
 

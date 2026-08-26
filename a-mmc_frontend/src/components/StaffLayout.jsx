@@ -35,7 +35,7 @@ function SidebarNav({ user, onLogout, onNavClick }) {
       {/* Wordmark + badge */}
       <div className="px-6 py-5 border-b border-white/10 shrink-0">
         <p className="text-white font-bold text-lg tracking-tight select-none">
-          Unicorn
+          Alagang MMC
         </p>
         <span className="mt-1.5 inline-block bg-white/20 text-white text-xs font-semibold px-2 py-0.5 rounded-full select-none">
           Staff . {roleLabel(user.role)}
@@ -154,7 +154,7 @@ export default function StaffLayout() {
             <Menu size={22} />
           </button>
           <span className="text-white font-bold text-base tracking-tight select-none">
-            Unicorn
+            Alagang MMC
           </span>
           <span className="bg-white/20 text-white text-xs font-semibold px-2 py-0.5 rounded-full select-none">
             Staff . {roleLabel(user.role)}
