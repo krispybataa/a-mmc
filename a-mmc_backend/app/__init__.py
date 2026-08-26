@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -34,8 +35,12 @@ config_by_name: dict = {
     "production": ProductionConfig,
 }
 
-def create_app(config_name: str = "development") -> Flask:
+def create_app(config_name: str = None) -> Flask:
     """Application factory."""
+    config_name = config_name or os.environ.get("FLASK_ENV", "development")
+    if config_name not in config_by_name:
+        config_name = "development"
+
     app = Flask(__name__)
     app.config.from_object(config_by_name[config_name])
 

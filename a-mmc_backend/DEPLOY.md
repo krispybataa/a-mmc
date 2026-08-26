@@ -13,6 +13,14 @@
 | SYSTEM_URL | https://your-app.up.railway.app |
 | DATABASE_URL | Auto-provided by Railway PostgreSQL plugin |
 
+Setting `FLASK_ENV=production` here now actually activates `ProductionConfig`
+(`create_app()` reads it as a fallback when no `config_name` is passed in,
+which is how every real entrypoint calls it - see `Dockerfile`'s gunicorn
+`CMD`). Previously this table listed the variable but nothing in the code
+read it, so setting it had no effect; that's fixed as of B-CONFIG-1. Leave
+it unset for local/self-hosted docker-compose deploys until TLS is added to
+`a-mmc_infra/nginx.conf` - see the note in `a-mmc_infra/.env`.
+
 ### First deploy sequence
 1. Push to main — CI builds and pushes Docker image to Docker Hub
 2. Railway pulls the image and runs the start command:
