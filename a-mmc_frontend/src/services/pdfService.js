@@ -241,6 +241,12 @@ export function generatePatientAppointmentPDF(appointment) {
     yL = drawRow(doc, 'Reason', appt.reschedule_reason, yL, 1)
   }
 
+  if (appt.cancellation_reason) {
+    yL += 6
+    yL = sectionHeading(doc, 'Cancellation Note', yL, 1)
+    yL = drawRow(doc, 'Reason', appt.cancellation_reason, yL, 1)
+  }
+
   // -- Right: Clinician ------------------------------------------------------
   yR = sectionHeading(doc, 'Clinician', yR, 2)
   const docName = [clinician.title, clinician.first_name, clinician.last_name]
@@ -301,6 +307,12 @@ export function generateStaffAppointmentPDF(appointment) {
     yL += 6
     yL = sectionHeading(doc, 'Reschedule Note', yL, 1)
     yL = drawRow(doc, 'Reason', appt.reschedule_reason, yL, 1)
+  }
+
+  if (appt.cancellation_reason) {
+    yL += 6
+    yL = sectionHeading(doc, 'Cancellation Note', yL, 1)
+    yL = drawRow(doc, 'Reason', appt.cancellation_reason, yL, 1)
   }
 
   // -- Right: Patient --------------------------------------------------------

@@ -586,6 +586,14 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
                       <p className="text-sm text-orange-800 leading-relaxed">{appt.reschedule_reason}</p>
                     </div>
                   )}
+
+                  {/* Cancellation reason - only when present */}
+                  {appt.cancellation_reason && (
+                    <div className="rounded-lg bg-slate-50 border border-slate-100 px-4 py-3">
+                      <p className="text-xs text-slate-400 mb-1">Cancellation Reason</p>
+                      <p className="text-sm text-slate-700 leading-relaxed">{appt.cancellation_reason}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 

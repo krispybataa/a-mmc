@@ -19,6 +19,16 @@ import os
 
 load_dotenv()
 
+# BaseConfig.SQLALCHEMY_DATABASE_URI is resolved from ACTIONS_TEST_DATABASE_URL
+# at import time (config/BaseConfig.py), before create_app() ever runs - so it
+# MUST be set here, before `app`/`config` are imported anywhere in this process.
+# Setting app.config["SQLALCHEMY_DATABASE_URI"] on the Flask app *after* the
+# fact does NOT work: Flask-SQLAlchemy 3.x builds its engine eagerly inside
+# db.init_app() (called from create_app()), so a late override is silently
+# ignored and create_all()/drop_all() run against whatever real database
+# BaseConfig originally pointed at (e.g. the dev Postgres container).
+os.environ.setdefault("ACTIONS_TEST_DATABASE_URL", "sqlite:///:memory:")
+
 # ---------------------------------------------------------------------------
 # Flask app + test client
 # ---------------------------------------------------------------------------
@@ -37,11 +47,17 @@ def flask_app():
     _app = create_app("development")
     _app.config.update({
         "TESTING": True,
-        "SQLALCHEMY_DATABASE_URI": os.environ.get("SQLALCHEMY_DATABASE_URI") or os.environ.get("DATABASE_URL"),
-        "JWT_SECRET_KEY": os.environ.get("JWT_SECRET_KEY"),
+        "JWT_SECRET_KEY": os.environ.get("JWT_SECRET_KEY") or "test-secret-key-at-least-32-bytes-long",
         # Disable cookie security flags so test responses don't require HTTPS
         "JWT_COOKIE_SECURE": False,
     })
+
+    # Safety net: never let this fixture run create_all()/drop_all() against
+    # anything but an isolated test database (see comment above).
+    uri = _app.config["SQLALCHEMY_DATABASE_URI"]
+    assert uri and uri.startswith("sqlite"), (
+        f"Refusing to run flask_app fixture against non-sqlite database: {uri!r}"
+    )
 
     with _app.app_context():
         _db.create_all()

@@ -346,6 +346,16 @@ def update_appointment(appointment_id: int):
                 a.reschedule_reason = reschedule_reason
 
             # ----------------------------------------------------------------
+            # Cancel - either party cancels via the status-update endpoint
+            # (the dedicated DELETE endpoint below has its own time-gating)
+            # ----------------------------------------------------------------
+            elif new_status == "cancelled":
+                cancellation_reason = (data.get("cancellation_reason") or "").strip()
+                if not cancellation_reason:
+                    return jsonify({"error": "cancellation_reason is required when cancelling an appointment"}), 422
+                a.cancellation_reason = cancellation_reason
+
+            # ----------------------------------------------------------------
             # Accepting a reschedule - C/S must confirm with a new slot
             # ----------------------------------------------------------------
             elif new_status == "accepted" and a.status == "reschedule_requested":
@@ -465,7 +475,7 @@ def cancel_appointment(appointment_id: int):
     # B1-D-patch: transaction boundary added
     try:
         a.status = "cancelled"
-        a.reschedule_reason = cancellation_reason  # reuse field for audit trail
+        a.cancellation_reason = cancellation_reason
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -524,6 +534,7 @@ def _serialize(a: Appointment) -> dict:
         "status": a.status,
         "reschedule_reason": a.reschedule_reason,
         "decline_reason": a.decline_reason,
+        "cancellation_reason": a.cancellation_reason,
         "created_at": a.created_at.isoformat() if a.created_at else None,
         "updated_at": a.updated_at.isoformat() if a.updated_at else None,
     }

@@ -20,6 +20,7 @@ class Appointment(db.Model):
     status = db.Column(db.String(30), nullable=False, default="pending")
     reschedule_reason = db.Column(db.Text)
     decline_reason    = db.Column(db.Text)
+    cancellation_reason = db.Column(db.Text)
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(
         db.DateTime,
