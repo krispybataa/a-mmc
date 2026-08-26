@@ -44,7 +44,6 @@ from app.services.timeslot_service import regenerate_slots_for_schedule_change
 CLINICIAN_ID = 1
 FROM_DATE = date(2026, 3, 30)   # Monday
 TO_DATE = date(2026, 3, 30)
-DURATION = 60
 
 # ---------------------------------------------------------------------------
 # Test data factories
@@ -174,28 +173,28 @@ class TestAllSafeOrphans:
     def test_deleted_count_correct(self):
         with _mocked([SLOT_IN_SCHEDULE, SLOT_ORPHAN_SAFE]):
             result = regenerate_slots_for_schedule_change(
-                CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                CLINICIAN_ID, FROM_DATE, TO_DATE
             )
         assert result["deleted"] == 1
 
     def test_stuck_list_empty(self):
         with _mocked([SLOT_IN_SCHEDULE, SLOT_ORPHAN_SAFE]):
             result = regenerate_slots_for_schedule_change(
-                CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                CLINICIAN_ID, FROM_DATE, TO_DATE
             )
         assert result["stuck"] == []
 
     def test_delete_called_for_safe_orphan(self):
         with _mocked([SLOT_IN_SCHEDULE, SLOT_ORPHAN_SAFE]) as mock_db:
             regenerate_slots_for_schedule_change(
-                CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                CLINICIAN_ID, FROM_DATE, TO_DATE
             )
         mock_db.session.delete.assert_called_once_with(SLOT_ORPHAN_SAFE)
 
     def test_commit_called_once(self):
         with _mocked([SLOT_IN_SCHEDULE, SLOT_ORPHAN_SAFE]) as mock_db:
             regenerate_slots_for_schedule_change(
-                CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                CLINICIAN_ID, FROM_DATE, TO_DATE
             )
         mock_db.session.commit.assert_called_once()
 
@@ -206,14 +205,14 @@ class TestAllStuckOrphans:
     def test_deleted_count_zero(self):
         with _mocked([SLOT_IN_SCHEDULE, SLOT_ORPHAN_STUCK], {3: 2}):
             result = regenerate_slots_for_schedule_change(
-                CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                CLINICIAN_ID, FROM_DATE, TO_DATE
             )
         assert result["deleted"] == 0
 
     def test_stuck_list_populated(self):
         with _mocked([SLOT_IN_SCHEDULE, SLOT_ORPHAN_STUCK], {3: 2}):
             result = regenerate_slots_for_schedule_change(
-                CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                CLINICIAN_ID, FROM_DATE, TO_DATE
             )
         assert len(result["stuck"]) == 1
         entry = result["stuck"][0]
@@ -223,7 +222,7 @@ class TestAllStuckOrphans:
     def test_stuck_entry_has_correct_time_strings(self):
         with _mocked([SLOT_IN_SCHEDULE, SLOT_ORPHAN_STUCK], {3: 1}):
             result = regenerate_slots_for_schedule_change(
-                CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                CLINICIAN_ID, FROM_DATE, TO_DATE
             )
         entry = result["stuck"][0]
         assert entry["start_time"] == "11:00"
@@ -233,7 +232,7 @@ class TestAllStuckOrphans:
     def test_delete_not_called(self):
         with _mocked([SLOT_IN_SCHEDULE, SLOT_ORPHAN_STUCK], {3: 1}) as mock_db:
             regenerate_slots_for_schedule_change(
-                CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                CLINICIAN_ID, FROM_DATE, TO_DATE
             )
         mock_db.session.delete.assert_not_called()
 
@@ -241,7 +240,7 @@ class TestAllStuckOrphans:
         """Commit must run even when there are no deletions."""
         with _mocked([SLOT_IN_SCHEDULE, SLOT_ORPHAN_STUCK], {3: 1}) as mock_db:
             regenerate_slots_for_schedule_change(
-                CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                CLINICIAN_ID, FROM_DATE, TO_DATE
             )
         mock_db.session.commit.assert_called_once()
 
@@ -255,7 +254,7 @@ class TestMixedOrphans:
             {2: 0, 3: 1},
         ):
             result = regenerate_slots_for_schedule_change(
-                CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                CLINICIAN_ID, FROM_DATE, TO_DATE
             )
         assert result["deleted"] == 1
 
@@ -265,7 +264,7 @@ class TestMixedOrphans:
             {2: 0, 3: 1},
         ):
             result = regenerate_slots_for_schedule_change(
-                CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                CLINICIAN_ID, FROM_DATE, TO_DATE
             )
         assert len(result["stuck"]) == 1
         assert result["stuck"][0]["slot_id"] == 3
@@ -276,7 +275,7 @@ class TestMixedOrphans:
             {2: 0, 3: 1},
         ) as mock_db:
             regenerate_slots_for_schedule_change(
-                CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                CLINICIAN_ID, FROM_DATE, TO_DATE
             )
         mock_db.session.delete.assert_called_once_with(SLOT_ORPHAN_SAFE)
 
@@ -287,7 +286,7 @@ class TestNoOrphans:
     def test_returns_zero_deleted(self):
         with _mocked([SLOT_IN_SCHEDULE]):
             result = regenerate_slots_for_schedule_change(
-                CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                CLINICIAN_ID, FROM_DATE, TO_DATE
             )
         assert result["deleted"] == 0
         assert result["stuck"] == []
@@ -295,14 +294,14 @@ class TestNoOrphans:
     def test_delete_not_called(self):
         with _mocked([SLOT_IN_SCHEDULE]) as mock_db:
             regenerate_slots_for_schedule_change(
-                CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                CLINICIAN_ID, FROM_DATE, TO_DATE
             )
         mock_db.session.delete.assert_not_called()
 
     def test_commit_called(self):
         with _mocked([SLOT_IN_SCHEDULE]) as mock_db:
             regenerate_slots_for_schedule_change(
-                CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                CLINICIAN_ID, FROM_DATE, TO_DATE
             )
         mock_db.session.commit.assert_called_once()
 
@@ -317,7 +316,7 @@ class TestOrphanClassificationEdgeCases:
         # SLOT_ORPHAN_SAFE has status="available" — but we give it an active appointment
         with _mocked([SLOT_IN_SCHEDULE, SLOT_ORPHAN_SAFE], {2: 1}):
             result = regenerate_slots_for_schedule_change(
-                CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                CLINICIAN_ID, FROM_DATE, TO_DATE
             )
         assert result["deleted"] == 0
         assert len(result["stuck"]) == 1
@@ -331,7 +330,7 @@ class TestOrphanClassificationEdgeCases:
         slot_blocked_orphan = _slot(4, time(10, 0), time(11, 0), status="blocked")
         with _mocked([SLOT_IN_SCHEDULE, slot_blocked_orphan], {4: 0}):
             result = regenerate_slots_for_schedule_change(
-                CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                CLINICIAN_ID, FROM_DATE, TO_DATE
             )
         assert result["deleted"] == 0   # not deleted
         assert result["stuck"] == []    # not stuck
@@ -348,7 +347,7 @@ class TestTransactionalBehavior:
             mock_db.session.delete.side_effect = RuntimeError("DB constraint violated")
             with pytest.raises(RuntimeError, match="DB constraint violated"):
                 regenerate_slots_for_schedule_change(
-                    CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                    CLINICIAN_ID, FROM_DATE, TO_DATE
                 )
             mock_db.session.rollback.assert_called_once()
 
@@ -358,7 +357,7 @@ class TestTransactionalBehavior:
             mock_db.session.delete.side_effect = RuntimeError("failure")
             with pytest.raises(RuntimeError):
                 regenerate_slots_for_schedule_change(
-                    CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                    CLINICIAN_ID, FROM_DATE, TO_DATE
                 )
             mock_db.session.commit.assert_not_called()
 
@@ -368,6 +367,6 @@ class TestTransactionalBehavior:
             mock_db.session.commit.side_effect = RuntimeError("commit failed")
             with pytest.raises(RuntimeError, match="commit failed"):
                 regenerate_slots_for_schedule_change(
-                    CLINICIAN_ID, FROM_DATE, TO_DATE, DURATION
+                    CLINICIAN_ID, FROM_DATE, TO_DATE
                 )
             mock_db.session.rollback.assert_called_once()

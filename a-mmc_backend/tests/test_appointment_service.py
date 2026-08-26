@@ -49,10 +49,13 @@ def _patch_query(appointments: list):
     Return a (patched Appointment class, mock query chain) tuple for use in
     patch() context managers.
 
-    The mock chain supports arbitrary .filter() chaining followed by .all():
+    Mirrors the real call shape in has_overlap():
+    Appointment.query.join(ClinicianTimeslot, ...).filter(...) — so .join()
+    must return the same mock_chain that the subsequent .filter()/.all()
+    calls are asserted against, not a disconnected auto-generated child mock.
 
-        Appointment.query.filter(...)         → mock_chain
-        mock_chain.filter(...)                → mock_chain   (exclusion filter)
+        Appointment.query.join(...)           → mock_chain
+        mock_chain.filter(...)                → mock_chain   (initial + exclusion filter)
         mock_chain.all()                      → appointments
     """
     mock_chain = MagicMock()
@@ -60,7 +63,7 @@ def _patch_query(appointments: list):
     mock_chain.all.return_value = appointments
 
     MockAppt = MagicMock()
-    MockAppt.query.filter.return_value = mock_chain
+    MockAppt.query.join.return_value = mock_chain
     return MockAppt, mock_chain
 
 
@@ -113,8 +116,9 @@ class TestHasOverlapReturnsFalse:
             result = has_overlap(PATIENT_ID, candidate, exclude_appointment_id=42)
 
         assert result is False
-        # Exclusion filter must have been added (filter called twice on mock_chain)
-        assert mock_chain.filter.call_count == 1  # one chained exclusion call after initial
+        # Exclusion filter must have been added: one initial .filter() after
+        # .join(), plus one chained exclusion .filter() call.
+        assert mock_chain.filter.call_count == 2
 
     def test_cancelled_appointment_does_not_trigger_overlap(self, make_slot):
         """
@@ -168,15 +172,16 @@ class TestHasOverlapQueryConstruction:
 
     def test_query_uses_active_status_filter(self, make_slot):
         """
-        Verifies that the initial Appointment.query.filter() is called (meaning
-        the status.in_() clause is applied). The mock simulates the DB having
-        already filtered to active statuses only.
+        Verifies that Appointment.query.join(...) is followed by a .filter()
+        call (meaning the patient/status/date clauses are applied). The mock
+        simulates the DB having already filtered to active statuses only.
         """
         candidate = make_slot(start_time=time(9, 0), end_time=time(10, 0))
-        MockAppt, _ = _patch_query([])
+        MockAppt, mock_chain = _patch_query([])
         with patch("app.models.appointment.Appointment", MockAppt):
             has_overlap(PATIENT_ID, candidate)
-        MockAppt.query.filter.assert_called_once()
+        MockAppt.query.join.assert_called_once()
+        assert mock_chain.filter.call_count == 1
 
     def test_exclusion_adds_second_filter_call(self, make_slot):
         """
@@ -187,15 +192,16 @@ class TestHasOverlapQueryConstruction:
         MockAppt, mock_chain = _patch_query([])
         with patch("app.models.appointment.Appointment", MockAppt):
             has_overlap(PATIENT_ID, candidate, exclude_appointment_id=99)
-        # Initial filter on MockAppt.query, plus one chained filter for exclusion
-        assert mock_chain.filter.call_count == 1
+        # One initial .filter() after .join(), plus one chained filter for exclusion
+        assert mock_chain.filter.call_count == 2
 
     def test_no_exclusion_does_not_add_second_filter_call(self, make_slot):
         """
-        When exclude_appointment_id is None (default), no extra .filter() is chained.
+        When exclude_appointment_id is None (default), no extra .filter() is chained
+        — only the initial post-.join() filter call happens.
         """
         candidate = make_slot(start_time=time(9, 0), end_time=time(10, 0))
         MockAppt, mock_chain = _patch_query([])
         with patch("app.models.appointment.Appointment", MockAppt):
             has_overlap(PATIENT_ID, candidate)
-        mock_chain.filter.assert_not_called()
+        assert mock_chain.filter.call_count == 1
