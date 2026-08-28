@@ -1,4 +1,4 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, date, timezone, timedelta
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, jsonify, request
@@ -215,6 +215,16 @@ def create_appointment():
     if err:
         return err
 
+    # Normalise consultation_date to a real date object. The column is db.Date;
+    # passing the raw string only ever worked because Postgres coerces it, and
+    # breaks on stricter backends (e.g. SQLite in the test fixture).
+    raw_date = data["consultation_date"]
+    if isinstance(raw_date, str):
+        try:
+            data["consultation_date"] = date.fromisoformat(raw_date)
+        except ValueError:
+            return jsonify({"error": "consultation_date must be in YYYY-MM-DD format."}), 400
+
     # A patient can only ever book for themselves. Staff (clinician/secretary/
     # admin) booking on a patient's behalf - e.g. a phone booking - is allowed
     # deliberately: they may pass any patient_id.
@@ -276,6 +286,9 @@ def create_appointment():
             payment_type=data.get("payment_type"),
             discount_type=discount_type,
             consultation_type=consultation_type,
+            # Snapshot the clinician's current default fee - not a live join.
+            professional_fee=slot.clinician.professional_fee,
+            additional_request=(data.get("additional_request") or None),
             status="pending",
         )
         db.session.add(appointment)
@@ -400,6 +413,20 @@ def update_appointment(appointment_id: int):
             if ps is not None and ps not in ("paid", "unpaid"):
                 return jsonify({"error": "payment_status must be 'paid', 'unpaid', or null."}), 422
             a.payment_status = ps
+
+        # professional_fee - clinician/secretary only (same gate as marking done)
+        if "professional_fee" in data:
+            if role not in ("clinician", "secretary"):
+                return jsonify({"error": "Only clinicians or secretaries can update the professional fee."}), 403
+            fee = data["professional_fee"]
+            if fee is not None:
+                try:
+                    fee = float(fee)
+                except (TypeError, ValueError):
+                    return jsonify({"error": "professional_fee must be a number or null."}), 422
+                if fee < 0:
+                    return jsonify({"error": "professional_fee cannot be negative."}), 422
+            a.professional_fee = fee
 
         db.session.commit()
     except Exception:
@@ -530,6 +557,8 @@ def _serialize(a: Appointment) -> dict:
         "payment_type": _format_payment_type(a.payment_type),
         "discount_type": a.discount_type,
         "payment_status": a.payment_status,
+        "professional_fee": float(a.professional_fee) if a.professional_fee is not None else None,
+        "additional_request": a.additional_request,
         "consultation_type": a.consultation_type,
         "status": a.status,
         "reschedule_reason": a.reschedule_reason,

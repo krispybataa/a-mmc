@@ -36,6 +36,13 @@ function formatTimeRange(start, end) {
   return `${formatTime(start)} - ${formatTime(end)}`
 }
 
+function formatFee(amount) {
+  if (amount == null || amount === '') return null
+  const n = Number(amount)
+  if (Number.isNaN(n)) return null
+  return `PHP ${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
 function mapApiError(err) {
   const status = err?.response?.status
   const apiMsg = err?.response?.data?.error
@@ -107,10 +114,10 @@ function CSDrawerContent({ appointment: appt, close, user, onSave }) {
   const [patientDetail, setPatientDetail] = useState(null)
 
   // Editable fields
-  const [statusChoice,   setStatusChoice]   = useState(appt.status)
-  const [consultType,    setConsultType]    = useState(appt.consultation_type || 'f2f')
-  const [paymentStatus,  setPaymentStatus]  = useState(appt.payment_status || 'unpaid')
-  const [cancelReason,   setCancelReason]   = useState('')
+  const [statusChoice,    setStatusChoice]    = useState(appt.status)
+  const [paymentStatus,   setPaymentStatus]   = useState(appt.payment_status || 'unpaid')
+  const [professionalFee, setProfessionalFee] = useState(appt.professional_fee ?? '')
+  const [cancelReason,    setCancelReason]     = useState('')
   const [smsText,        setSmsText]        = useState(buildSmsMessage(slot, clinician, appt.status))
 
   // UI state
@@ -151,6 +158,12 @@ function CSDrawerContent({ appointment: appt, close, user, onSave }) {
         payload.payment_status = paymentStatus
       }
 
+      const feeVal = professionalFee === '' || professionalFee == null ? null : Number(professionalFee)
+      const currentFee = appt.professional_fee == null ? null : Number(appt.professional_fee)
+      if (feeVal !== currentFee) {
+        payload.professional_fee = feeVal
+      }
+
       await api.patch(`/appointments/${appt.appointment_id}`, payload)
       onSave?.()
       close()
@@ -169,11 +182,6 @@ function CSDrawerContent({ appointment: appt, close, user, onSave }) {
     { value: 'accepted',  label: 'Accepted'  },
     { value: 'cancelled', label: 'Cancelled' },
     { value: 'done',      label: 'Done'      },
-  ]
-
-  const CONSULT_OPTIONS = [
-    { value: 'f2f',         label: 'F2F'         },
-    { value: 'teleconsult', label: 'Teleconsult' },
   ]
 
   const PAYMENT_OPTIONS = [
@@ -241,9 +249,31 @@ function CSDrawerContent({ appointment: appt, close, user, onSave }) {
                 {appt.discount_type && (
                   <DetailRow label="Discount" value={`${appt.discount_type} Discount`} />
                 )}
-                <DetailRow label="Professional Fee"    value="-" />
-                <DetailRow label="Additional Request"  value="-" />
-                <DetailRow label="Other Requests"      value="-" />
+
+                {/* Professional Fee - staff-editable (clinician/secretary).
+                    Pre-filled from the clinician's default at booking time;
+                    payment itself is settled outside the app. */}
+                <div>
+                  <label htmlFor="professional-fee" className="text-xs text-slate-400 mb-0.5 block">
+                    Professional Fee
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-400">PHP</span>
+                    <input
+                      id="professional-fee"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      inputMode="decimal"
+                      value={professionalFee}
+                      onChange={e => setProfessionalFee(e.target.value)}
+                      placeholder="Not set"
+                      className="w-40 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-[var(--color-dark)]"
+                    />
+                  </div>
+                </div>
+
+                <DetailRow label="Additional Request" value={appt.additional_request} />
               </div>
             </div>
 
@@ -570,6 +600,8 @@ export default function AppointmentDrawer({ appointment, onClose, onCancel, onRe
                   {appt.discount_type && (
                     <DetailRow label="Discount" value={`${appt.discount_type} Discount`} />
                   )}
+                  <DetailRow label="Professional Fee"  value={formatFee(appt.professional_fee)} />
+                  <DetailRow label="Additional Request" value={appt.additional_request} />
 
                   {/* Status badge */}
                   <div>

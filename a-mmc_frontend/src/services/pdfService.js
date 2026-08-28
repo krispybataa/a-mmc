@@ -63,6 +63,13 @@ function paymentStatusLabel(ps) {
   return null
 }
 
+function formatFee(amount) {
+  if (amount == null || amount === '') return null
+  const n = Number(amount)
+  if (Number.isNaN(n)) return null
+  return `PHP ${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
 function today() {
   const now = new Date()
   return formatDate(
@@ -230,9 +237,16 @@ export function generatePatientAppointmentPDF(appointment) {
   if (appt.discount_type) {
     yL = drawRow(doc, 'Discount', appt.discount_type, yL, 1)
   }
+  yL = drawRow(doc, 'Prof. Fee', formatFee(appt.professional_fee), yL, 1)
   yL = drawRow(doc, 'Status', capitalize(appt.status), yL, 1)
   if (appt.decline_reason) {
     yL = drawRow(doc, 'Reason', appt.decline_reason, yL, 1)
+  }
+
+  if (appt.additional_request) {
+    yL += 6
+    yL = sectionHeading(doc, 'Additional Request', yL, 1)
+    yL = drawRow(doc, 'Request', appt.additional_request, yL, 1)
   }
 
   if (appt.reschedule_reason) {
@@ -298,9 +312,16 @@ export function generateStaffAppointmentPDF(appointment) {
   if (psLabel) {
     yL = drawRow(doc, 'Paid?', psLabel, yL, 1)
   }
+  yL = drawRow(doc, 'Prof. Fee', formatFee(appt.professional_fee), yL, 1)
   yL = drawRow(doc, 'Status', capitalize(appt.status), yL, 1)
   if (appt.decline_reason) {
     yL = drawRow(doc, 'Reason', appt.decline_reason, yL, 1)
+  }
+
+  if (appt.additional_request) {
+    yL += 6
+    yL = sectionHeading(doc, 'Additional Request', yL, 1)
+    yL = drawRow(doc, 'Request', appt.additional_request, yL, 1)
   }
 
   if (appt.reschedule_reason) {

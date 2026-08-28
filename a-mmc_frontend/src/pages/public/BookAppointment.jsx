@@ -150,6 +150,7 @@ export default function BookAppointment() {
   // Step 3
   const [chiefComplaint, setChiefComplaint] = useState('')
   const [description, setDescription]       = useState('')
+  const [additionalRequest, setAdditionalRequest] = useState('')
   const [bookingType, setBookingType]       = useState('')
   const [paymentMethod, setPaymentMethod]   = useState('')   // 'Private' | 'HMO'
   const [selectedHmo, setSelectedHmo]       = useState('')   // hmo_name when HMO
@@ -336,6 +337,7 @@ export default function BookAppointment() {
         consultation_date: selectedDate,
         chief_complaint: chiefComplaint.trim(),
         chief_complaint_description: description.trim() || undefined,
+        additional_request: additionalRequest.trim() || undefined,
         payment_type: paymentTypeValue || undefined,
         discount_type: discountType || undefined,
         consultation_type: consultationType,
@@ -593,6 +595,24 @@ export default function BookAppointment() {
                 <p className="text-xs text-slate-400 mt-1 text-right">{description.length}/500</p>
               </div>
 
+              {/* Additional Request */}
+              <div>
+                <label htmlFor="additional-request" className="block text-sm font-medium text-[var(--color-dark)] mb-1.5">
+                  Additional Request
+                  <span className="text-xs font-normal text-slate-400 ml-1.5">(optional)</span>
+                </label>
+                <textarea
+                  id="additional-request"
+                  maxLength={500}
+                  rows={3}
+                  value={additionalRequest}
+                  onChange={(e) => setAdditionalRequest(e.target.value)}
+                  placeholder="Anything else the clinic should know (e.g. wheelchair access, interpreter)"
+                  className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm text-[var(--color-dark)] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none"
+                />
+                <p className="text-xs text-slate-400 mt-1 text-right">{additionalRequest.length}/500</p>
+              </div>
+
               {/* Booking Type */}
               <div>
                 <label htmlFor="booking-type" className="block text-sm font-medium text-[var(--color-dark)] mb-1.5">
@@ -804,6 +824,7 @@ export default function BookAppointment() {
                 <div className="space-y-2.5">
                   <ReviewRow label="Chief Complaint" value={chiefComplaint} />
                   <ReviewRow label="Description"     value={description.trim() || '-'} />
+                  <ReviewRow label="Additional Request" value={additionalRequest.trim() || '-'} />
                 </div>
               </div>
 

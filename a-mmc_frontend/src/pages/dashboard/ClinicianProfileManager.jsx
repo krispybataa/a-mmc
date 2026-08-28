@@ -3,7 +3,26 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useActingClinician } from '../../context/ActingClinicianContext'
 import api from '../../services/api'
-import { useAnimeOnMount, useStaggerOnChange, EASE, DURATION } from '../../lib/motion'
+import { useAnimeOnMount, useStaggerOnChange, EASE, DURATION, prefersReducedMotion } from '../../lib/motion'
+
+// -- Section nav (smooth-scroll scaffold) -------------------------------------
+// Lightweight in-page nav. This page keeps growing (Photo, Basic Info,
+// Professional Fee...) and a full tabbed/routed layout is a later upgrade -
+// see FB-STAFF-1. Order here is the on-page order.
+const SECTIONS = [
+  { id: 'section-photo', label: 'Profile Photo' },
+  { id: 'section-basic', label: 'Basic Information' },
+  { id: 'section-fee',   label: 'Professional Fee' },
+]
+
+function scrollToSection(id) {
+  const el = document.getElementById(id)
+  if (!el) return
+  el.scrollIntoView({
+    behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    block: 'start',
+  })
+}
 
 // -- Empty basic info template --------------------------------------------------
 
@@ -93,6 +112,12 @@ export default function ClinicianProfileManager() {
   const [basicSaveSuccess, setBasicSuccess] = useState(false)
   const [basicSaveError, setBasicError]   = useState('')
 
+  // -- Professional Fee state -------------------------------------------------
+  const [profFee, setProfFee]               = useState('')
+  const [profFeeSaving, setProfFeeSaving]   = useState(false)
+  const [profFeeSuccess, setProfFeeSuccess] = useState(false)
+  const [profFeeError, setProfFeeError]     = useState('')
+
   // -- HMO state ----------------------------------------------------------------
   const [hmos, setHmos]               = useState([])
   const [newHmo, setNewHmo]           = useState('')
@@ -150,6 +175,7 @@ export default function ClinicianProfileManager() {
         setHmos(data.hmos ?? [])
         setInfos(data.infos ?? [])
         setPreviewUrl(data.profile_picture ?? null)
+        setProfFee(data.professional_fee ?? '')
       })
       .catch(() => setFetchError('Unable to load clinician profile.'))
       .finally(() => setFetchLoading(false))
@@ -221,6 +247,34 @@ export default function ClinicianProfileManager() {
       setBasicError(err?.response?.data?.error ?? 'Failed to save changes.')
     } finally {
       setBasicSaving(false)
+    }
+  }
+
+  function handleProfFeeChange(value) {
+    setProfFee(value)
+    if (profFeeSuccess) setProfFeeSuccess(false)
+    if (profFeeError) setProfFeeError('')
+  }
+
+  async function handleProfFeeSave() {
+    const trimmed = String(profFee).trim()
+    if (trimmed !== '' && (Number.isNaN(Number(trimmed)) || Number(trimmed) < 0)) {
+      setProfFeeError('Enter a valid non-negative amount, or leave blank to clear.')
+      return
+    }
+    setProfFeeSaving(true)
+    setProfFeeError('')
+    setProfFeeSuccess(false)
+    try {
+      await api.patch(`/clinicians/${clinicianId}`, {
+        professional_fee: trimmed === '' ? null : Number(trimmed),
+      })
+      setProfFeeSuccess(true)
+      setTimeout(() => setProfFeeSuccess(false), 5000)
+    } catch (err) {
+      setProfFeeError(err?.response?.data?.error ?? 'Failed to save changes.')
+    } finally {
+      setProfFeeSaving(false)
     }
   }
 
@@ -353,8 +407,22 @@ export default function ClinicianProfileManager() {
           <p className="text-sm text-[var(--color-accent)] mb-6">{fetchError}</p>
         )}
 
+        {/* == Section nav (smooth-scroll scaffold) =========================== */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {SECTIONS.map(s => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => scrollToSection(s.id)}
+              className="px-4 py-2 rounded-full border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-[var(--color-primary)] transition-colors min-h-[40px]"
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
         {/* == Profile picture ================================================== */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-8 py-7 mb-6">
+        <div id="section-photo" className="scroll-mt-6 bg-white rounded-2xl border border-slate-100 shadow-sm px-8 py-7 mb-6">
           <h2 className="text-lg font-semibold text-[var(--color-dark)] mb-5">Profile Photo</h2>
           <div className="flex items-center gap-6">
             {/* Avatar / preview */}
@@ -395,7 +463,7 @@ export default function ClinicianProfileManager() {
         </div>
 
         {/* == Section 1 - Basic Info ========================================== */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-8 py-7 mb-6">
+        <div id="section-basic" className="scroll-mt-6 bg-white rounded-2xl border border-slate-100 shadow-sm px-8 py-7 mb-6">
           <h2 className="text-lg font-semibold text-[var(--color-dark)] mb-6">Basic Information</h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -545,6 +613,46 @@ export default function ClinicianProfileManager() {
             {basicSaveSuccess && <SaveSuccess />}
             {basicSaveError && (
               <p className="text-sm font-medium text-[var(--color-accent)]">{basicSaveError}</p>
+            )}
+          </div>
+        </div>
+
+        {/* == Professional Fee ============================================== */}
+        <div id="section-fee" className="scroll-mt-6 bg-white rounded-2xl border border-slate-100 shadow-sm px-8 py-7 mb-6">
+          <h2 className="text-lg font-semibold text-[var(--color-dark)] mb-2">Professional Fee</h2>
+          <p className="text-xs text-slate-400 mb-6">
+            Your default consultation fee. New appointments are pre-filled with this
+            amount at booking time; staff can still adjust it per appointment.
+            Payment is settled outside the app.
+          </p>
+
+          <div className="max-w-xs">
+            <FieldLabel htmlFor="professional_fee" optional>Default Fee (PHP)</FieldLabel>
+            <input
+              id="professional_fee"
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              value={profFee}
+              onChange={e => handleProfFeeChange(e.target.value)}
+              placeholder="e.g. 800.00"
+              className={inputCls}
+            />
+          </div>
+
+          <div className="mt-7 flex items-center gap-4">
+            <button
+              type="button"
+              onClick={handleProfFeeSave}
+              disabled={profFeeSaving}
+              className="px-6 py-3 rounded-lg bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+            >
+              {profFeeSaving ? 'Saving...' : 'Save Changes'}
+            </button>
+            {profFeeSuccess && <p className="text-sm font-medium text-green-700">Changes saved.</p>}
+            {profFeeError && (
+              <p className="text-sm font-medium text-[var(--color-accent)]">{profFeeError}</p>
             )}
           </div>
         </div>

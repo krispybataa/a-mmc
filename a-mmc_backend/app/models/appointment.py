@@ -15,6 +15,13 @@ class Appointment(db.Model):
     payment_type = db.Column(db.String(100))
     discount_type = db.Column(db.String(50), nullable=True)   # "Senior Citizen" | "PWD" | None
     payment_status = db.Column(db.String(20), nullable=True)  # "paid" | "unpaid" | None
+    # Snapshot of the clinician's default professional fee (PHP) taken at booking
+    # time - deliberately not a live join, so a later change to the clinician's
+    # default does not retroactively alter existing appointments.
+    professional_fee = db.Column(db.Numeric(10, 2), nullable=True)
+    # Free-text request submitted by the patient during booking (step 3). Merges
+    # the former decorative "Additional Request" / "Other Requests" fields.
+    additional_request = db.Column(db.Text)
     consultation_type = db.Column(db.String, nullable=False, server_default='f2f')  # f2f | teleconsult
     # pending | accepted | reschedule_requested | rejected | cancelled | done
     status = db.Column(db.String(30), nullable=False, default="pending")

@@ -19,6 +19,9 @@ class Clinician(db.Model):
     contact_email = db.Column(db.String(200))
     login_email = db.Column(db.String(200), unique=True, nullable=False)
     login_password_hash = db.Column(db.String(256), nullable=False)
+    # Default professional fee (PHP). Pre-fills new appointments as a snapshot at
+    # booking time - see appointment_routes.create_appointment. NULL = not set.
+    professional_fee = db.Column(db.Numeric(10, 2), nullable=True)
 
     # Relationships
     schedules = db.relationship("ClinicianSchedule", back_populates="clinician", cascade="all, delete-orphan")

@@ -79,6 +79,7 @@ def get_clinician(clinician_id: int):
         "profile_picture": c.profile_picture,
         "contact_phone": c.contact_phone,
         "contact_email": c.contact_email,
+        "professional_fee": float(c.professional_fee) if c.professional_fee is not None else None,
         "schedules": [
             {
                 "schedule_id": s.schedule_id,
@@ -147,6 +148,19 @@ def update_clinician(clinician_id: int):
     for field in updatable:
         if field in data:
             setattr(c, field, data[field])
+
+    # professional_fee - numeric, nullable, non-negative. Sent as null to clear.
+    if "professional_fee" in data:
+        fee = data["professional_fee"]
+        if fee is not None:
+            try:
+                fee = float(fee)
+            except (TypeError, ValueError):
+                return jsonify({"error": "professional_fee must be a number or null."}), 422
+            if fee < 0:
+                return jsonify({"error": "professional_fee cannot be negative."}), 422
+        c.professional_fee = fee
+
     db.session.commit()
     return jsonify({"message": "updated"})
 
