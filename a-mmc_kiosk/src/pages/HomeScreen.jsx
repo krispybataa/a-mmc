@@ -1,5 +1,7 @@
 import { Stethoscope, ClipboardList } from 'lucide-react'
 import KioskClock from '../components/KioskClock'
+import LanguageSelector from '../components/LanguageSelector'
+import { stringsFor } from '../data/homeStrings'
 import { COLOR_PRIMARY as PRIMARY, COLOR_ACCENT as ACCENT } from '../theme'
 
 function ModeButton({ Icon, label, subtext, onClick, disabled, badge, borderColor }) {
@@ -78,7 +80,9 @@ function ModeButton({ Icon, label, subtext, onClick, disabled, badge, borderColo
   )
 }
 
-export default function HomeScreen({ onNavigate }) {
+export default function HomeScreen({ onNavigate, lang = 'en', onLangChange }) {
+  const t = stringsFor(lang)
+
   return (
     <div className="flex flex-col h-screen" style={{ backgroundColor: '#F8F7FF' }}>
       {/* Header */}
@@ -89,19 +93,25 @@ export default function HomeScreen({ onNavigate }) {
         <KioskClock />
       </div>
 
+      {/* Language selector -- top-right, in the white space below the clock.
+          Demo placeholder for F-KIOSKLANG-1; home screen only. */}
+      <div className="flex justify-end shrink-0 px-8 pt-5">
+        <LanguageSelector value={lang} onChange={onLangChange} />
+      </div>
+
       {/* Main content */}
       <div className="flex flex-1 items-center justify-center" style={{ gap: '64px' }}>
         <ModeButton
           Icon={Stethoscope}
-          label="Find a Doctor"
-          subtext="Browse our list of clinicians"
+          label={t.findDoctorLabel}
+          subtext={t.findDoctorSubtext}
           onClick={() => onNavigate('directory')}
           borderColor={PRIMARY}
         />
         <ModeButton
           Icon={ClipboardList}
-          label="Find the Right Doctor for You"
-          subtext="Answer a few questions to get matched"
+          label={t.triageLabel}
+          subtext={t.triageSubtext}
           onClick={() => onNavigate('triage')}
           borderColor={ACCENT}
         />
@@ -110,10 +120,10 @@ export default function HomeScreen({ onNavigate }) {
       {/* Footer */}
       <div className="flex flex-col items-center pb-8 gap-1 shrink-0">
         <p style={{ fontSize: '20px', color: '#6B7280', fontWeight: '500' }}>
-          Touch the screen to get started
+          {t.touchToStart}
         </p>
         <p style={{ fontSize: '18px', color: '#9CA3AF' }}>
-          This station will reset after 2 minutes of inactivity
+          {t.resetNotice}
         </p>
       </div>
     </div>
